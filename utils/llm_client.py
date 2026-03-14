@@ -29,6 +29,12 @@ class LLMClient:
     """
 
     def __init__(self) -> None:
+        self.total_input_tokens: int = 0
+        self.total_output_tokens: int = 0
+        self._mock = os.environ.get("FRAUDGEN_MOCK") == "1"
+        if self._mock:
+            self._client = None
+            return
         api_key = os.environ.get("ANTHROPIC_API_KEY")
         if not api_key:
             raise LLMClientError(
@@ -37,8 +43,6 @@ class LLMClient:
                 "export ANTHROPIC_API_KEY='sk-ant-...'"
             )
         self._client = anthropic.AsyncAnthropic(api_key=api_key)
-        self.total_input_tokens: int = 0
-        self.total_output_tokens: int = 0
 
     # ------------------------------------------------------------------
     # Public API
@@ -58,6 +62,10 @@ class LLMClient:
         Retries up to 3 times on JSON parse errors.
         Applies exponential backoff on 429/529 status codes.
         """
+        if self._mock:
+            await asyncio.sleep(0.3)
+            return _mock_response(messages)
+
         last_error: Exception | None = None
         current_messages = list(messages)
 
@@ -116,6 +124,14 @@ class LLMClient:
         on_text: Callable[[str], None] | None = None,
     ) -> str:
         """Stream the response, invoke *on_text* for each text chunk, return full text."""
+        if self._mock:
+            text = "Mock strategy: Criminal uses layered transfers to obscure fund origin."
+            for chunk in text.split(" "):
+                await asyncio.sleep(0.05)
+                if on_text:
+                    on_text(chunk + " ")
+            return text
+
         try:
             full_text_parts: list[str] = []
             async with self._client.messages.stream(
@@ -153,6 +169,10 @@ class LLMClient:
         Returns the first top-level JSON object found in the response text.
         Extended thinking responses may include a thinking block before the answer block.
         """
+        if self._mock:
+            await asyncio.sleep(0.5)
+            return _mock_response(messages)
+
         try:
             response = await asyncio.wait_for(
                 self._client.messages.create(
@@ -260,6 +280,89 @@ class LLMClient:
         cap = 30.0
         delay = min(cap, base * (2 ** attempt)) + random.uniform(0.0, 1.0)
         await asyncio.sleep(delay)
+
+
+def _mock_response(messages: list[dict]) -> dict:
+    """Return a plausible stub response for mock mode.
+
+    Detects which agent is calling based on message content and returns
+    a schema-matching response so the full pipeline can run end-to-end.
+    """
+    import uuid, random
+    from datetime import datetime, timedelta
+
+    content = " ".join(
+        m.get("content", "") if isinstance(m.get("content"), str) else ""
+        for m in messages
+    ).lower()
+
+    # Orchestrator output
+    if "variation_dimensions" in content or "coverage_cells" in content or "decompose" in content:
+        cells = []
+        for i in range(6):
+            cells.append({
+                "cell_id": f"C-{i+1:02d}",
+                "dimension_values": {
+                    "hop_count": random.choice([2, 3, 4, 5, 6]),
+                    "timing_interval_hrs": random.choice([1, 8, 24, 72]),
+                    "topology": random.choice(["chain", "fan_out", "hybrid"]),
+                    "extraction_method": random.choice(["wire", "crypto", "cash"]),
+                },
+                "persona_slot": i % 3,
+            })
+        return {
+            "variation_dimensions": [
+                {"name": "hop_count", "description": "Number of mule hops", "range_low": "2", "range_high": "8", "example_values": ["2", "4", "6"]},
+                {"name": "timing_interval_hrs", "description": "Hours between hops", "range_low": "1", "range_high": "168", "example_values": ["1", "24", "72"]},
+                {"name": "topology", "description": "Network shape", "range_low": "chain", "range_high": "fan_out", "example_values": ["chain", "fan_out", "hybrid"]},
+                {"name": "extraction_method", "description": "Final extraction channel", "range_low": "wire", "range_high": "crypto", "example_values": ["wire", "crypto", "cash"]},
+            ],
+            "coverage_cells": cells,
+            "suggested_persona_count": 3,
+        }
+
+    # Persona generator output
+    if "persona" in content and ("risk" in content or "generate" in content):
+        return {
+            "personas": [
+                {"persona_id": "P-01", "name": "Viktor Sokolov", "risk_tolerance": "high", "operational_scale": "large", "geographic_scope": "international", "timeline_pressure": "72 hours", "evasion_targets": ["DE", "NL"], "backstory": "Organized crime network, Eastern European operation with 200+ mule accounts.", "resources": "Crypto infrastructure, professional money mules, multiple jurisdictions"},
+                {"persona_id": "P-02", "name": "James Harlow", "risk_tolerance": "low", "operational_scale": "small", "geographic_scope": "domestic", "timeline_pressure": "3 weeks", "evasion_targets": ["velocity checks"], "backstory": "Small-scale domestic operation, previously caught, highly cautious.", "resources": "8 recruited mules, no crypto, single city"},
+                {"persona_id": "P-03", "name": "Maria Chen", "risk_tolerance": "mid", "operational_scale": "medium", "geographic_scope": "cross-border", "timeline_pressure": "1 week", "evasion_targets": ["CTR thresholds", "new-payee flags"], "backstory": "Mid-level operation using business accounts as cover for layering.", "resources": "Business accounts, 30 mules, partial crypto access"},
+            ]
+        }
+
+    # Critic output
+    if "realism" in content or "critic" in content or "persona_consistency" in content:
+        score = round(random.uniform(6.5, 9.2), 1)
+        return {
+            "realism_score": score,
+            "distinctiveness_score": round(random.uniform(6.0, 8.5), 1),
+            "persona_consistency": True,
+            "label_correctness": True,
+            "feedback": "",
+        }
+
+    # Fraud constructor — any step (persona analysis, planning, profiles, transactions, self-review)
+    # Return a full RawVariant-shaped response for the self-review step
+    now = datetime.now()
+    acct = lambda: f"ACC-{uuid.uuid4().hex[:8].upper()}"
+    a1, a2, a3, a4 = acct(), acct(), acct(), acct()
+    txns = [
+        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=i*8)).isoformat(), "amount": round(random.uniform(3000, 9800), 2), "sender_account_id": [a1,a2,a3][min(i,2)], "receiver_account_id": [a2,a3,a4][min(i,2)], "merchant_category": "wire_transfer", "channel": "wire_domestic", "is_fraud": True, "fraud_role": f"hop_{i+1}_of_3"}
+        for i in range(3)
+    ] + [
+        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=2)).isoformat(), "amount": round(random.uniform(20, 85), 2), "sender_account_id": a2, "receiver_account_id": acct(), "merchant_category": "grocery", "channel": "card_debit", "is_fraud": False, "fraud_role": "cover_activity"}
+    ]
+    return {
+        "variant_id": f"V-{uuid.uuid4().hex[:6].upper()}",
+        "fraud_type": "mule_network",
+        "persona_id": "P-01",
+        "strategy_description": "Mock: 3-hop domestic chain with burst timing. Funds moved via same-day wire transfers structured below $10K CTR threshold. Cover activity via grocery purchases on mule accounts.",
+        "variant_parameters": {"hop_count": 3, "timing_interval_hrs": 8, "amount_logic": "structured_below_10k", "cover_activity": "low", "topology": "chain", "extraction_method": "wire", "geographic_spread": "domestic"},
+        "transactions": txns,
+        "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions"],
+        "fraud_indicators_present": ["rapid sequential transfers", "round-trip timing pattern", "new payee relationships"],
+    }
 
 
 def _extract_json_from_text(text: str) -> dict | None:
