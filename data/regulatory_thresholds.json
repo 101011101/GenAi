@@ -1,0 +1,78 @@
+{
+  "_source": "FinCEN, FINTRAC, FCA, EBA, and respective national AML/CTF guidance. Thresholds current as of 2025. For synthetic data generation purposes only.",
+  "_notes": "These thresholds are publicly known and criminal organizations design their operations explicitly around them. Structuring (breaking transactions to stay below reporting thresholds) is itself a federal crime in the US and equivalent offences exist in all listed jurisdictions.",
+  "US": {
+    "CTR_threshold": 10000,
+    "CTR_description": "Currency Transaction Report — mandatory filing for cash transactions exceeding $10,000 in a single day, by any combination of transactions. Filed by financial institutions with FinCEN.",
+    "structuring_threshold": 10000,
+    "structuring_law": "31 U.S.C. § 5324 — it is a federal crime to structure transactions specifically to avoid the $10,000 reporting requirement, even if the underlying funds are legitimate.",
+    "SAR_threshold": 5000,
+    "SAR_description": "Suspicious Activity Report — mandatory filing for transactions of $5,000+ that the institution knows, suspects, or has reason to suspect involve illicit funds or have no lawful purpose. No minimum for transactions involving known bad actors.",
+    "BSA_recordkeeping_threshold": 3000,
+    "BSA_recordkeeping_description": "Banks must keep records of cash purchases of monetary instruments ($3,000–$10,000). The Bank Secrecy Act also requires records for wire transfers of $3,000+.",
+    "CMIR_threshold": 10000,
+    "CMIR_description": "Currency or Monetary Instrument Report — required when transporting >$10,000 cash or monetary instruments across US borders.",
+    "beneficial_ownership_threshold": 25,
+    "beneficial_ownership_description": "FinCEN Customer Due Diligence rule: institutions must identify natural persons owning 25%+ of legal entity customers.",
+    "common_evasion_amounts": [9900, 9800, 9500, 4900, 4800]
+  },
+  "CA": {
+    "LCTR_threshold": 10000,
+    "LCTR_currency": "CAD",
+    "LCTR_description": "Large Cash Transaction Report — mandatory for cash transactions of CAD $10,000+ in a single transaction or multiple related transactions within 24 hours.",
+    "EFTR_threshold": 10000,
+    "EFTR_currency": "CAD",
+    "EFTR_description": "Electronic Funds Transfer Report — mandatory for international EFTs of CAD $10,000+ sent or received. Covers SWIFT, ACH, and Interac cross-border.",
+    "STR_description": "Suspicious Transaction Report — no minimum threshold; must be filed when reasonable grounds exist to suspect money laundering or terrorist financing.",
+    "FINTRAC_24hr_aggregation": true,
+    "FINTRAC_24hr_description": "Multiple transactions by or on behalf of the same individual totaling CAD $10,000+ within 24 hours must be treated as a single reportable transaction.",
+    "common_evasion_amounts": [9900, 9750, 9500]
+  },
+  "UK": {
+    "SAR_threshold": 0,
+    "SAR_description": "Suspicious Activity Report — no minimum threshold in the UK. Any suspicion of money laundering triggers a mandatory reporting obligation under the Proceeds of Crime Act 2002 (POCA). Failure to report is a criminal offence.",
+    "DAML_available": true,
+    "DAML_description": "Defence Against Money Laundering — consent request sent to the NCA (National Crime Agency) before processing a transaction believed to involve criminal property. Provides legal protection if NCA consents.",
+    "NCA_moratorium_days": 7,
+    "NCA_moratorium_description": "NCA has 7 working days to respond to a DAML request; can extend to 31 days. Transaction must be paused during moratorium.",
+    "cash_payment_limit": 10000,
+    "cash_payment_limit_description": "From January 2024: cash payments above £10,000 for goods are prohibited under UK AMLD implementation.",
+    "beneficial_ownership_PSC_threshold": 25,
+    "PEP_enhanced_due_diligence": true
+  },
+  "EU": {
+    "AMLD_threshold": 10000,
+    "AMLD_description": "EU Anti-Money Laundering Directive (6AMLD) — cash transactions of €10,000+ trigger enhanced due diligence obligations for obligated entities.",
+    "cash_payment_limit": 10000,
+    "cash_payment_limit_description": "EU Regulation 2024/1624 limits cash payments to €10,000 across the EU from 2027. Several member states have lower limits already (e.g. France €1,000 for professionals).",
+    "wire_transfer_regulation": "Regulation (EU) 2015/847 — complete payer and payee information required on all wire transfers. Missing information triggers enhanced scrutiny.",
+    "STR_description": "Suspicious Transaction Report — threshold varies by member state but 6AMLD mandates reporting of any suspicious activity regardless of amount.",
+    "beneficial_ownership_threshold": 25,
+    "UBO_register": true,
+    "UBO_register_description": "All EU member states must maintain Ultimate Beneficial Owner registers accessible to authorities and, in most cases, the public."
+  },
+  "AU": {
+    "TTR_threshold": 10000,
+    "TTR_currency": "AUD",
+    "TTR_description": "Threshold Transaction Report — AUSTRAC requires reporting of cash transactions AUD $10,000+.",
+    "SMR_description": "Suspicious Matter Report — no minimum threshold; filed with AUSTRAC for any suspicious matter.",
+    "IFTIe_threshold": 0,
+    "IFTIe_description": "International Funds Transfer Instructions — ALL international transfers (any amount) must be reported to AUSTRAC regardless of value.",
+    "digital_currency_exchanges": "Australian DCEs are reporting entities under AML/CTF Act — must file TTRs and SMRs same as banks."
+  },
+  "SG": {
+    "CTR_threshold": 20000,
+    "CTR_currency": "SGD",
+    "CTR_description": "Cash Transaction Report — MAS requires filing for cash transactions SGD $20,000+.",
+    "STR_threshold": 0,
+    "STR_description": "Suspicious Transaction Report — no minimum; Suspicious Transaction Reporting Office (STRO) receives reports under the Corruption, Drug Trafficking and Other Serious Crimes Act.",
+    "notes": "Singapore is a major financial hub with significant cross-border flows. Gateway jurisdiction for Southeast Asian and China-linked fraud networks."
+  },
+  "HK": {
+    "DTCR_threshold": 120000,
+    "DTCR_currency": "HKD",
+    "DTCR_description": "Cash reporting threshold approximately HKD $120,000 (≈ USD $15,000). JFIU (Joint Financial Intelligence Unit) receives STRs.",
+    "STR_threshold": 0,
+    "notes": "HKMA supervised institutions. High-volume cross-border flows with mainland China complicate tracing. Common transit jurisdiction for APAC fraud networks."
+  }
+}

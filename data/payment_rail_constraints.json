@@ -1,0 +1,96 @@
+{
+  "ACH": {
+    "max_per_transaction": 25000,
+    "settlement_hours": 24,
+    "same_day_available": true,
+    "same_day_max": 1000000,
+    "reversible": true,
+    "reversal_window_hours": 24,
+    "notes": "Standard ACH: next-business-day. Same-day ACH available for premium; settling weekdays only. Nacha rules apply. Returns possible up to 60 days for unauthorized debits (R10)."
+  },
+  "Zelle": {
+    "max_per_transaction": 2500,
+    "settlement_hours": 0,
+    "instant": true,
+    "reversible": false,
+    "daily_limit": 5000,
+    "notes": "Limits vary by bank: Chase $2,500/transaction, $5,000/day; Bank of America $2,500/day. Instant settlement means funds are immediately accessible. No chargeback path for authorized push payments — key AML vulnerability."
+  },
+  "wire_domestic": {
+    "max_per_transaction": 100000000,
+    "settlement_hours": 4,
+    "cutoff_hour": 17,
+    "reversible": false,
+    "notes": "Fedwire. Same-day if sent before 5pm ET. No practical max (Fedwire handles RTGS). Recall possible only with beneficiary bank cooperation — not guaranteed. Commonly used for extraction."
+  },
+  "wire_international_SWIFT": {
+    "max_per_transaction": 100000000,
+    "settlement_days": 3,
+    "reversible": false,
+    "correspondent_banks": true,
+    "notes": "3–5 business day settlement typical for SWIFT; correspondent bank fees $15–$50. SWIFT gpi enables same-day for premium corridors. Jurisdictions with FATF grey/blacklist status add delays. AML screening at each correspondent hop."
+  },
+  "Interac_eTransfer": {
+    "max_per_transaction": 3000,
+    "settlement_hours": 0,
+    "instant": true,
+    "reversible": false,
+    "jurisdiction": "Canada",
+    "daily_limit": 10000,
+    "weekly_limit": 20000,
+    "notes": "Canadian domestic. Autodeposit makes cancellation impossible after acceptance. No chargeback for authorized push. Limits vary by FI: RBC up to $3,000/transaction; limit increases possible for business accounts."
+  },
+  "card_debit": {
+    "max_per_transaction": 2500,
+    "settlement_hours": 2,
+    "reversible": true,
+    "chargeback_window_days": 60,
+    "notes": "Visa/Mastercard debit interchange; authorization is instant, settlement T+1 to T+2. $2,500 typical daily POS limit; ATM sub-limits apply separately. Chargebacks possible under Reg E for unauthorized transactions."
+  },
+  "card_credit": {
+    "max_per_transaction": 10000,
+    "settlement_hours": 48,
+    "reversible": true,
+    "chargeback_window_days": 120,
+    "notes": "Visa/Mastercard credit; authorization instant, settlement T+1 to T+2. Credit limit determines effective max. Chargebacks under Reg Z up to 120 days. CNP (card-not-present) fraud more common in synthetic ID scenarios."
+  },
+  "RTP_FedNow": {
+    "max_per_transaction": 500000,
+    "settlement_hours": 0,
+    "instant": true,
+    "reversible": false,
+    "notes": "FedNow and RTP (The Clearing House): instant, 24/7/365. $500,000 per-transaction max. No recall once accepted. Rapidly growing adoption — increasingly used in fraud scenarios due to irreversibility and speed."
+  },
+  "crypto_bitcoin": {
+    "max_per_transaction": null,
+    "settlement_minutes": 60,
+    "confirmations_required": 6,
+    "reversible": false,
+    "notes": "No per-transaction limit. ~10-minute block times; 6 confirmations (~60 min) considered final. High-value transactions may wait for more confirmations. Chain analytics firms (Chainalysis, Elliptic) can trace flows; mixers/tumblers used for obfuscation."
+  },
+  "crypto_monero": {
+    "max_per_transaction": null,
+    "settlement_minutes": 20,
+    "reversible": false,
+    "notes": "Privacy coin; ring signatures and stealth addresses make tracing practically impossible. Preferred for extraction in sophisticated operations. Some exchanges refuse XMR deposits due to AML pressure."
+  },
+  "crypto_stablecoin_USDC_USDT": {
+    "max_per_transaction": null,
+    "settlement_minutes": 1,
+    "reversible": false,
+    "notes": "USDT/USDC on Ethereum/TRON; near-instant on TRON (low fees). USDT issuer (Tether) can freeze flagged addresses. USDC (Circle) also has freeze capability. Transparent on-chain but stable value makes them preferred for large layering."
+  },
+  "cash_ATM": {
+    "max_per_transaction": 1000,
+    "settlement_hours": 0,
+    "reversible": false,
+    "daily_limit": 3000,
+    "notes": "ATM daily limits typically $500–$1,000 for personal accounts, up to $3,000 for premium. Cash leaves no counterparty record. CTR required for cash transactions >$10,000. Structuring (multiple withdrawals to stay below CTR) is a federal crime under 31 U.S.C. § 5324."
+  },
+  "prepaid_card": {
+    "max_per_transaction": 500,
+    "max_load_per_day": 2000,
+    "reversible": false,
+    "notes": "Vanilla Visa, Green Dot, etc. Minimal KYC for low-value cards (<$500 load). Used to break traceability — loaded with mule funds and spent or converted. BSA regulations now require ID for reloadable cards."
+  }
+}

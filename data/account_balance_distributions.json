@@ -1,0 +1,103 @@
+{
+  "_source": "Federal Reserve Survey of Consumer Finances (SCF) 2022 and FDIC National Survey of Unbanked and Underbanked Households 2021. Values in USD.",
+  "_notes": "Distributions represent typical ranges for legitimate accounts. Fraudulent mule accounts tend to show sudden balance spikes inconsistent with the account holder's profile — a signal for anomaly detection.",
+  "checking_standard": {
+    "description": "Standard personal checking account — majority of US households",
+    "mean_balance": 5700,
+    "median_balance": 1200,
+    "p25": 250,
+    "p75": 4500,
+    "p95": 24000,
+    "notes": "Highly right-skewed distribution — median much lower than mean. Most accounts maintain low balances with occasional payroll spikes."
+  },
+  "checking_premium": {
+    "description": "Premium or relationship checking — higher income households, minimum balance requirements",
+    "mean_balance": 22000,
+    "median_balance": 8500,
+    "p25": 3000,
+    "p75": 28000,
+    "p95": 95000,
+    "notes": "Wider variance. These accounts are targets for account takeover because large transactions are less anomalous."
+  },
+  "savings_standard": {
+    "description": "Standard savings account — FDIC-insured, lower APY",
+    "mean_balance": 8200,
+    "median_balance": 1500,
+    "p25": 300,
+    "p75": 6000,
+    "p95": 40000,
+    "notes": "Used for emergency funds; typical balance accumulates slowly from recurring transfers."
+  },
+  "savings_high_yield": {
+    "description": "High-yield savings — online banks (Marcus, Ally, SoFi), earns 4–5% APY",
+    "mean_balance": 35000,
+    "median_balance": 12000,
+    "p25": 3000,
+    "p75": 50000,
+    "p95": 180000,
+    "notes": "Attracts higher-income savers. Unusual for frequent withdrawals — deviations are high-signal anomalies."
+  },
+  "student_checking": {
+    "description": "Student checking — typically 18–24 age bracket, low or no minimum balance",
+    "mean_balance": 800,
+    "median_balance": 250,
+    "p25": 50,
+    "p75": 1200,
+    "p95": 5000,
+    "notes": "Very low balances. Student accounts receiving large ACH credits are immediately anomalous. Commonly recruited as mule accounts due to financial vulnerability."
+  },
+  "business_checking_small": {
+    "description": "Small business checking — sole proprietors, LLCs under $1M annual revenue",
+    "mean_balance": 18000,
+    "median_balance": 6000,
+    "p25": 1500,
+    "p75": 22000,
+    "p95": 85000,
+    "notes": "Higher transaction velocity than personal accounts — legitimate cover for frequent large transfers. Business accounts are harder to flag on velocity alone."
+  },
+  "business_checking_medium": {
+    "description": "Medium business checking — companies $1M–$50M revenue, payroll accounts",
+    "mean_balance": 120000,
+    "median_balance": 45000,
+    "p25": 12000,
+    "p75": 150000,
+    "p95": 600000,
+    "notes": "Very high transaction volume and amounts. Wire transfers in the $50,000–$250,000 range are normal. Least anomalous for large pass-through transfers — highest mule value if compromised."
+  },
+  "money_market_account": {
+    "description": "Money market account — higher interest, limited monthly withdrawals",
+    "mean_balance": 28000,
+    "median_balance": 10000,
+    "p25": 2000,
+    "p75": 40000,
+    "p95": 150000,
+    "notes": "Regulation D limits 6 withdrawals/month; excess triggers fees. Unusual withdrawal velocity is flagged automatically by most core banking systems."
+  },
+  "senior_checking": {
+    "description": "Checking accounts for adults 65+ — often fixed-income recipients",
+    "mean_balance": 9500,
+    "median_balance": 3500,
+    "p25": 500,
+    "p75": 12000,
+    "p95": 55000,
+    "notes": "Regular recurring income (Social Security, pension). Deviations from monthly patterns are high-signal. Frequently targeted in romance scams and authorized push payment fraud."
+  },
+  "recently_opened_personal": {
+    "description": "Personal checking account opened within the last 90 days",
+    "mean_balance": 350,
+    "median_balance": 100,
+    "p25": 25,
+    "p75": 500,
+    "p95": 3000,
+    "notes": "Very low baseline balance. New accounts receiving large transfers within days of opening are one of the strongest AML red flags. Velocity rules typically apply stricter limits for the first 90 days."
+  },
+  "synthetic_identity_account": {
+    "description": "Account opened using a synthetic identity (fabricated SSN + real address/DOB combination)",
+    "mean_balance": 450,
+    "median_balance": 200,
+    "p25": 50,
+    "p75": 800,
+    "p95": 4000,
+    "notes": "Synthetic ID accounts often show a 'build-up' pattern: small activity for 6–18 months to establish credit history, then rapid extraction. Account age and credit bureau thin-file status are key signals."
+  }
+}
