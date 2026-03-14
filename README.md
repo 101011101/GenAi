@@ -1,81 +1,90 @@
-## FraudGen — Synthetic Fraud Variant Generator
+FraudGen — Synthetic Fraud Variant Generator
+Bridging the Gap in Machine Learning Fraud Detection via Agentic Simulation
 
-FraudGen is a hackathon prototype for **TD Best AI Hack — Detect Financial Fraud**.
+FraudGen is a high-fidelity simulation framework designed for the TD Best AI Hack — Detect Financial Fraud. It addresses the "cold start" problem in financial security: the difficulty of training machine learning models to detect novel fraud patterns that have not yet occurred in historical datasets.
 
-It simulates a **Red Team of AI agents** that generates realistic, labeled **synthetic fraud variants** to help banks close the “known unknown” gap in ML-based fraud detection. The output is a structured dataset that can be fed into an institution’s existing fraud models.
+By utilizing a coordinated Red Team of autonomous AI agents, FraudGen generates structured, labeled synthetic datasets that mirror the complexity of modern financial crimes, allowing institutions to strengthen their defenses against "known unknown" threats.
 
-### High‑Level Workflow
+High-Level Workflow and Agent Logic
+FraudGen employs an agentic architecture to ensure that synthetic data is not just random noise, but a collection of logical, adversarial transaction sequences.
 
-- **Describe a fraud pattern** in natural language (e.g., “layered 3‑hop mule account network with burst withdrawals”).
-- **Orchestrator agent** decomposes the description into variation dimensions (hop count, timing, topology, cover behaviour, etc.) and proposes coverage cells.
-- **Sub‑agent fleet** explores those cells and generates full synthetic transaction sequences per variant.
-- **Console UI** lets you monitor progress, inspect variants, visualize networks/coverage, and export a training dataset.
+Natural Language Specification: Users define a fraud hypothesis in plain English (e.g., "A sophisticated account takeover followed by rapid layering through multiple internal accounts and a final external wire transfer to a high-risk jurisdiction").
 
-### Requirements
+The Orchestrator Agent: This lead agent acts as the system architect. it parses the natural language input into a structured simulation plan, identifying key dimensions such as network topology, transaction velocity, obfuscation techniques, and "noise" injection.
 
-- **Python**: 3.10+ recommended
-- **Dependencies**: managed via `requirements.txt` (typical stack includes `streamlit`, `anthropic`, `pydantic`, `pandas`, `networkx`, `plotly`, etc.)
-- **Anthropic API key**:
-  - Set `ANTHROPIC_API_KEY` in your environment for live calls.
-  - Or set `FRAUDGEN_MOCK=1` to use the built‑in mock mode (no external API calls, useful for demos and development).
+The Generation Fleet: A specialized swarm of sub-agents executes the plan. Each agent is responsible for simulating a specific "entity" or "actor" within the fraud network, ensuring that transaction timestamps, amounts, and metadata (IP addresses, device IDs) remain consistent and realistic.
 
-### Setup
+The Command Center: A unified Console UI built in Streamlit provides real-time visibility into the generation process, allowing users to inspect the logic behind specific variants before they are finalized.
 
-```bash
+Technical Requirements
+Python: Version 3.10 or higher.
+
+Core Libraries:
+
+Generation: anthropic (Claude 3/3.5 models), pydantic (Data validation).
+
+Processing: pandas (Data manipulation), numpy (Statistical modeling).
+
+Visualization: networkx (Graph theory/Topology), plotly (Interactive charting).
+
+Interface: streamlit (Web-based console).
+
+API Configuration:
+
+Live Mode: Requires an ANTHROPIC_API_KEY for high-reasoning synthetic generation.
+
+Mock Mode: Enable FRAUDGEN_MOCK=1 to run the system locally for testing, UI development, or demonstrations without external API costs.
+
+Setup and Configuration
+Bash
+# Clone the repository and enter the directory
 git clone <this-repo-url>
 cd GenAi
+
+# Initialize a virtual environment for dependency isolation
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
+
+# Install the required software stack
 pip install -r requirements.txt
-```
+Environment Variables:
 
-Configure your environment:
+Bash
+# Option A: Real-world generation (Requires Anthropic credits)
+export ANTHROPIC_API_KEY="sk-ant-..."
 
-```bash
-export ANTHROPIC_API_KEY="sk-ant-..."   # for real runs
-# or
-export FRAUDGEN_MOCK=1                 # for fully local mock mode
-```
+# Option B: Development/Demo mode (No cost, local data generation)
+export FRAUDGEN_MOCK=1
+The Interactive Console
+Launch the FraudGen Command Center to manage the simulation lifecycle:
 
-### Running the App
-
-FraudGen ships with a Streamlit console defined in `app.py`.
-
-```bash
+Bash
 streamlit run app.py
-```
+1. Configuration Phase
+Users can tune the "Fidelity vs. Variety" slider. Higher fidelity results in more computationally expensive reasoning to ensure transactions bypass basic heuristic filters, while higher variety explores a wider range of edge cases and topologies.
 
-Then open the URL Streamlit prints (usually `http://localhost:8501`) in your browser.
+2. Live Monitoring Phase
+The console displays a real-time log of agent activity. You can witness the "thought process" of the Orchestrator as it adjusts parameters to meet the user's fraud description. Users can pause the fleet at any time to inspect a specific transaction sequence.
 
-### Using the Console
+3. Intelligence and Export Phase
+Network Graphs: Visualize the flow of funds through mule accounts and shell companies using interactive 2D/3D plots.
 
-- **Input phase**:
-  - Enter a natural‑language description of the fraud type.
-  - Choose number of variants, fidelity level, and parallelism.
-  - (Optional) Adjust advanced orchestrator controls in the side panel.
-- **Running phase**:
-  - Watch variants being generated and controlled (pause/resume/stop).
-  - See progress and current phase in the sidebar.
-- **Results phase**:
-  - Review aggregate stats for generated variants.
-  - Inspect network graphs and coverage matrix.
-  - Browse the synthetic dataset and **export** CSV/JSON files for ML training.
+Coverage Matrix: See how well the generated data covers different "risk dimensions" (e.g., geography, time-of-day, amount ranges).
 
-You can also trigger a preconfigured **demo run** from the main screen or by appending `?demo=true` to the Streamlit URL.
+Data Synthesis: Export the final results into standardized CSV or JSON formats, ready for ingestion by Scikit-Learn, PyTorch, or existing enterprise fraud engines.
 
-### Project Docs
+Internal Architecture and Documentation
+For developers looking to extend the agentic logic or integrate new LLM providers, refer to the following internal documentation:
 
-For a deeper architecture and product overview, see:
+CLAUDE.md: Contains specific system prompts and formatting instructions for the AI agents to ensure consistent data output.
 
-- `CLAUDE.md` — guidance for AI agents working on this repo
-- `PRD/01_problem_and_solution.md` — problem statement and solution outline
-- `PRD/05_architecture_draft.md`
-- `PRD/06_api_and_console_draft.md`
-- `PRD/07_user_flow_and_console.md`
+PRD/05_architecture_draft.md: Breaks down the state management and communication protocols between the Orchestrator and the Generation Fleet.
 
-### Notes & Limitations
+PRD/06_api_and_console_draft.md: Technical specifications for the Streamlit components and API endpoints.
 
-- This is a **hackathon‑stage prototype**; interfaces and internals may change rapidly.
-- Generated data is **synthetic** and should be validated and calibrated before use in production risk models.
-- The system is designed to be **additive** to existing fraud detection pipelines, not a replacement.
+Notes and Safety
+Prototype Status: This tool is a hackathon-stage prototype. While the generation logic is robust, the internal interfaces are subject to breaking changes as the project evolves.
 
+Synthetic Nature: All data produced by FraudGen is mathematically generated. It contains no PII (Personally Identifiable Information) and is intended for model training and stress-testing only.
+
+Integration: This system is designed to complement existing fraud detection pipelines by providing "Adversarial Data Augmentation." It is not a replacement for real-time monitoring systems.
