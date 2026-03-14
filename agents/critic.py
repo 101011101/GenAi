@@ -49,10 +49,12 @@ class CriticAgent:
       - Distinctiveness (score 1–10)
     """
 
-    _MODEL = "claude-sonnet-4-6"
+    _MODEL = "claude-haiku-4-5-20251001"
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         self._client = LLMClient()
+        if model:
+            self._MODEL = model
 
     async def run(
         self,

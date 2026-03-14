@@ -65,6 +65,44 @@ def _load_system_prompt() -> str:
 # Agent class
 # ---------------------------------------------------------------------------
 
+_ORCHESTRATOR_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "variation_dimensions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "values": {"type": "array", "items": {}},
+                },
+                "required": ["name", "description", "values"],
+            },
+            "description": "Axes along which this fraud type varies structurally.",
+        },
+        "coverage_cells": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "cell_id": {"type": "string"},
+                    "dimension_values": {"type": "object"},
+                    "persona_slot": {"type": "integer"},
+                },
+                "required": ["cell_id", "dimension_values", "persona_slot"],
+            },
+            "description": "One sub-agent assignment per planned variant.",
+        },
+        "suggested_persona_count": {
+            "type": "integer",
+            "description": "How many distinct criminal profiles to generate.",
+        },
+    },
+    "required": ["variation_dimensions", "coverage_cells", "suggested_persona_count"],
+}
+
+
 class OrchestratorAgent:
     """Decomposes a fraud description into a structured variation plan.
 
@@ -86,11 +124,12 @@ class OrchestratorAgent:
 
         user_message = _build_user_message(config)
 
-        raw: dict = await self._client.call_with_thinking(
+        raw: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=[{"role": "user", "content": user_message}],
-            model="claude-opus-4-6",
-            budget_tokens=5000,
+            model="claude-haiku-4-5-20251001",
+            response_schema=_ORCHESTRATOR_RESPONSE_SCHEMA,
+            timeout=60.0,
         )
 
         return _parse_output(raw, config)

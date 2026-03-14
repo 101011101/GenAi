@@ -95,42 +95,53 @@ def render_coverage_matrix(matrix_display_dict: dict | None) -> None:
 
     st.markdown("")  # spacer
 
-    # --- Build 2D grid if exactly 2 dimensions are available ---
+    # --- Pick the two best dimensions for a 2D grid ---
+    # Prefer hop_count and topology as primary axes (most visually meaningful
+    # for mule network fraud). Fall back to first two dimensions if not found.
+    _PREFERRED_AXES = ["hop_count", "topology"]
+
     if len(dimensions) >= 2:
-        dim_x = dimensions[0]
-        dim_y = dimensions[1]
+        dim_by_name = {d.get("name"): d for d in dimensions}
+        if all(n in dim_by_name for n in _PREFERRED_AXES):
+            dim_x = dim_by_name[_PREFERRED_AXES[0]]
+            dim_y = dim_by_name[_PREFERRED_AXES[1]]
+        else:
+            dim_x = dimensions[0]
+            dim_y = dimensions[1]
+
         x_values = dim_x.get("values", [])
         y_values = dim_y.get("values", [])
         x_name = dim_x.get("name", "dim_0")
         y_name = dim_y.get("name", "dim_1")
 
-        # Index cells by dimension values for fast lookup
-        cell_index: dict[tuple, dict] = {}
+        # Index cells by (x, y) — aggregate when multiple cells map to same slot
+        cell_index: dict[tuple, list[dict]] = {}
         for cell in cells:
             dv = cell.get("dimension_values", {})
-            key = (dv.get(x_name), dv.get(y_name))
-            cell_index[key] = cell
+            key = (str(dv.get(x_name)), str(dv.get(y_name)))
+            cell_index.setdefault(key, []).append(cell)
+
+        # Build as a single HTML table for reliable grid layout
+        html_rows = []
 
         # Header row
-        col_widths = [2] + [1] * len(x_values)
-        header_cols = st.columns(col_widths)
-        with header_cols[0]:
-            st.markdown(f"**{y_name}** \\ **{x_name}**")
-        for i, xv in enumerate(x_values):
-            with header_cols[i + 1]:
-                st.markdown(f"**{xv}**")
+        header = f'<th style="padding:6px 12px;text-align:left;font-size:0.85em;">{y_name} \\ {x_name}</th>'
+        for xv in x_values:
+            header += f'<th style="padding:6px 12px;text-align:center;font-size:0.85em;">{xv}</th>'
+        html_rows.append(f"<tr>{header}</tr>")
 
         # Data rows
         for yv in y_values:
-            row_cols = st.columns(col_widths)
-            with row_cols[0]:
-                st.markdown(f"**{yv}**")
-            for i, xv in enumerate(x_values):
-                key = (xv, yv)
-                cell = cell_index.get(key)
-                if cell:
-                    status = cell.get("status", "unassigned")
-                    variant_count = cell.get("variant_count", 0)
+            row_html = f'<td style="padding:6px 12px;font-weight:bold;font-size:0.85em;">{yv}</td>'
+            for xv in x_values:
+                key = (str(xv), str(yv))
+                slot_cells = cell_index.get(key, [])
+                if slot_cells:
+                    # Pick the best status: completed > in_progress > rejected > unassigned
+                    priority = {"completed": 3, "in_progress": 2, "rejected": 1, "unassigned": 0}
+                    best = max(slot_cells, key=lambda c: priority.get(c.get("status", "unassigned"), 0))
+                    status = best.get("status", "unassigned")
+                    variant_count = sum(c.get("variant_count", 0) for c in slot_cells)
                     sym, color = _STATUS_CONFIG.get(status, ("░░", "#555555"))
                     tooltip = (
                         f"{x_name}={xv}, {y_name}={yv} | "
@@ -141,29 +152,37 @@ def render_coverage_matrix(matrix_display_dict: dict | None) -> None:
                     sym, color = _STATUS_CONFIG["unassigned"]
                     tooltip = f"{x_name}={xv}, {y_name}={yv} | No cell defined"
 
-                with row_cols[i + 1]:
-                    st.markdown(
-                        _cell_html(sym, color, tooltip),
-                        unsafe_allow_html=True,
-                    )
+                row_html += (
+                    f'<td title="{tooltip}" style="'
+                    f"text-align:center;padding:6px 12px;"
+                    f"font-family:monospace;font-size:1.4em;"
+                    f'color:{color};cursor:default;">'
+                    f"{sym}</td>"
+                )
+            html_rows.append(f"<tr>{row_html}</tr>")
+
+        table_html = (
+            '<table style="border-collapse:collapse;margin-top:4px;">'
+            + "".join(html_rows)
+            + "</table>"
+        )
+        st.markdown(table_html, unsafe_allow_html=True)
+
     else:
         # Fallback: flat list of cells when dimension structure is unexpected
-        st.markdown("**All cells:**")
-        cells_per_row = 8
-        rows = [cells[i : i + cells_per_row] for i in range(0, len(cells), cells_per_row)]
-        for row_cells in rows:
-            cols = st.columns(len(row_cells))
-            for col, cell in zip(cols, row_cells):
-                status = cell.get("status", "unassigned")
-                variant_count = cell.get("variant_count", 0)
-                dv = cell.get("dimension_values", {})
-                sym, color = _STATUS_CONFIG.get(status, ("░░", "#555555"))
-                tooltip = f"{dv} | {status} | {variant_count} variants"
-                with col:
-                    st.markdown(
-                        _cell_html(sym, color, tooltip),
-                        unsafe_allow_html=True,
-                    )
+        flat_html = ""
+        for cell in cells:
+            status = cell.get("status", "unassigned")
+            dv = cell.get("dimension_values", {})
+            sym, color = _STATUS_CONFIG.get(status, ("░░", "#555555"))
+            tooltip = f"{dv} | {status}"
+            flat_html += (
+                f'<span title="{tooltip}" style="'
+                f"font-family:monospace;font-size:1.4em;"
+                f'color:{color};padding:2px 4px;">'
+                f"{sym}</span> "
+            )
+        st.markdown(flat_html, unsafe_allow_html=True)
 
     # Low-saturation warning
     if total_cells > 0 and pct < 40:

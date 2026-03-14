@@ -63,6 +63,7 @@ st.session_state.setdefault("personas", [])
 st.session_state.setdefault("approved_variants", [])
 st.session_state.setdefault("demo_mode", False)
 st.session_state.setdefault("run_thread", None)
+st.session_state.setdefault("coverage_matrix", None)
 
 # ---------------------------------------------------------------------------
 # Demo mode detection via query params
@@ -85,21 +86,29 @@ def _start_run(config: RunConfig) -> None:
     st.session_state.run_state = run_state
     st.session_state.personas = personas_out
     st.session_state.approved_variants = approved_variants
+    st.session_state.coverage_matrix = None
     st.session_state.phase = "running"
 
+    # Shared list to capture the CoverageMatrix from the runner thread
+    matrix_out: list = []
+
     runner = PipelineRunner()
+
+    async def _run_and_capture() -> None:
+        await runner.run(
+            config,
+            run_state,
+            personas_out=personas_out,
+            approved_variants_out=approved_variants,
+            matrix_out=matrix_out,
+        )
+
     thread = threading.Thread(
         target=asyncio.run,
-        args=(
-            runner.run(
-                config,
-                run_state,
-                personas_out=personas_out,
-                approved_variants_out=approved_variants,
-            ),
-        ),
+        args=(_run_and_capture(),),
         daemon=True,
     )
+    st.session_state._matrix_out = matrix_out
     thread.start()
     st.session_state.run_thread = thread
     st.rerun()
@@ -279,7 +288,7 @@ try:
         with btn_col:
             if st.button("Start New Run", use_container_width=True):
                 # Clear run-specific session state and go back to input
-                for key in ("run_state", "run_folder", "personas", "approved_variants", "run_thread", "demo_mode"):
+                for key in ("run_state", "run_folder", "personas", "approved_variants", "run_thread", "demo_mode", "coverage_matrix", "_matrix_out"):
                     st.session_state[key] = (
                         [] if key in ("personas", "approved_variants") else
                         False if key == "demo_mode" else
@@ -311,40 +320,11 @@ try:
 
         st.divider()
 
-        # 3. Coverage matrix
-        # Try to load matrix display dict from the run folder's variants.json,
-        # or fall back to a minimal representation derived from run_state.
+        # 3. Coverage matrix — use the real CoverageMatrix captured from the runner
         matrix_display_dict: dict | None = None
-        if run_folder:
-            variants_json_path = os.path.join(run_folder, "variants.json")
-            if os.path.isfile(variants_json_path):
-                try:
-                    import json as _json
-                    with open(variants_json_path, "r", encoding="utf-8") as f:
-                        _variants_data = _json.load(f)
-                    # Build a minimal matrix display dict from the saved variants
-                    if isinstance(_variants_data, list) and _variants_data:
-                        cells = []
-                        for v in _variants_data:
-                            params = v.get("variant_parameters", {}) or {}
-                            cells.append({
-                                "cell_id": v.get("variant_id", "?"),
-                                "dimension_values": {
-                                    "hop_count": str(params.get("hop_count", "?")),
-                                    "timing": str(params.get("timing_pattern", params.get("timing", "?"))),
-                                },
-                                "status": "completed",
-                                "variant_count": 1,
-                            })
-                        matrix_display_dict = {
-                            "dimensions": [
-                                {"name": "hop_count", "values": sorted({c["dimension_values"]["hop_count"] for c in cells})},
-                                {"name": "timing", "values": sorted({c["dimension_values"]["timing"] for c in cells})},
-                            ],
-                            "cells": cells,
-                        }
-                except Exception:
-                    matrix_display_dict = None
+        matrix_list = getattr(st.session_state, "_matrix_out", None) or []
+        if matrix_list:
+            matrix_display_dict = matrix_list[0].to_display_dict()
 
         render_coverage_matrix(matrix_display_dict)
 

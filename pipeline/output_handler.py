@@ -43,6 +43,7 @@ class OutputHandler:
         run_config,
         run_state: RunState,
         run_start_time: datetime | None = None,
+        coverage_saturation_pct: float = 0.0,
     ) -> str:
         """
         Write all six output files for a completed run.
@@ -135,9 +136,7 @@ class OutputHandler:
             sum(critic_scores) / len(critic_scores) if critic_scores else 0.0
         )
 
-        saturation_pct = 0.0  # populated by runner if CoverageMatrix is available
-        # run_state does not hold a reference to CoverageMatrix; the caller can
-        # pass saturation in via run_state or the caller can post-process the file.
+        saturation_pct = coverage_saturation_pct
 
         run_summary = {
             "variant_count": len(approved_variants),

@@ -31,8 +31,9 @@ class PersonaGeneratorAgent:
     The count and risk distribution are driven by RunConfig settings.
     """
 
-    def __init__(self) -> None:
+    def __init__(self, model: str | None = None) -> None:
         self._client = LLMClient()
+        self._model = model or "claude-haiku-4-5-20251001"
 
     async def run(self, fraud_description: str, config: RunConfig) -> list[Persona]:
         """Generate personas and return them as validated Pydantic objects."""
@@ -44,7 +45,7 @@ class PersonaGeneratorAgent:
         raw: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=[{"role": "user", "content": user_message}],
-            model="claude-sonnet-4-6",
+            model=self._model,
             response_schema=response_schema,
             timeout=60.0,
         )

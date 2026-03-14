@@ -34,6 +34,7 @@ class PipelineRunner:
         run_state: RunState,
         personas_out: list | None = None,
         approved_variants_out: list | None = None,
+        matrix_out: list | None = None,
     ) -> str:
         """Execute a full pipeline run.
 
@@ -60,8 +61,9 @@ class PipelineRunner:
         run_start_time = datetime.now(tz=timezone.utc)
 
         # ------------------------------------------------------------------
-        # Demo mode guard — cap cells and force fidelity level 3
+        # Demo mode guard — cap cells, force fidelity 3, use Haiku for speed
         # ------------------------------------------------------------------
+        self._agent_model = "claude-haiku-4-5-20251001" if config.demo_mode else None
         if config.demo_mode:
             config = config.model_copy(update={"fidelity_level": 3})
 
@@ -85,11 +87,14 @@ class PipelineRunner:
             cells,
         )
 
+        if matrix_out is not None:
+            matrix_out.append(matrix)
+
         # ------------------------------------------------------------------
         # Step 3 — Generate personas
         # ------------------------------------------------------------------
         run_state.set_phase("Generating personas")
-        personas: list[Persona] = await PersonaGeneratorAgent().run(
+        personas: list[Persona] = await PersonaGeneratorAgent(model=self._agent_model).run(
             config.fraud_description, config
         )
 
@@ -168,11 +173,13 @@ class PipelineRunner:
         # ------------------------------------------------------------------
         run_state.set_phase("Compiling dataset")
 
+        saturation = matrix.check_saturation()
         folder_path = OutputHandler().write_run_output(
             approved_variants=approved_variants,
             run_config=config,
             run_state=run_state,
             run_start_time=run_start_time,
+            coverage_saturation_pct=round(saturation * 100, 1),
         )
 
         # ------------------------------------------------------------------
@@ -251,8 +258,8 @@ class PipelineRunner:
             # We create dedicated agent instances per cell so their LLMClient
             # token counters are isolated.  This lets us compute the cost delta
             # per cell by reading cost_usd after all calls complete.
-            constructor = FraudConstructorAgent()
-            critic_agent = CriticAgent()
+            constructor = FraudConstructorAgent(model=self._agent_model)
+            critic_agent = CriticAgent(model=self._agent_model)
 
             feedback: str = extra_feedback
             passed_this_cell = False

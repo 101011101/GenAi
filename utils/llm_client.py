@@ -125,11 +125,15 @@ class LLMClient:
     ) -> str:
         """Stream the response, invoke *on_text* for each text chunk, return full text."""
         if self._mock:
-            text = "Mock strategy: Criminal uses layered transfers to obscure fund origin."
-            for chunk in text.split(" "):
+            mock_data = _mock_response(messages)
+            text = json.dumps(mock_data)
+            # Stream in small chunks to simulate real streaming
+            chunk_size = 80
+            for i in range(0, len(text), chunk_size):
+                chunk = text[i : i + chunk_size]
                 await asyncio.sleep(0.05)
                 if on_text:
-                    on_text(chunk + " ")
+                    on_text(chunk)
             return text
 
         try:
@@ -178,14 +182,11 @@ class LLMClient:
                 self._client.messages.create(
                     model=model,
                     max_tokens=budget_tokens + 8192,
-                    thinking={
-                        "type": "enabled",
-                        "budget_tokens": budget_tokens,
-                    },
+                    thinking={"type": "adaptive"},
                     system=system_prompt,
                     messages=messages,
                 ),
-                timeout=120.0,  # thinking calls can take longer
+                timeout=180.0,  # thinking calls can take longer
             )
             self.total_input_tokens += response.usage.input_tokens
             self.total_output_tokens += response.usage.output_tokens
@@ -296,29 +297,203 @@ def _mock_response(messages: list[dict]) -> dict:
         for m in messages
     ).lower()
 
+    # Critic output — check FIRST because critic messages contain the full variant
+    # JSON (which includes "step" keywords and "persona" text from prior agents).
+    if "critic floor" in content or "score this variant" in content:
+        # ~25% chance of a yellow score (5.5-6.8) to show quality-control story
+        if random.random() < 0.25:
+            realism = round(random.uniform(5.5, 6.8), 1)
+            distinct = round(random.uniform(5.0, 6.5), 1)
+        else:
+            realism = round(random.uniform(6.5, 9.2), 1)
+            distinct = round(random.uniform(6.0, 8.5), 1)
+        return {
+            "realism_score": realism,
+            "distinctiveness_score": distinct,
+            "persona_consistency": True,
+            "label_correctness": True,
+            "feedback": "Improve structural diversity and add more realistic cover activity."
+            if (realism + distinct) / 2 < 7.0
+            else "",
+        }
+
     # Orchestrator output
     if "variation_dimensions" in content or "coverage_cells" in content or "decompose" in content:
+        # Fixed dimension values — used for both cells and grid rendering
+        hop_counts = [2, 3, 4, 6]
+        topologies = ["chain", "fan_out", "hybrid"]
+        extraction_methods = ["wire", "crypto", "cash"]
+        timing_values = [1, 8, 24, 72]
+
+        # Build 12 cells with diverse parameter combos across the grid
+        cell_configs = [
+            {"hop_count": 2, "timing_interval_hrs": 1,  "topology": "chain",   "extraction_method": "wire"},
+            {"hop_count": 2, "timing_interval_hrs": 24, "topology": "fan_out", "extraction_method": "crypto"},
+            {"hop_count": 2, "timing_interval_hrs": 72, "topology": "hybrid",  "extraction_method": "cash"},
+            {"hop_count": 3, "timing_interval_hrs": 8,  "topology": "chain",   "extraction_method": "wire"},
+            {"hop_count": 3, "timing_interval_hrs": 24, "topology": "fan_out", "extraction_method": "crypto"},
+            {"hop_count": 3, "timing_interval_hrs": 72, "topology": "hybrid",  "extraction_method": "cash"},
+            {"hop_count": 4, "timing_interval_hrs": 1,  "topology": "fan_out", "extraction_method": "wire"},
+            {"hop_count": 4, "timing_interval_hrs": 8,  "topology": "hybrid",  "extraction_method": "crypto"},
+            {"hop_count": 4, "timing_interval_hrs": 72, "topology": "chain",   "extraction_method": "cash"},
+            {"hop_count": 6, "timing_interval_hrs": 1,  "topology": "hybrid",  "extraction_method": "wire"},
+            {"hop_count": 6, "timing_interval_hrs": 24, "topology": "chain",   "extraction_method": "crypto"},
+            {"hop_count": 6, "timing_interval_hrs": 72, "topology": "fan_out", "extraction_method": "cash"},
+        ]
+
         cells = []
-        for i in range(6):
+        for i, cfg in enumerate(cell_configs):
             cells.append({
                 "cell_id": f"C-{i+1:02d}",
-                "dimension_values": {
-                    "hop_count": random.choice([2, 3, 4, 5, 6]),
-                    "timing_interval_hrs": random.choice([1, 8, 24, 72]),
-                    "topology": random.choice(["chain", "fan_out", "hybrid"]),
-                    "extraction_method": random.choice(["wire", "crypto", "cash"]),
-                },
+                "dimension_values": cfg,
                 "persona_slot": i % 3,
             })
+
         return {
             "variation_dimensions": [
-                {"name": "hop_count", "description": "Number of mule hops", "range_low": "2", "range_high": "8", "example_values": ["2", "4", "6"]},
-                {"name": "timing_interval_hrs", "description": "Hours between hops", "range_low": "1", "range_high": "168", "example_values": ["1", "24", "72"]},
-                {"name": "topology", "description": "Network shape", "range_low": "chain", "range_high": "fan_out", "example_values": ["chain", "fan_out", "hybrid"]},
-                {"name": "extraction_method", "description": "Final extraction channel", "range_low": "wire", "range_high": "crypto", "example_values": ["wire", "crypto", "cash"]},
+                {"name": "hop_count", "description": "Number of mule hops", "values": hop_counts},
+                {"name": "topology", "description": "Network shape", "values": topologies},
+                {"name": "extraction_method", "description": "Final extraction channel", "values": extraction_methods},
+                {"name": "timing_interval_hrs", "description": "Hours between hops", "values": timing_values},
             ],
             "coverage_cells": cells,
             "suggested_persona_count": 3,
+        }
+
+    # Fraud constructor steps — check BEFORE persona generator because
+    # constructor messages also contain "persona" and "generate" keywords.
+    if "step 1" in content or "step 2" in content or "step 3" in content or "step 4" in content or "step 5" in content:
+        now = datetime.now()
+        acct = lambda: f"ACC-{uuid.uuid4().hex[:8].upper()}"
+
+        # --- Extract cell assignment params from message content ---
+        cell_hop_count = 3
+        cell_topology = "chain"
+        cell_timing = 8
+        cell_extraction = "wire"
+        # Parse dimension_values from the cell assignment JSON in the message
+        import re
+        hop_match = re.search(r'"hop_count"\s*:\s*(\d+)', content)
+        if hop_match:
+            cell_hop_count = int(hop_match.group(1))
+        topo_match = re.search(r'"topology"\s*:\s*"(\w+)"', content)
+        if topo_match:
+            cell_topology = topo_match.group(1)
+        timing_match = re.search(r'"timing_interval_hrs"\s*:\s*(\d+)', content)
+        if timing_match:
+            cell_timing = int(timing_match.group(1))
+        extract_match = re.search(r'"extraction_method"\s*:\s*"(\w+)"', content)
+        if extract_match:
+            cell_extraction = extract_match.group(1)
+
+        # Build accounts for the given hop count
+        accounts = [acct() for _ in range(cell_hop_count + 1)]
+
+        # Step 1 — persona analysis
+        if "step 2" not in content:
+            return {
+                "specific_goal": "Move $150K through mule network within 72 hours",
+                "deadline_or_pressure": "Funds must be extracted before Monday freeze review",
+                "available_resources": {
+                    "mule_count": cell_hop_count + 1,
+                    "account_quality": "aged_checking",
+                    "payment_rails_accessible": ["wire_domestic", "ach", "zelle"],
+                    "crypto_capability": cell_extraction == "crypto",
+                    "international_reach": False,
+                },
+                "fears_and_known_controls": ["velocity flags", "CTR reporting", "new-payee alerts"],
+                "non_negotiable_constraints": ["All transactions below $10K", "No international wires"],
+                "structural_differentiators": f"Uses {cell_topology} topology with {cell_timing}h timing intervals",
+                "evasion_targets": ["structuring detection", "rapid-movement flags"],
+            }
+
+        # Step 2 — network planning
+        if "step 3" not in content:
+            cover_level = "high" if cell_hop_count >= 4 else "low"
+            return {
+                "hop_count": cell_hop_count,
+                "topology": cell_topology,
+                "timing_interval_hrs": cell_timing,
+                "amount_logic": "structured_below_10k",
+                "cover_activity_level": cover_level,
+                "extraction_method": cell_extraction,
+                "geographic_spread": "domestic",
+                "rationale": f"{cell_topology.replace('_', '-')} topology with {cell_hop_count} hops; "
+                             f"{cell_timing}h intervals to evade velocity flags.",
+            }
+
+        # Step 3 — participant profiles
+        if "step 4" not in content:
+            roles = ["source"] + [f"mule_hop_{j+1}" for j in range(cell_hop_count - 1)] + ["destination"]
+            acct_profiles = []
+            for j, role in enumerate(roles):
+                acct_profiles.append({
+                    "account_id": accounts[j],
+                    "role": role,
+                    "owner_description": ["Primary fraud operator", "College student recruited online", "Unemployed individual", "Extraction account", "Gig worker", "Retired individual", "Small business owner"][j % 7],
+                    "recruitment_story": "Account owner" if j == 0 else "Recruited via social media ad",
+                    "what_they_think_is_happening": "Moving own funds" if j == 0 else "Freelance payment processing",
+                    "account_type": "business_checking" if role == "destination" else "checking",
+                    "typical_balance_range": "$10K-$50K" if role == "destination" else "$500-$15K",
+                    "response_time_hrs": round(random.uniform(0.5, 4.0), 1),
+                })
+            return {"accounts": acct_profiles}
+
+        # Steps 4 & 5 — transaction generation / self-review: return full variant
+        # Fraud hop transactions
+        txns = []
+        for i in range(cell_hop_count):
+            txns.append({
+                "transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}",
+                "timestamp": (now + timedelta(hours=i * cell_timing)).isoformat(),
+                "amount": round(random.uniform(3000, 9800), 2),
+                "sender_account_id": accounts[i],
+                "receiver_account_id": accounts[i + 1],
+                "merchant_category": "wire_transfer" if cell_extraction == "wire" else ("crypto_exchange" if cell_extraction == "crypto" else "atm_withdrawal"),
+                "channel": {"wire": "wire_domestic", "crypto": "crypto_transfer", "cash": "atm"}[cell_extraction],
+                "is_fraud": True,
+                "fraud_role": f"hop_{i+1}_of_{cell_hop_count}",
+            })
+
+        # Cover activity transactions (more for deeper networks)
+        cover_count = 2 if cell_hop_count >= 4 else 1
+        for c in range(cover_count):
+            mule_idx = min(c + 1, len(accounts) - 2)
+            txns.append({
+                "transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}",
+                "timestamp": (now + timedelta(hours=c * 3 + 2)).isoformat(),
+                "amount": round(random.uniform(15, 120), 2),
+                "sender_account_id": accounts[mule_idx],
+                "receiver_account_id": acct(),
+                "merchant_category": random.choice(["grocery", "gas_station", "restaurant", "retail"]),
+                "channel": "card_debit",
+                "is_fraud": False,
+                "fraud_role": "cover_activity",
+            })
+
+        strategy_templates = {
+            "chain": f"Mock: {cell_hop_count}-hop chain with {cell_timing}h intervals. Sequential fund movement via {cell_extraction} with cover purchases on mule accounts.",
+            "fan_out": f"Mock: {cell_hop_count}-hop fan-out tree. Source splits funds to {cell_hop_count - 1} mules simultaneously, converging at extraction point via {cell_extraction}.",
+            "hybrid": f"Mock: {cell_hop_count}-hop hybrid network. Initial chain splits into parallel paths before {cell_extraction} extraction. {cell_timing}h timing intervals.",
+        }
+
+        return {
+            "variant_id": f"V-{uuid.uuid4().hex[:6].upper()}",
+            "fraud_type": "mule_network",
+            "persona_id": "P-01",
+            "strategy_description": strategy_templates.get(cell_topology, strategy_templates["chain"]),
+            "variant_parameters": {
+                "hop_count": cell_hop_count,
+                "timing_interval_hrs": cell_timing,
+                "amount_logic": "structured_below_10k",
+                "cover_activity": "high" if cell_hop_count >= 4 else "low",
+                "topology": cell_topology,
+                "extraction_method": cell_extraction,
+                "geographic_spread": "domestic",
+            },
+            "transactions": txns,
+            "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions", f"{cell_topology} topology obfuscation"],
+            "fraud_indicators_present": ["rapid sequential transfers", "round-trip timing pattern", "new payee relationships"],
         }
 
     # Persona generator output
@@ -331,24 +506,20 @@ def _mock_response(messages: list[dict]) -> dict:
             ]
         }
 
-    # Critic output
-    if "realism" in content or "critic" in content or "persona_consistency" in content:
-        score = round(random.uniform(6.5, 9.2), 1)
-        return {
-            "realism_score": score,
-            "distinctiveness_score": round(random.uniform(6.0, 8.5), 1),
-            "persona_consistency": True,
-            "label_correctness": True,
-            "feedback": "",
-        }
+    # Fallback — return a generic fraud constructor variant response
+    return _mock_variant_fallback()
 
-    # Fraud constructor — any step (persona analysis, planning, profiles, transactions, self-review)
-    # Return a full RawVariant-shaped response for the self-review step
+
+def _mock_variant_fallback() -> dict:
+    """Fallback mock variant when no agent pattern is detected."""
+    import uuid, random
+    from datetime import datetime, timedelta
+
     now = datetime.now()
     acct = lambda: f"ACC-{uuid.uuid4().hex[:8].upper()}"
     a1, a2, a3, a4 = acct(), acct(), acct(), acct()
     txns = [
-        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=i*8)).isoformat(), "amount": round(random.uniform(3000, 9800), 2), "sender_account_id": [a1,a2,a3][min(i,2)], "receiver_account_id": [a2,a3,a4][min(i,2)], "merchant_category": "wire_transfer", "channel": "wire_domestic", "is_fraud": True, "fraud_role": f"hop_{i+1}_of_3"}
+        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=i * 8)).isoformat(), "amount": round(random.uniform(3000, 9800), 2), "sender_account_id": [a1, a2, a3][min(i, 2)], "receiver_account_id": [a2, a3, a4][min(i, 2)], "merchant_category": "wire_transfer", "channel": "wire_domestic", "is_fraud": True, "fraud_role": f"hop_{i+1}_of_3"}
         for i in range(3)
     ] + [
         {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=2)).isoformat(), "amount": round(random.uniform(20, 85), 2), "sender_account_id": a2, "receiver_account_id": acct(), "merchant_category": "grocery", "channel": "card_debit", "is_fraud": False, "fraud_role": "cover_activity"}
@@ -357,7 +528,7 @@ def _mock_response(messages: list[dict]) -> dict:
         "variant_id": f"V-{uuid.uuid4().hex[:6].upper()}",
         "fraud_type": "mule_network",
         "persona_id": "P-01",
-        "strategy_description": "Mock: 3-hop domestic chain with burst timing. Funds moved via same-day wire transfers structured below $10K CTR threshold. Cover activity via grocery purchases on mule accounts.",
+        "strategy_description": "Mock: 3-hop domestic chain with burst timing.",
         "variant_parameters": {"hop_count": 3, "timing_interval_hrs": 8, "amount_logic": "structured_below_10k", "cover_activity": "low", "topology": "chain", "extraction_method": "wire", "geographic_spread": "domestic"},
         "transactions": txns,
         "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions"],

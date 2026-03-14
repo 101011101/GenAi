@@ -32,8 +32,8 @@ The analyst moves through four phases in a single session: **Input → Tweak →
 
 **Fraud description (free text)**
 Natural language prompt that seeds the entire run. The orchestrator agent reads this to decompose the fraud type into variable dimensions.
-
-> Example: *"layered mule account network with cross-border hops and burst withdrawal"*
+layered
+> Example: *" mule account network with cross-border hops and burst withdrawal"*
 
 Why this matters: the description is the only creative input the analyst provides. The richer and more specific it is, the more targeted the variant space the system explores. A vague description produces generic variants; a specific one produces structurally diverse variants around a real fraud pattern.
 
