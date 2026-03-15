@@ -35,6 +35,38 @@ class VariantSummary:
     passed: bool = False
 
 
+@dataclass
+class AgentStatus:
+    agent_id: str           # "A1"–"A5"
+    cell_id: str
+    variant_id: str
+    persona_name: str
+    status: str             # "running" | "retry" | "done" | "idle" | "error"
+    current_step: int
+    total_steps: int
+    step_name: str
+    attempt: int
+    max_attempts: int
+    tokens_used: int
+    cost_usd: float
+    last_score: float | None = None
+
+
+@dataclass
+class TraceEvent:
+    event_id: str
+    ts: str
+    agent_id: str
+    variant_id: str
+    step: int
+    step_name: str
+    attempt: int
+    status: str             # "running" | "done" | "error"
+    description: str
+    score: float | None = None
+    detail: dict | None = None
+
+
 class RunState:
     """
     Shared state bridge between the background pipeline thread and the Streamlit console.
@@ -72,7 +104,10 @@ class RunState:
         self.coverage_cells: dict[str, CellStatus] = {}  # cell_id → CellStatus
         self.personas: list[Any] = []                    # list[Persona]
         self.orchestrator_output: Any = None             # OrchestratorOutput | None
-        self.scored_variants: list[Any] = []             # list[ScoredVariant]
+        self.scored_variants: list[Any] = []
+        self.agent_slots: dict[str, AgentStatus] = {}   # agent_id → AgentStatus
+        self.trace_events: list[TraceEvent] = []
+        self._event_counter: int = 0             # list[ScoredVariant]
 
     # ------------------------------------------------------------------
     # Mutation methods — all thread-safe
@@ -169,6 +204,18 @@ class RunState:
         """Append an approved ScoredVariant."""
         with self._lock:
             self.scored_variants.append(variant)
+
+    def upsert_agent(self, agent: AgentStatus) -> None:
+        """Insert or update an agent slot status."""
+        with self._lock:
+            self.agent_slots[agent.agent_id] = agent
+
+    def add_trace_event(self, event: TraceEvent) -> None:
+        """Append a structured trace event (capped at 500)."""
+        with self._lock:
+            self.trace_events.append(event)
+            if len(self.trace_events) > 500:
+                self.trace_events = self.trace_events[-500:]
 
     # ------------------------------------------------------------------
     # Convenience read — no lock (eventually consistent is fine for display)

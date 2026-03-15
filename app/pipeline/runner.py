@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import asyncio
 import logging
+import re as _re
 from datetime import datetime, timezone
 
 from agents.critic import CriticAgent
@@ -15,10 +16,56 @@ from models.variant import ScoredVariant
 from pipeline.cell_generator import generate_cells
 from pipeline.coverage_matrix import CoverageMatrix
 from pipeline.output_handler import OutputHandler
-from pipeline.run_state import CellStatus, RunState, VariantSummary
+import itertools as _itertools
+
+from pipeline.run_state import AgentStatus, CellStatus, RunState, TraceEvent, VariantSummary
 from utils.schema_validator import validate_raw_variant
 
 logger = logging.getLogger(__name__)
+
+_AGENT_SLOT_LABELS = ["A1", "A2", "A3", "A4", "A5"]
+
+
+def _now_ts() -> str:
+    return datetime.now(timezone.utc).strftime("%H:%M:%S")
+
+
+# Matches "Step X/5: <name> — <rest>" messages emitted by FraudConstructorAgent.on_step
+_FC_STEP_RE = _re.compile(r"Step\s+(\d+)/\d+:\s*(.+?)(?:\s+—\s+(.*))?$")
+
+
+def _make_fc_on_step(
+    run_state: "RunState",
+    cell_id: str,
+    agent_id: str,
+    attempt: int,
+):
+    """Return an on_step callback that fans out to both event_log and trace_events."""
+
+    def _on_step(msg: str) -> None:
+        run_state.log_event(f"{cell_id}: {msg}")
+        m = _FC_STEP_RE.match(msg)
+        if not m:
+            return
+        sub_step = int(m.group(1))
+        label = m.group(2).strip()
+        rest = (m.group(3) or "").strip()
+        # "done" messages include timing like "done (1.2s)"; "running" messages don't
+        ev_status = "done" if rest.lower().startswith("done") else "running"
+        run_state.add_trace_event(TraceEvent(
+            event_id=f"{cell_id}-fc-s{sub_step}-{ev_status}-a{attempt}",
+            ts=_now_ts(),
+            agent_id=agent_id,
+            variant_id=cell_id,
+            # Offset by 20 so these don't collide with outer pipeline step numbers (1–4)
+            step=20 + sub_step,
+            step_name=f"Constructor: {label}",
+            attempt=attempt,
+            status=ev_status,
+            description=msg,
+        ))
+
+    return _on_step
 
 
 def _check_cell_persona_conflict(cell: dict, persona: Persona) -> str:
@@ -121,10 +168,33 @@ class PipelineRunner:
         # ------------------------------------------------------------------
         run_state.set_phase("Orchestrating")
         run_state.log_event("Orchestrator -> Claude [thinking mode] decomposing fraud description...")
+        run_state.add_trace_event(TraceEvent(
+            event_id="orchestrator-start",
+            ts=_now_ts(),
+            agent_id="SYS",
+            variant_id="orchestrator",
+            step=1,
+            step_name="Orchestrator",
+            attempt=1,
+            status="running",
+            description="Decomposing fraud description into variation dimensions…",
+        ))
         orchestrator_output = await OrchestratorAgent().run(config)
         run_state.log_event(
             f"Orchestrator done: {len(orchestrator_output.variation_dimensions)} dimensions discovered"
         )
+        run_state.add_trace_event(TraceEvent(
+            event_id="orchestrator-done",
+            ts=_now_ts(),
+            agent_id="SYS",
+            variant_id="orchestrator",
+            step=1,
+            step_name="Orchestrator",
+            attempt=1,
+            status="done",
+            description=f"{len(orchestrator_output.variation_dimensions)} dimensions discovered",
+            detail={"dimensions": orchestrator_output.variation_dimensions},
+        ))
         run_state.set_orchestrator_output(orchestrator_output)
 
         # Generate coverage cells deterministically from dimensions
@@ -149,10 +219,32 @@ class PipelineRunner:
         # ------------------------------------------------------------------
         run_state.set_phase("Generating personas")
         run_state.log_event(f"PersonaGenerator -> Claude generating {orchestrator_output.suggested_persona_count} personas...")
+        run_state.add_trace_event(TraceEvent(
+            event_id="personas-start",
+            ts=_now_ts(),
+            agent_id="SYS",
+            variant_id="personas",
+            step=2,
+            step_name="Persona Generator",
+            attempt=1,
+            status="running",
+            description=f"Generating {orchestrator_output.suggested_persona_count} personas…",
+        ))
         personas: list[Persona] = await PersonaGeneratorAgent().run(
             config.fraud_description, config
         )
         run_state.log_event(f"PersonaGenerator done: {len(personas)} personas — {', '.join(p.name for p in personas)}")
+        run_state.add_trace_event(TraceEvent(
+            event_id="personas-done",
+            ts=_now_ts(),
+            agent_id="SYS",
+            variant_id="personas",
+            step=2,
+            step_name="Persona Generator",
+            attempt=1,
+            status="done",
+            description=f"{len(personas)} personas: {', '.join(p.name for p in personas)}",
+        ))
         run_state.set_personas(personas)
 
         if personas_out is not None:
@@ -175,6 +267,10 @@ class PipelineRunner:
         )
         approved_lock = asyncio.Lock()
 
+        slot_queue: asyncio.Queue[str] = asyncio.Queue()
+        for _s in _AGENT_SLOT_LABELS:
+            await slot_queue.put(_s)
+
         tasks = [
             asyncio.create_task(self._process_cell(
                 cell=cell,
@@ -185,6 +281,7 @@ class PipelineRunner:
                 semaphore=semaphore,
                 approved_variants=approved_variants,
                 approved_lock=approved_lock,
+                slot_queue=slot_queue,
                 extra_feedback="",
             ))
             for cell in cells
@@ -230,6 +327,7 @@ class PipelineRunner:
                             semaphore=semaphore,
                             approved_variants=approved_variants,
                             approved_lock=approved_lock,
+                            slot_queue=slot_queue,
                             extra_feedback=(
                                 "Focus on underrepresented variant space — "
                                 "be structurally different from common patterns"
@@ -283,6 +381,7 @@ class PipelineRunner:
         semaphore: asyncio.Semaphore,
         approved_variants: list[ScoredVariant],
         approved_lock: asyncio.Lock,
+        slot_queue: asyncio.Queue,
         extra_feedback: str = "",
     ) -> None:
         """Run the fraud_constructor → validator → critic loop for one coverage cell.
@@ -292,307 +391,486 @@ class PipelineRunner:
         """
         cell_id: str = cell["cell_id"]
 
-        async with semaphore:
-            # ----------------------------------------------------------------
-            # Control signal check — before doing any work
-            # ----------------------------------------------------------------
-            if run_state.control_signal == "stop":
-                return
-
-            while run_state.control_signal == "pause":
-                await asyncio.sleep(0.5)
+        agent_id = await slot_queue.get()
+        try:
+            async with semaphore:
+                # ----------------------------------------------------------------
+                # Control signal check — before doing any work
+                # ----------------------------------------------------------------
                 if run_state.control_signal == "stop":
                     return
 
-            # ----------------------------------------------------------------
-            # Claim the cell in the coverage matrix
-            # ----------------------------------------------------------------
-            claimed = matrix.assign_cell(
-                cell_id=cell_id,
-                agent_id=str(id(asyncio.current_task())),
-            )
-            if claimed is None:
-                # Cell already taken by another task (race condition) — skip silently.
-                return
-
-            # ----------------------------------------------------------------
-            # Resolve persona
-            # ----------------------------------------------------------------
-            slot = cell.get("persona_slot", 0)
-            if personas:
-                slot = max(0, min(int(slot), len(personas) - 1))
-                persona = personas[slot]
-            else:
-                # No personas available — reject the cell and exit.
-                matrix.reject_cell(cell_id)
-                run_state.add_error(
-                    f"Cell {cell_id}: no personas available, skipping."
-                )
-                return
-
-            # ----------------------------------------------------------------
-            # Pre-check: detect irreconcilable cell/persona conflicts before
-            # burning API calls on attempts that will always fail persona_consistency
-            # ----------------------------------------------------------------
-            conflict = _check_cell_persona_conflict(cell, persona)
-            if conflict:
-                run_state.log_event(
-                    f"{cell_id}: CONFLICT SKIP — {conflict} (irreconcilable, skipping)"
-                )
-                run_state.add_error(f"Cell {cell_id}: irreconcilable cell/persona conflict — {conflict}")
-                matrix.reject_cell(cell_id)
-                return
-
-            run_state.upsert_cell(CellStatus(
-                cell_id=cell_id,
-                dimension_values=cell.get("dimension_values", {}),
-                assigned_persona_id=getattr(persona, "persona_id", ""),
-                assigned_persona_name=persona.name,
-                status="in_progress",
-            ))
-            run_state.increment_active()
-
-            # Log cell start with dimension parameters
-            dim_vals = cell.get("dimension_values", {})
-            dim_summary = ", ".join(f"{k}={v}" for k, v in list(dim_vals.items())[:4])
-            run_state.log_event(f"{cell_id}: START — {dim_summary} | persona={persona.name}")
-
-            # ----------------------------------------------------------------
-            # Track cost before entering the attempt loop
-            # ----------------------------------------------------------------
-            # We create dedicated agent instances per cell so their LLMClient
-            # token counters are isolated.  This lets us compute the cost delta
-            # per cell by reading cost_usd after all calls complete.
-            constructor = FraudConstructorAgent()
-            critic_agent = CriticAgent()
-
-            feedback: str = extra_feedback
-            passed_this_cell = False
-            attempt_count = 0
-            max_attempts = config.max_revisions + 1  # e.g. max_revisions=2 → 3 total attempts
-
-            try:
-                for attempt in range(max_attempts):
-                    attempt_count = attempt + 1
-
-                    # Check stop signal between attempts
+                while run_state.control_signal == "pause":
+                    await asyncio.sleep(0.5)
                     if run_state.control_signal == "stop":
-                        break
+                        return
 
-                    # ----------------------------------------------------------
-                    # Fraud constructor
-                    # ----------------------------------------------------------
-                    run_state.log_event(
-                        f"{cell_id}: FraudConstructor [attempt {attempt_count}/{max_attempts}] "
-                        f"persona={persona.name}"
+                # ----------------------------------------------------------------
+                # Claim the cell in the coverage matrix
+                # ----------------------------------------------------------------
+                claimed = matrix.assign_cell(
+                    cell_id=cell_id,
+                    agent_id=str(id(asyncio.current_task())),
+                )
+                if claimed is None:
+                    # Cell already taken by another task (race condition) — skip silently.
+                    return
+
+                # ----------------------------------------------------------------
+                # Resolve persona
+                # ----------------------------------------------------------------
+                slot = cell.get("persona_slot", 0)
+                if personas:
+                    slot = max(0, min(int(slot), len(personas) - 1))
+                    persona = personas[slot]
+                else:
+                    # No personas available — reject the cell and exit.
+                    matrix.reject_cell(cell_id)
+                    run_state.add_error(
+                        f"Cell {cell_id}: no personas available, skipping."
                     )
-                    try:
-                        raw_variant, persona_ok, consistency_notes = await constructor.run(
-                            persona=persona,
-                            cell_assignment=cell,
-                            critic_feedback=feedback,
-                            on_step=lambda msg, _cid=cell_id: run_state.log_event(f"{_cid}: {msg}"),
-                        )
-                    except Exception as exc:
-                        err_msg = (
-                            f"Cell {cell_id} attempt {attempt_count}: "
-                            f"FraudConstructor error — {exc}"
-                        )
-                        logger.error(err_msg)
-                        run_state.add_error(err_msg)
-                        # Constructor errors are transient — allow retry if attempts remain
-                        feedback = str(exc)
-                        continue
+                    return
 
-                    # ----------------------------------------------------------
-                    # Schema validation (hard fail — no retry on bad structure)
-                    # ----------------------------------------------------------
-                    validated, validation_error = validate_raw_variant(raw_variant.model_dump())
-                    if validated is None:
-                        err_msg = (
-                            f"Cell {cell_id} attempt {attempt_count}: "
-                            f"Schema validation failed — {validation_error}"
-                        )
-                        logger.error(err_msg)
-                        run_state.add_error(err_msg)
-                        run_state.log_event(f"{cell_id}: Schema validation FAILED — {str(validation_error)[:80]}")
-                        # Hard fail: break immediately, reject cell
-                        break
-                    txn_count = len(validated.transactions) if hasattr(validated, "transactions") else "?"
-                    run_state.log_event(f"{cell_id}: Schema validation OK — {txn_count} transactions")
+                # ----------------------------------------------------------------
+                # Pre-check: detect irreconcilable cell/persona conflicts before
+                # burning API calls on attempts that will always fail persona_consistency
+                # ----------------------------------------------------------------
+                conflict = _check_cell_persona_conflict(cell, persona)
+                if conflict:
+                    run_state.log_event(
+                        f"{cell_id}: CONFLICT SKIP — {conflict} (irreconcilable, skipping)"
+                    )
+                    run_state.add_error(f"Cell {cell_id}: irreconcilable cell/persona conflict — {conflict}")
+                    matrix.reject_cell(cell_id)
+                    return
 
-                    # ----------------------------------------------------------
-                    # Critic evaluation
-                    # ----------------------------------------------------------
-                    run_state.log_event(f"{cell_id}: Critic -> Claude evaluating variant...")
-                    if not persona_ok:
-                        run_state.log_event(f"{cell_id}: persona_consistency=False — {consistency_notes}")
-                    try:
-                        scored = await critic_agent.run(
-                            variant=validated,
-                            persona=persona,
-                            persona_consistency=persona_ok,
-                            critic_floor=config.critic_floor,
-                        )
-                    except Exception as exc:
-                        err_msg = (
-                            f"Cell {cell_id} attempt {attempt_count}: "
-                            f"CriticAgent error — {exc}"
-                        )
-                        logger.error(err_msg)
-                        run_state.add_error(err_msg)
-                        feedback = str(exc)
-                        continue
+                run_state.upsert_cell(CellStatus(
+                    cell_id=cell_id,
+                    dimension_values=cell.get("dimension_values", {}),
+                    assigned_persona_id=getattr(persona, "persona_id", ""),
+                    assigned_persona_name=persona.name,
+                    status="in_progress",
+                ))
+                run_state.increment_active()
 
-                    avg_score = round((scored.realism_score + scored.distinctiveness_score) / 2.0, 1)
-                    if scored.passed:
+                # Log cell start with dimension parameters
+                dim_vals = cell.get("dimension_values", {})
+                dim_summary = ", ".join(f"{k}={v}" for k, v in list(dim_vals.items())[:4])
+                run_state.log_event(f"{cell_id}: START — {dim_summary} | persona={persona.name}")
+
+                run_state.upsert_agent(AgentStatus(
+                    agent_id=agent_id,
+                    cell_id=cell_id,
+                    variant_id=cell_id,
+                    persona_name=persona.name,
+                    status="running",
+                    current_step=1,
+                    total_steps=4,
+                    step_name="Orchestrator Decomposition",
+                    attempt=1,
+                    max_attempts=config.max_revisions + 1,
+                    tokens_used=0,
+                    cost_usd=0.0,
+                ))
+                run_state.add_trace_event(TraceEvent(
+                    event_id=f"{cell_id}-start",
+                    ts=_now_ts(),
+                    agent_id=agent_id,
+                    variant_id=cell_id,
+                    step=1,
+                    step_name="Orchestrator Decomposition",
+                    attempt=1,
+                    status="running",
+                    description=f"Cell started — persona={persona.name}",
+                ))
+
+                # ----------------------------------------------------------------
+                # Track cost before entering the attempt loop
+                # ----------------------------------------------------------------
+                # We create dedicated agent instances per cell so their LLMClient
+                # token counters are isolated.  This lets us compute the cost delta
+                # per cell by reading cost_usd after all calls complete.
+                constructor = FraudConstructorAgent()
+                critic_agent = CriticAgent()
+
+                feedback: str = extra_feedback
+                passed_this_cell = False
+                attempt_count = 0
+                max_attempts = config.max_revisions + 1  # e.g. max_revisions=2 → 3 total attempts
+
+                try:
+                    for attempt in range(max_attempts):
+                        attempt_count = attempt + 1
+
+                        # Check stop signal between attempts
+                        if run_state.control_signal == "stop":
+                            break
+
+                        # ----------------------------------------------------------
+                        # Fraud constructor
+                        # ----------------------------------------------------------
                         run_state.log_event(
-                            f"{cell_id}: Critic PASS score={avg_score} "
-                            f"(realism={scored.realism_score} distinct={scored.distinctiveness_score})"
+                            f"{cell_id}: FraudConstructor [attempt {attempt_count}/{max_attempts}] "
+                            f"persona={persona.name}"
                         )
-                        # --------------------------------------------------------
-                        # Approved — record the variant
-                        # --------------------------------------------------------
-                        async with approved_lock:
-                            approved_variants.append(scored)
-                        run_state.add_scored_variant(scored)
+                        run_state.upsert_agent(AgentStatus(
+                            agent_id=agent_id,
+                            cell_id=cell_id,
+                            variant_id=cell_id,
+                            persona_name=persona.name,
+                            status="running",
+                            current_step=2,
+                            total_steps=4,
+                            step_name="Fraud Constructor",
+                            attempt=attempt_count,
+                            max_attempts=max_attempts,
+                            tokens_used=0,
+                            cost_usd=0.0,
+                        ))
+                        run_state.add_trace_event(TraceEvent(
+                            event_id=f"{cell_id}-step2-attempt{attempt_count}",
+                            ts=_now_ts(),
+                            agent_id=agent_id,
+                            variant_id=cell_id,
+                            step=2,
+                            step_name="Fraud Constructor",
+                            attempt=attempt_count,
+                            status="running",
+                            description=f"FraudConstructor running [attempt {attempt_count}/{max_attempts}]",
+                        ))
+                        try:
+                            raw_variant, persona_ok, consistency_notes = await constructor.run(
+                                persona=persona,
+                                cell_assignment=cell,
+                                critic_feedback=feedback,
+                                on_step=_make_fc_on_step(run_state, cell_id, agent_id, attempt_count),
+                            )
+                        except Exception as exc:
+                            err_msg = (
+                                f"Cell {cell_id} attempt {attempt_count}: "
+                                f"FraudConstructor error — {exc}"
+                            )
+                            logger.error(err_msg)
+                            run_state.add_error(err_msg)
+                            # Constructor errors are transient — allow retry if attempts remain
+                            feedback = str(exc)
+                            continue
 
-                        matrix.complete_cell(cell_id, variant_id=scored.variant_id)
+                        # ----------------------------------------------------------
+                        # Schema validation (hard fail — no retry on bad structure)
+                        # ----------------------------------------------------------
+                        validated, validation_error = validate_raw_variant(raw_variant.model_dump())
+                        if validated is None:
+                            err_msg = (
+                                f"Cell {cell_id} attempt {attempt_count}: "
+                                f"Schema validation failed — {validation_error}"
+                            )
+                            logger.error(err_msg)
+                            run_state.add_error(err_msg)
+                            run_state.log_event(f"{cell_id}: Schema validation FAILED — {str(validation_error)[:80]}")
+                            # Hard fail: break immediately, reject cell
+                            break
+                        txn_count = len(validated.transactions) if hasattr(validated, "transactions") else "?"
+                        run_state.log_event(f"{cell_id}: Schema validation OK — {txn_count} transactions")
+                        run_state.upsert_agent(AgentStatus(
+                            agent_id=agent_id,
+                            cell_id=cell_id,
+                            variant_id=cell_id,
+                            persona_name=persona.name,
+                            status="running",
+                            current_step=3,
+                            total_steps=4,
+                            step_name="Schema Validation",
+                            attempt=attempt_count,
+                            max_attempts=max_attempts,
+                            tokens_used=0,
+                            cost_usd=0.0,
+                        ))
+                        run_state.add_trace_event(TraceEvent(
+                            event_id=f"{cell_id}-step3-attempt{attempt_count}",
+                            ts=_now_ts(),
+                            agent_id=agent_id,
+                            variant_id=cell_id,
+                            step=3,
+                            step_name="Schema Validation",
+                            attempt=attempt_count,
+                            status="done",
+                            description=f"Schema validation OK — {txn_count} transactions",
+                        ))
+
+                        # ----------------------------------------------------------
+                        # Critic evaluation
+                        # ----------------------------------------------------------
+                        run_state.log_event(f"{cell_id}: Critic -> Claude evaluating variant...")
+                        if not persona_ok:
+                            run_state.log_event(f"{cell_id}: persona_consistency=False — {consistency_notes}")
+                        run_state.upsert_agent(AgentStatus(
+                            agent_id=agent_id,
+                            cell_id=cell_id,
+                            variant_id=cell_id,
+                            persona_name=persona.name,
+                            status="running",
+                            current_step=4,
+                            total_steps=4,
+                            step_name="Critic Evaluation",
+                            attempt=attempt_count,
+                            max_attempts=max_attempts,
+                            tokens_used=0,
+                            cost_usd=0.0,
+                        ))
+                        run_state.add_trace_event(TraceEvent(
+                            event_id=f"{cell_id}-step4-attempt{attempt_count}",
+                            ts=_now_ts(),
+                            agent_id=agent_id,
+                            variant_id=cell_id,
+                            step=4,
+                            step_name="Critic Evaluation",
+                            attempt=attempt_count,
+                            status="running",
+                            description="Critic evaluating variant...",
+                        ))
+                        try:
+                            scored = await critic_agent.run(
+                                variant=validated,
+                                persona=persona,
+                                persona_consistency=persona_ok,
+                                critic_floor=config.critic_floor,
+                            )
+                        except Exception as exc:
+                            err_msg = (
+                                f"Cell {cell_id} attempt {attempt_count}: "
+                                f"CriticAgent error — {exc}"
+                            )
+                            logger.error(err_msg)
+                            run_state.add_error(err_msg)
+                            feedback = str(exc)
+                            continue
+
+                        avg_score = round((scored.realism_score + scored.distinctiveness_score) / 2.0, 1)
+                        if scored.passed:
+                            run_state.log_event(
+                                f"{cell_id}: Critic PASS score={avg_score} "
+                                f"(realism={scored.realism_score} distinct={scored.distinctiveness_score})"
+                            )
+                            run_state.upsert_agent(AgentStatus(
+                                agent_id=agent_id,
+                                cell_id=cell_id,
+                                variant_id=scored.variant_id,
+                                persona_name=persona.name,
+                                status="done",
+                                current_step=4,
+                                total_steps=4,
+                                step_name="Critic Evaluation",
+                                attempt=attempt_count,
+                                max_attempts=max_attempts,
+                                tokens_used=0,
+                                cost_usd=0.0,
+                                last_score=avg_score,
+                            ))
+                            run_state.add_trace_event(TraceEvent(
+                                event_id=f"{cell_id}-step4-pass-attempt{attempt_count}",
+                                ts=_now_ts(),
+                                agent_id=agent_id,
+                                variant_id=scored.variant_id,
+                                step=4,
+                                step_name="Critic Evaluation",
+                                attempt=attempt_count,
+                                status="done",
+                                description=f"Critic PASS score={avg_score}",
+                                score=avg_score,
+                                detail={"realism": scored.realism_score, "distinctiveness": scored.distinctiveness_score},
+                            ))
+                            # --------------------------------------------------------
+                            # Approved — record the variant
+                            # --------------------------------------------------------
+                            async with approved_lock:
+                                approved_variants.append(scored)
+                            run_state.add_scored_variant(scored)
+
+                            matrix.complete_cell(cell_id, variant_id=scored.variant_id)
+                            run_state.upsert_cell(CellStatus(
+                                cell_id=cell_id,
+                                dimension_values=cell.get("dimension_values", {}),
+                                assigned_persona_id=getattr(persona, "persona_id", ""),
+                                assigned_persona_name=persona.name,
+                                status="completed",
+                                attempt_count=attempt_count,
+                                critic_score=avg_score,
+                                variant_id=scored.variant_id,
+                            ))
+
+                            # Build a human-readable parameters summary
+                            params = scored.variant_parameters
+                            hop_count = params.get("hop_count", "?")
+                            topology = params.get("topology", "?")
+                            extraction = params.get("extraction_method", "?")
+                            geo = params.get("geographic_spread", "?")
+                            params_summary = (
+                                f"{hop_count}-hop {topology}, "
+                                f"{extraction} extraction, {geo}"
+                            )
+
+                            status = "revised" if attempt_count > 1 else "approved"
+                            summary = VariantSummary(
+                                variant_id=scored.variant_id,
+                                persona_name=persona.name,
+                                parameters_summary=params_summary,
+                                critic_score=round(
+                                    (scored.realism_score + scored.distinctiveness_score) / 2.0, 2
+                                ),
+                                status=status,
+                                strategy_description=scored.strategy_description[:200],
+                                completed_at=datetime.now(tz=timezone.utc).isoformat(),
+                                realism_score=scored.realism_score,
+                                distinctiveness_score=scored.distinctiveness_score,
+                                attempt_count=attempt_count,
+                                passed=True,
+                            )
+                            run_state.update_variant(summary)
+                            passed_this_cell = True
+                            break
+
+                        else:
+                            # --------------------------------------------------------
+                            # Failed — prepare feedback for next attempt
+                            # --------------------------------------------------------
+                            run_state.log_event(
+                                f"{cell_id}: Critic FAIL score={avg_score} — "
+                                f"{scored.feedback[:80] if scored.feedback else 'no feedback'}"
+                            )
+                            run_state.add_trace_event(TraceEvent(
+                                event_id=f"{cell_id}-step4-fail-attempt{attempt_count}",
+                                ts=_now_ts(),
+                                agent_id=agent_id,
+                                variant_id=cell_id,
+                                step=4,
+                                step_name="Critic Evaluation",
+                                attempt=attempt_count,
+                                status="error",
+                                description=f"Critic FAIL score={avg_score} — {scored.feedback[:120] if scored.feedback else ''}",
+                                score=avg_score,
+                                detail={"feedback": scored.feedback},
+                            ))
+                            run_state.upsert_agent(AgentStatus(
+                                agent_id=agent_id,
+                                cell_id=cell_id,
+                                variant_id=cell_id,
+                                persona_name=persona.name,
+                                status="retry",
+                                current_step=4,
+                                total_steps=4,
+                                step_name="Critic Evaluation",
+                                attempt=attempt_count,
+                                max_attempts=max_attempts,
+                                tokens_used=0,
+                                cost_usd=0.0,
+                                last_score=avg_score,
+                            ))
+                            if not scored.persona_consistency:
+                                feedback = (
+                                    f"PERSONA CONSISTENCY FAILURE: {consistency_notes} "
+                                    "Do NOT change the cell assignment parameters. "
+                                    "Adapt the persona's behavior to work within the cell's "
+                                    "structural constraints instead."
+                                )
+                            else:
+                                feedback = scored.feedback
+                            logger.info(
+                                "Cell %s attempt %d rejected by critic: %s",
+                                cell_id,
+                                attempt_count,
+                                feedback[:120],
+                            )
+
+                    # ----------------------------------------------------------------
+                    # After attempt loop — reject cell if nothing passed
+                    # ----------------------------------------------------------------
+                    if not passed_this_cell:
+                        matrix.reject_cell(cell_id)
                         run_state.upsert_cell(CellStatus(
                             cell_id=cell_id,
                             dimension_values=cell.get("dimension_values", {}),
                             assigned_persona_id=getattr(persona, "persona_id", ""),
                             assigned_persona_name=persona.name,
-                            status="completed",
+                            status="failed",
                             attempt_count=attempt_count,
-                            critic_score=avg_score,
-                            variant_id=scored.variant_id,
                         ))
-
-                        # Build a human-readable parameters summary
-                        params = scored.variant_parameters
-                        hop_count = params.get("hop_count", "?")
-                        topology = params.get("topology", "?")
-                        extraction = params.get("extraction_method", "?")
-                        geo = params.get("geographic_spread", "?")
-                        params_summary = (
-                            f"{hop_count}-hop {topology}, "
-                            f"{extraction} extraction, {geo}"
-                        )
-
-                        status = "revised" if attempt_count > 1 else "approved"
-                        summary = VariantSummary(
-                            variant_id=scored.variant_id,
-                            persona_name=persona.name,
-                            parameters_summary=params_summary,
-                            critic_score=round(
-                                (scored.realism_score + scored.distinctiveness_score) / 2.0, 2
-                            ),
-                            status=status,
-                            strategy_description=scored.strategy_description[:200],
-                            completed_at=datetime.now(tz=timezone.utc).isoformat(),
-                            realism_score=scored.realism_score,
-                            distinctiveness_score=scored.distinctiveness_score,
-                            attempt_count=attempt_count,
-                            passed=True,
-                        )
-                        run_state.update_variant(summary)
-                        passed_this_cell = True
-                        break
-
-                    else:
-                        # --------------------------------------------------------
-                        # Failed — prepare feedback for next attempt
-                        # --------------------------------------------------------
-                        run_state.log_event(
-                            f"{cell_id}: Critic FAIL score={avg_score} — "
-                            f"{scored.feedback[:80] if scored.feedback else 'no feedback'}"
-                        )
-                        if not scored.persona_consistency:
-                            feedback = (
-                                f"PERSONA CONSISTENCY FAILURE: {consistency_notes} "
-                                "Do NOT change the cell assignment parameters. "
-                                "Adapt the persona's behavior to work within the cell's "
-                                "structural constraints instead."
-                            )
-                        else:
-                            feedback = scored.feedback
-                        logger.info(
-                            "Cell %s attempt %d rejected by critic: %s",
+                        logger.warning(
+                            "Cell %s permanently rejected after %d attempt(s).",
                             cell_id,
                             attempt_count,
-                            feedback[:120],
                         )
+                        # Log a rejected variant summary so the console can surface it
+                        summary = VariantSummary(
+                            variant_id=f"REJECTED-{cell_id}",
+                            persona_name=persona.name,
+                            parameters_summary=f"cell {cell_id} — all attempts failed",
+                            critic_score=0.0,
+                            status="rejected",
+                            strategy_description="",
+                            completed_at=datetime.now(tz=timezone.utc).isoformat(),
+                            passed=False,
+                            attempt_count=attempt_count,
+                        )
+                        run_state.update_variant(summary)
 
-                # ----------------------------------------------------------------
-                # After attempt loop — reject cell if nothing passed
-                # ----------------------------------------------------------------
-                if not passed_this_cell:
+                except asyncio.CancelledError:
+                    raise  # propagate cancellation to the event loop
+                except Exception as exc:
+                    # Catch-all: isolate any unexpected exception
+                    err_msg = f"Cell {cell_id}: unexpected error — {exc}"
+                    logger.exception(err_msg)
+                    run_state.add_error(err_msg)
                     matrix.reject_cell(cell_id)
-                    run_state.upsert_cell(CellStatus(
-                        cell_id=cell_id,
-                        dimension_values=cell.get("dimension_values", {}),
-                        assigned_persona_id=getattr(persona, "persona_id", ""),
-                        assigned_persona_name=persona.name,
-                        status="failed",
-                        attempt_count=attempt_count,
-                    ))
-                    logger.warning(
-                        "Cell %s permanently rejected after %d attempt(s).",
-                        cell_id,
-                        attempt_count,
-                    )
-                    # Log a rejected variant summary so the console can surface it
-                    summary = VariantSummary(
-                        variant_id=f"REJECTED-{cell_id}",
-                        persona_name=persona.name,
-                        parameters_summary=f"cell {cell_id} — all attempts failed",
-                        critic_score=0.0,
-                        status="rejected",
-                        strategy_description="",
-                        completed_at=datetime.now(tz=timezone.utc).isoformat(),
-                        passed=False,
-                        attempt_count=attempt_count,
-                    )
-                    run_state.update_variant(summary)
 
-            except asyncio.CancelledError:
-                raise  # propagate cancellation to the event loop
-            except Exception as exc:
-                # Catch-all: isolate any unexpected exception
-                err_msg = f"Cell {cell_id}: unexpected error — {exc}"
-                logger.exception(err_msg)
-                run_state.add_error(err_msg)
-                matrix.reject_cell(cell_id)
+                finally:
+                    # ----------------------------------------------------------------
+                    # Accumulate cost from this cell's agent instances
+                    # ----------------------------------------------------------------
+                    cell_cost = 0.0
+                    for _agent_obj in (constructor, critic_agent):
+                        try:
+                            cell_cost += _agent_obj._client.cost_usd
+                        except AttributeError:
+                            pass
+                    run_state.add_cost(cell_cost)
+                    if cell_cost > 0:
+                        run_state.log_event(f"{cell_id}: DONE — cell cost=${cell_cost:.4f} | run total=${run_state.total_cost_usd:.4f}")
 
-            finally:
-                # ----------------------------------------------------------------
-                # Accumulate cost from this cell's agent instances
-                # ----------------------------------------------------------------
-                cell_cost = 0.0
-                for _agent_obj in (constructor, critic_agent):
-                    try:
-                        cell_cost += _agent_obj._client.cost_usd
-                    except AttributeError:
-                        pass
-                run_state.add_cost(cell_cost)
-                if cell_cost > 0:
-                    run_state.log_event(f"{cell_id}: DONE — cell cost=${cell_cost:.4f} | run total=${run_state.total_cost_usd:.4f}")
+                    # Always decrement — balances the single increment_active() above.
+                    run_state.decrement_active()
 
-                # Always decrement — balances the single increment_active() above.
-                run_state.decrement_active()
+                    # Mark agent slot as idle
+                    existing = run_state.agent_slots.get(agent_id)
+                    if existing and existing.status not in ("done",):
+                        run_state.upsert_agent(AgentStatus(
+                            agent_id=agent_id,
+                            cell_id=cell_id,
+                            variant_id=existing.variant_id,
+                            persona_name=existing.persona_name,
+                            status="idle",
+                            current_step=existing.current_step,
+                            total_steps=4,
+                            step_name=existing.step_name,
+                            attempt=existing.attempt,
+                            max_attempts=existing.max_attempts,
+                            tokens_used=0,
+                            cost_usd=cell_cost,
+                        ))
 
-                # ----------------------------------------------------------------
-                # Cost cap check — signal stop if exceeded
-                # ----------------------------------------------------------------
-                if run_state.total_cost_usd >= config.cost_cap_usd:
-                    if run_state.control_signal != "stop":
-                        run_state.set_control("stop")
-                        run_state.add_error(
-                            f"Cost cap of ${config.cost_cap_usd} reached. Stopping run."
-                        )
-                        logger.warning(
-                            "Cost cap $%.2f reached (current: $%.4f). Run stopped.",
-                            config.cost_cap_usd,
-                            run_state.total_cost_usd,
-                        )
+                    # ----------------------------------------------------------------
+                    # Cost cap check — signal stop if exceeded
+                    # ----------------------------------------------------------------
+                    if run_state.total_cost_usd >= config.cost_cap_usd:
+                        if run_state.control_signal != "stop":
+                            run_state.set_control("stop")
+                            run_state.add_error(
+                                f"Cost cap of ${config.cost_cap_usd} reached. Stopping run."
+                            )
+                            logger.warning(
+                                "Cost cap $%.2f reached (current: $%.4f). Run stopped.",
+                                config.cost_cap_usd,
+                                run_state.total_cost_usd,
+                            )
+        finally:
+            slot_queue.put_nowait(agent_id)
