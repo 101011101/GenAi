@@ -31,52 +31,57 @@ To use demo mode, append `?demo=true` to the URL — runs a pre-configured 12-va
 
 ```
 app.py                          ← Streamlit entry point
+trace_pipeline.py               ← Step-through pipeline tracer (terminal, no UI)
 .env                            ← API key + optional FRAUDGEN_MOCK=1
 
-models/                         ← Pydantic data models (shared language)
-  run_config.py                 ← All settings for one run
-  persona.py                    ← Criminal profile
-  variant.py                    ← Transaction, RawVariant, ValidatedVariant, ScoredVariant
-  output_record.py              ← Flat row for final CSV/dataset
+app/
+  models/                       ← Pydantic data models (shared language)
+    run_config.py               ← All settings for one run
+    persona.py                  ← Criminal profile
+    variant.py                  ← Transaction, RawVariant, ValidatedVariant, ScoredVariant
+    output_record.py            ← Flat row for final CSV/dataset
 
-utils/
-  llm_client.py                 ← Async Claude API wrapper (retries, cost tracking, mock mode)
-  schema_validator.py           ← Fast sync validation of agent JSON output
+  utils/
+    llm_client.py               ← Async Claude API wrapper (retries, cost tracking, mock mode)
+    schema_validator.py         ← Fast sync validation of agent JSON output
+    label_transactions.py       ← Transaction labeling utility
 
-prompts/                        ← Plain text system prompts, one per agent
-  orchestrator.txt
-  persona_generator.txt
-  fraud_constructor.txt
-  critic.txt
+  prompts/                      ← Plain text system prompts, one per agent
+    orchestrator.txt
+    persona_generator.txt
+    fraud_constructor.txt
+    critic.txt
 
-data/                           ← Static grounding data (no API calls needed)
-  mcc_stats.json                ← Amount distributions by merchant category
-  payment_rail_constraints.json ← ACH/wire/Zelle/crypto limits and settlement times
-  account_balance_distributions.json
-  regulatory_thresholds.json    ← CTR/SAR reporting thresholds by jurisdiction
+  data/                         ← Static grounding data (no API calls needed)
+    mcc_stats.json              ← Amount distributions by merchant category
+    payment_rail_constraints.json ← ACH/wire/Zelle/crypto limits and settlement times
+    account_balance_distributions.json
+    regulatory_thresholds.json  ← CTR/SAR reporting thresholds by jurisdiction
 
-agents/                         ← LLM-powered agents (no imports from pipeline/ or console/)
-  orchestrator.py               ← Decomposes fraud type into coverage cells
-  persona_generator.py          ← Generates criminal personas
-  fraud_constructor.py          ← 5-step reasoning chain → transaction sequence
-  critic.py                     ← Quality gate scoring
+  agents/                       ← LLM-powered agents (no imports from pipeline/ or console/)
+    orchestrator.py             ← Decomposes fraud type into coverage cells
+    persona_generator.py        ← Generates criminal personas
+    fraud_constructor.py        ← 5-step reasoning chain → transaction sequence
+    critic.py                   ← Quality gate scoring
 
-pipeline/                       ← Pure Python, no LLM calls (except through agents/)
-  run_state.py                  ← Thread-safe shared state (pipeline writes, console reads)
-  coverage_matrix.py            ← Tracks which variant space cells are filled
-  output_handler.py             ← Writes CSV/JSON files to output/runs/
-  runner.py                     ← Async coordinator: runs all agents in order
+  pipeline/                     ← Pure Python, no LLM calls (except through agents/)
+    run_state.py                ← Thread-safe shared state (pipeline writes, console reads)
+    coverage_matrix.py          ← Tracks which variant space cells are filled
+    cell_generator.py           ← Generates coverage cells from variation dimensions
+    variant_validator.py        ← Validates variant structure before scoring
+    output_handler.py           ← Writes CSV/JSON files to output/runs/
+    runner.py                   ← Async coordinator: runs all agents in order
 
-console/                        ← Streamlit UI (no agent imports)
-  input_panel.py                ← Fraud description + variant count
-  orchestrator_controls.py      ← Advanced settings (collapsed by default)
-  monitoring_panel.py           ← Live feed during run
-  data_display/
-    coverage_matrix_view.py     ← Grid visualization
-    network_graph_view.py       ← NetworkX mule network graphs
-    stats_panel.py              ← Summary metric cards
-    dataset_browser.py          ← Filterable transaction table
-    export_panel.py             ← Download buttons
+  console/                      ← Streamlit UI (no agent imports)
+    input_panel.py              ← Fraud description + variant count
+    orchestrator_controls.py    ← Advanced settings (collapsed by default)
+    monitoring_panel.py         ← Live feed during run
+    data_display/
+      coverage_matrix_view.py   ← Grid visualization
+      network_graph_view.py     ← NetworkX mule network graphs
+      stats_panel.py            ← Summary metric cards
+      dataset_browser.py        ← Filterable transaction table
+      export_panel.py           ← Download buttons
 
 output/runs/                    ← Auto-created per run, gitignored
   run_YYYYMMDD_HHMMSS/
@@ -144,10 +149,10 @@ RunState           → monitoring_panel (pipeline writes, console reads every 1s
 
 When `FRAUDGEN_MOCK=1` is set in `.env`, `LLMClient` skips all real API calls and returns instant stub data. The detection works by scanning message content to figure out which agent is calling:
 
-- Message contains "variation_dimensions" or "decompose" → returns orchestrator stub (6 cells)
-- Message contains "persona" + "risk" → returns 3 persona stubs (Viktor, James, Maria)
-- Message contains "realism" or "persona_consistency" → returns critic score stub (random 6.5–9.2)
-- Everything else → returns fraud constructor stub (3-hop chain, 4 transactions)
+- Message contains step markers like "step 1: persona analysis" or "step 4: transaction generation" → returns fraud constructor stub (3-hop chain, 4 transactions)
+- Message contains "variation_dimensions", "coverage_cells", or "decompose" → returns orchestrator stub (6 cells)
+- Message contains "persona" + ("risk" or "generate") → returns 3 persona stubs (Viktor, James, Maria)
+- Message contains "realism", "critic", or "score this variant" → returns critic score stub (random 6.5–9.2)
 
 The full pipeline runs end-to-end in mock mode — all validation, the coverage matrix, the revision loop, and output files. It just uses fake data instead of real LLM responses.
 
@@ -157,7 +162,7 @@ The full pipeline runs end-to-end in mock mode — all validation, the coverage 
 
 | Agent | Model | Why |
 |---|---|---|
-| Orchestrator | claude-opus-4-6 + extended thinking (5000 tokens) | Dimension decomposition quality determines the whole run |
+| Orchestrator | claude-sonnet-4-6 + extended thinking (5000 tokens) | Dimension decomposition quality determines the whole run |
 | Persona Generator | claude-sonnet-4-6 | Creative, moderate complexity |
 | Fraud Constructor | claude-sonnet-4-6 | 5 sequential calls per variant |
 | Critic | claude-sonnet-4-6 | 1 call per variant |
@@ -252,7 +257,28 @@ ls output/runs/run_20260314_143022/
 
 ---
 
-### Step 5: Test pause/resume/stop
+### Step 5: Trace the pipeline (step-through runner)
+
+`trace_pipeline.py` is a terminal-based tool for inspecting the pipeline stage by stage — useful for verifying agent outputs, debugging prompt changes, or understanding what each stage produces before it hits the next one.
+
+```bash
+python3 trace_pipeline.py
+```
+
+It runs the same four stages as a real run (Orchestrator → Persona Generator → Fraud Constructor → Critic), but pauses after each stage and pretty-prints the output. Intermediate outputs are cached to `.trace_cache/` so you can re-run from any stage without re-invoking earlier agents.
+
+**Controls at each pause:**
+- `Enter` — continue to next stage
+- `s` / `skip` — skip the current cell (variant loop only)
+- `q` / `quit` — exit
+
+**Config** is at the top of the file in `TRACE_CONFIG` — edit `fraud_description`, `variant_count`, `persona_count`, and `TRACE_CELL_LIMIT` to control what gets run. Defaults are small (4 variants, 2 cells) for fast iteration.
+
+**When to use it:** When you've changed a prompt and want to see exactly what the agent returns before running the full Streamlit app. Also useful as a gate-check — each stage's output is printed in full, so you can spot malformed JSON or off-strategy responses immediately.
+
+---
+
+### Step 6: Test pause/resume/stop
 
 1. Start a 20-variant run
 2. Click Pause after ~5 variants complete
@@ -263,7 +289,7 @@ ls output/runs/run_20260314_143022/
 
 ---
 
-### Step 6: Test demo mode
+### Step 7: Test demo mode
 
 ```
 http://localhost:8501?demo=true
@@ -315,7 +341,7 @@ Expected — mock mode returns a random score between 6.5 and 9.2 for every crit
 
 ### Run hangs after "Generating personas" phase
 
-The orchestrator call uses extended thinking (`claude-opus-4-6`) and can take 30–60 seconds. This is normal. If it hangs >2 minutes, the API call probably timed out — check the terminal for `call_with_thinking timed out after 120s`. If this happens repeatedly, the Opus API may be under load — try again or switch orchestrator to Sonnet in `agents/orchestrator.py`.
+The orchestrator call uses extended thinking (`claude-sonnet-4-6`) and can take 30–60 seconds. This is normal. If it hangs >2 minutes, the API call probably timed out — check the terminal for `call_with_thinking timed out after 120s`. If this happens repeatedly, the API may be under load — try again or reduce the thinking budget in `app/agents/orchestrator.py`.
 
 ### "Cost cap reached" error
 
