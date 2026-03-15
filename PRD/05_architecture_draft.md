@@ -93,7 +93,8 @@ project/
 │
 ├── utils/
 │   ├── llm_client.py                   ← Claude API wrapper
-│   └── schema_validator.py             ← validates agent JSON output
+│   ├── schema_validator.py             ← validates agent JSON output
+│   └── label_transactions.py           ← deterministic BFS graph labeler; stamps fraud_role + is_fraud
 │
 └── output/
     └── runs/                           ← runtime generated, gitignored
@@ -198,14 +199,15 @@ Hybrid agent — one LLM call to decompose the fraud description into variation 
 Single LLM call (or N parallel calls for large counts). Receives the fraud description and persona settings (count, risk distribution, geographic scope). Returns `List[Persona]`. Enforces the configured risk distribution — if the analyst set 30% high / 40% mid / 30% low, the prompt enforces that spread explicitly.
 
 **Fraud Network Constructor (Level 3)** [TENTATIVE]
-The core generation agent. Runs as a five-step reasoning chain — each step's output becomes context for the next:
+The core generation agent. Runs as a five-step LLM reasoning chain followed by a deterministic Python labeling step:
 1. **Persona analysis** — what does this criminal actually need? What are their constraints and fears?
 2. **Network planning** — decide hop count, topology (chain vs fan-out), timing, amount logic, cover activity
 3. **Participant profiles** — for each account in the network, who are they, how were they recruited, what do they think they're doing
-4. **Transaction generation** — full transaction sequence grounded in real-world constraints
-5. **Self-review** — agent checks its own output for internal consistency before returning
+4. **Transaction generation** — full transaction sequence grounded in real-world constraints. Transactions do NOT include `is_fraud` or `fraud_role` fields at this stage. The LLM instead emits a `fraud_account_ids` list — the internal mule/layering account IDs only (excludes victim source accounts, extraction destination accounts, and cover activity accounts).
+5. **Self-review** — agent checks its own output for internal consistency, verifies `fraud_account_ids` contains only internal mule accounts, and corrects any constraint violations before returning.
+6. **Deterministic labeling** (pure Python, not an LLM call) — `label_transactions()` in `utils/label_transactions.py` receives the transaction list and `fraud_account_ids` set. It performs a BFS traversal of the transfer graph and stamps `fraud_role` and `is_fraud` on every transaction using edge-classification rules: placement (external→fraud), hop_N_of_M (fraud→fraud, BFS depth N of M), extraction (fraud→external), cover_activity (external→external). This step runs after self-review and before `RawVariant` is returned.
 
-Returns `RawVariant` JSON.
+Returns `RawVariant` JSON with all transactions fully labeled.
 
 **Critic** [TENTATIVE]
 Independent LLM agent. Receives `ValidatedVariant` + original `Persona`. Has no knowledge of the coverage matrix or other variants. Scores on four dimensions:
@@ -309,12 +311,13 @@ PersonaGenerator        →  List[Persona]
 [PARALLEL — up to max_parallel]
   For each (Persona, cell_assignment):
     FraudConstructor
-      Step 1: persona analysis
-      Step 2: network planning
-      Step 3: participant profiles
-      Step 4: transaction generation
-      Step 5: self-review
-      → RawVariant JSON
+      Step 1: persona analysis            [LLM]
+      Step 2: network planning            [LLM]
+      Step 3: participant profiles        [LLM]
+      Step 4: transaction generation      [LLM] → transactions (unlabeled) + fraud_account_ids list
+      Step 5: self-review                 [LLM] → corrected transactions + verified fraud_account_ids
+      Step 6: label_transactions()        [Python/BFS] → stamps fraud_role + is_fraud on all txns
+      → RawVariant JSON (fully labeled)
     ↓
     SchemaValidator (pure Python)
       → fail: discard, reassign cell
@@ -412,6 +415,8 @@ console → RunConfig → runner.py
 runner.py → (fraud_description, settings) → persona_generator → List[Persona]
 
 runner.py → (Persona, cell_assignment) → fraud_constructor → RawVariant JSON
+  [internally: LLM emits transactions (unlabeled) + fraud_account_ids list;
+   label_transactions() stamps fraud_role/is_fraud via BFS graph traversal before RawVariant is returned]
 
 RawVariant → schema_validator → ValidatedVariant | ValidationError
 
@@ -449,15 +454,16 @@ Revision loops run within the same async task — the failed variant re-calls th
 1. models/                      ← foundation, everything depends on these
 2. utils/llm_client.py          ← Claude API wrapper
 3. utils/schema_validator.py    ← validation logic
-4. prompts/                     ← plain text, no code dependencies
-5. pipeline/run_state.py        ← needed by both pipeline and console
-6. agents/                      ← depends on models + utils + prompts
-7. pipeline/coverage_matrix.py
-8. pipeline/runner.py           ← depends on agents + coverage_matrix + run_state
-9. pipeline/output_handler.py
-10. console/data_display/       ← depends on models (knows the output schema)
-11. console/monitoring_panel.py ← depends on run_state
-12. console/orchestrator_controls.py
-13. console/input_panel.py
-14. app.py                      ← wires everything, built last
+4. utils/label_transactions.py  ← BFS labeler; depends only on stdlib
+5. prompts/                     ← plain text, no code dependencies
+6. pipeline/run_state.py        ← needed by both pipeline and console
+7. agents/                      ← depends on models + utils + prompts
+8. pipeline/coverage_matrix.py
+9. pipeline/runner.py           ← depends on agents + coverage_matrix + run_state
+10. pipeline/output_handler.py
+11. console/data_display/       ← depends on models (knows the output schema)
+12. console/monitoring_panel.py ← depends on run_state
+13. console/orchestrator_controls.py
+14. console/input_panel.py
+15. app.py                      ← wires everything, built last
 ```

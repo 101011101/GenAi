@@ -252,6 +252,7 @@ class FraudConstructorAgent:
         critic_feedback: str = "",
         on_strategy_text: Callable[[str], None] | None = None,
         on_step: Callable[[str], None] | None = None,
+        on_labeling: Callable[[list[dict], set[str]], None] | None = None,
     ) -> RawVariant:
         """Execute the five-step reasoning chain and return a RawVariant.
 
@@ -529,6 +530,8 @@ class FraudConstructorAgent:
 
         # Deterministically assign fraud_role and is_fraud from the declared fraud network
         fraud_account_ids = set(final_data.pop("fraud_account_ids", []))
+        if on_labeling:
+            on_labeling(list(final_data["transactions"]), fraud_account_ids)
         final_data["transactions"] = label_transactions(
             final_data["transactions"], fraud_account_ids
         )

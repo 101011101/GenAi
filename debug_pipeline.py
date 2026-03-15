@@ -347,6 +347,13 @@ async def main() -> None:
                     _err(f"Cache load failed ({e}), re-running constructor…")
                     raw_variant = None
 
+        _prelabel_capture: list = []
+
+        def _on_labeling(raw_txns: list[dict], fraud_ids: set[str]) -> None:
+            _prelabel_capture.clear()
+            _prelabel_capture.append(raw_txns)
+            _prelabel_capture.append(fraud_ids)
+
         if raw_variant is None:
             on_step, _cleanup = make_on_step()
 
@@ -356,6 +363,7 @@ async def main() -> None:
                     persona=persona,
                     cell_assignment=cell,
                     on_step=on_step,
+                    on_labeling=_on_labeling,
                 )
                 _cleanup()
                 _save_cache(cell_cache_path, raw_variant)
@@ -372,7 +380,49 @@ async def main() -> None:
         print(f"\n{_BOLD}Raw variant output:{_RESET}")
         _dump(raw_variant)
 
-        resp = _pause("Variant generated. Continue to schema validation? ([s]kip cell, [q]uit)")
+        resp = _pause("Variant generated. Continue to labeling stage? ([s]kip cell, [q]uit)")
+        _check_quit(resp)
+        if resp in ("s", "skip"):
+            continue
+
+        # -------------------------------------------------------------------
+        # Labeling stage
+        # -------------------------------------------------------------------
+        _section(f"STAGE 3.5  —  Labeling Stage  [{cell_id}]")
+
+        if _prelabel_capture:
+            raw_txn_list: list[dict] = _prelabel_capture[0]
+            fraud_ids: set[str] = _prelabel_capture[1]
+
+            print(f"{_BOLD}fraud_account_ids declared by LLM ({len(fraud_ids)} accounts):{_RESET}")
+            for acct_id in sorted(fraud_ids):
+                print(f"  • {acct_id}")
+
+            print(f"\n{_BOLD}Raw unlabeled transactions ({len(raw_txn_list)} total):{_RESET}")
+            for txn in raw_txn_list:
+                print(
+                    f"  [{txn.get('transaction_id', '?')}]  "
+                    f"{txn.get('sender_account_id', '?')} → {txn.get('receiver_account_id', '?')}  "
+                    f"${txn.get('amount', 0):,.2f}  [{txn.get('channel', '?')}]"
+                )
+
+            print(f"\n{_BOLD}Labeled transactions (after label_transactions()):{_RESET}")
+            for txn in raw_variant.transactions:
+                fraud_marker = _RED + "FRAUD" + _RESET if txn.is_fraud else _DIM + "clean" + _RESET
+                print(
+                    f"  [{txn.transaction_id}]  "
+                    f"{txn.sender_account_id} → {txn.receiver_account_id}  "
+                    f"${txn.amount:,.2f}  {fraud_marker}  role={txn.fraud_role}"
+                )
+
+            fraud_count = sum(1 for t in raw_variant.transactions if t.is_fraud)
+            cover_count = len(raw_variant.transactions) - fraud_count
+            _ok(f"Labeling summary: {fraud_count} fraud txns, {cover_count} cover_activity txns")
+        else:
+            _info("(Labeling capture not available — variant loaded from cache)")
+            _info("Delete the cache file and re-run to see the labeling stage.")
+
+        resp = _pause("Continue to schema validation? ([s]kip cell, [q]uit)")
         _check_quit(resp)
         if resp in ("s", "skip"):
             continue
