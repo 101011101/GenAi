@@ -101,8 +101,14 @@ class LLMClient:
 
                 try:
                     return json.loads(raw_text)
-                except json.JSONDecodeError as parse_err:
-                    last_error = parse_err
+                except json.JSONDecodeError:
+                    # Try to salvage JSON from markdown fences or prose wrapping
+                    extracted = _extract_json_from_text(raw_text)
+                    if extracted is not None:
+                        return extracted
+                    last_error = json.JSONDecodeError(
+                        f"Could not parse JSON from response: {raw_text[:100]!r}", raw_text, 0
+                    )
                     # Reset to original messages + a short preview of the bad response.
                     # Using list(messages) (not current_messages) discards accumulated
                     # correction turns so token cost stays flat across retries.
@@ -392,6 +398,7 @@ def _mock_response(messages: list[dict]) -> dict:
             "transactions": txns,
             "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions"],
             "fraud_indicators_present": ["rapid sequential transfers", "round-trip timing pattern", "new payee relationships"],
+            "fraud_account_ids": [a2, a3],
         }
 
     # Orchestrator output
