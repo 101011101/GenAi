@@ -57,7 +57,7 @@ DIMENSION 3: LABEL CORRECTNESS (pass / fail)
 Ask yourself: does this transaction sequence actually represent the stated fraud type with accurate fraud_role labels?
 
 Check:
-- Is there exactly one "placement" transaction (the initial receipt of stolen funds)? A variant with two "placement" transactions has incorrect labeling.
+- Is there at least one "placement" transaction (the initial receipt of stolen funds)? A variant with zero "placement" transactions has incorrect labeling. Fan-out topologies with multiple victims may have multiple "placement" transactions — this is valid.
 - Are hop labels sequential and consistent? "hop_2_of_5" must be preceded by "hop_1_of_5" and followed by "hop_3_of_5".
 - Is there at least one "extraction" transaction? A variant with no extraction is incomplete.
 - Are "cover_activity" transactions labeled as is_fraud = false? If a cover_activity transaction is labeled is_fraud = true, that is a label error.
@@ -87,15 +87,9 @@ Score low for:
 
 ---
 
-PASSED CONDITION
+NOTE ON SCORING
 
-passed = true ONLY if ALL of the following are true:
-- realism_score >= [the critic_floor value provided in the input]
-- distinctiveness_score >= [the critic_floor value minus 1, minimum 5.0]
-- persona_consistency = true
-- label_correctness = true
-
-If any condition fails, passed = false.
+You do not need to compute a "passed" field — that determination is made by the pipeline code using the floors provided. Your job is to score each dimension accurately and independently on its own merits. Do not adjust scores to force a pass or fail.
 
 ---
 
@@ -118,8 +112,7 @@ You MUST return a JSON object with exactly this structure:
   "distinctiveness_score": "number between 1.0 and 10.0",
   "persona_consistency": "boolean",
   "label_correctness": "boolean",
-  "passed": "boolean — true ONLY if all four conditions above are met",
-  "feedback": "string — specific, actionable critique. If passed=true, describe what was done well and what the variant's strongest structural feature is."
+  "feedback": "string — specific, actionable critique. If all dimensions pass their floors, describe what was done well and what the variant's strongest structural feature is."
 }
 
 Return ONLY the JSON object. No preamble, no explanation outside the JSON.

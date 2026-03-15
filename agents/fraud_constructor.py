@@ -9,6 +9,7 @@ from uuid import uuid4
 
 from models.persona import Persona
 from models.variant import RawVariant
+from utils.label_transactions import label_transactions
 from utils.llm_client import LLMClient
 
 # ---------------------------------------------------------------------------
@@ -94,11 +95,34 @@ _PERSONA_ANALYSIS_SCHEMA = {
         "non_negotiable_constraints": {"type": "array", "items": {"type": "string"}},
         "structural_differentiators": {"type": "string"},
         "evasion_targets": {"type": "array", "items": {"type": "string"}},
+        "constraint_audit": {
+            "type": "object",
+            "properties": {
+                "max_hop_count": {"type": "integer"},
+                "allowed_channels": {"type": "array", "items": {"type": "string"}},
+                "crypto_allowed": {"type": "boolean"},
+                "international_allowed": {"type": "boolean"},
+                "min_timing_interval_hrs": {"type": "number"},
+                "max_timing_interval_hrs": {"type": "number"},
+                "cover_activity_required": {"type": "boolean"},
+                "mule_account_age_range": {"type": "string"},
+                "mule_account_quality": {"type": "string"},
+                "geographic_scope": {"type": "string"},
+                "extraction_methods_allowed": {"type": "array", "items": {"type": "string"}},
+            },
+            "required": [
+                "max_hop_count", "allowed_channels", "crypto_allowed",
+                "international_allowed", "min_timing_interval_hrs",
+                "max_timing_interval_hrs", "cover_activity_required",
+                "mule_account_age_range", "mule_account_quality",
+                "geographic_scope", "extraction_methods_allowed",
+            ],
+        },
     },
     "required": [
         "specific_goal", "deadline_or_pressure", "available_resources",
         "fears_and_known_controls", "non_negotiable_constraints",
-        "structural_differentiators", "evasion_targets",
+        "structural_differentiators", "evasion_targets", "constraint_audit",
     ],
 }
 
@@ -183,23 +207,22 @@ _SELF_REVIEW_SCHEMA = {
                     "receiver_account_id": {"type": "string"},
                     "merchant_category": {"type": "string"},
                     "channel": {"type": "string"},
-                    "is_fraud": {"type": "boolean"},
-                    "fraud_role": {"type": "string"},
                 },
                 "required": [
                     "transaction_id", "timestamp", "amount",
                     "sender_account_id", "receiver_account_id",
-                    "merchant_category", "channel", "is_fraud", "fraud_role",
+                    "merchant_category", "channel",
                 ],
             },
         },
         "evasion_techniques": {"type": "array", "items": {"type": "string"}},
         "fraud_indicators_present": {"type": "array", "items": {"type": "string"}},
+        "fraud_account_ids": {"type": "array", "items": {"type": "string"}},
     },
     "required": [
         "variant_id", "fraud_type", "persona_id", "strategy_description",
         "variant_parameters", "transactions", "evasion_techniques",
-        "fraud_indicators_present",
+        "fraud_indicators_present", "fraud_account_ids",
     ],
 }
 
@@ -293,6 +316,7 @@ class FraudConstructorAgent:
                 "role": "user",
                 "content": (
                     "STEP 2: NETWORK PLANNING\n\n"
+                    "Your constraint_audit from Step 1 defines hard limits — do not violate any of them when selecting parameters.\n\n"
                     "CONFLICT RESOLUTION RULE: The cell assignment defines MANDATORY structural "
                     "parameters (hop_count, topology, extraction_method, etc.). The persona defines "
                     "BEHAVIORAL constraints (risk tolerance, resources, timeline). When they conflict:\n"
@@ -390,16 +414,22 @@ class FraudConstructorAgent:
             '      "sender_account_id": "<string>",\n'
             '      "receiver_account_id": "<string>",\n'
             '      "merchant_category": "<string>",\n'
-            '      "channel": "<string>",\n'
-            '      "is_fraud": <boolean>,\n'
-            '      "fraud_role": "<placement|hop_N_of_M|extraction|cover_activity>"\n'
+            '      "channel": "<string>"\n'
             '    }\n'
             '  ],\n'
             '  "evasion_techniques": ["<string>"],\n'
-            '  "fraud_indicators_present": ["<string>"]\n'
+            '  "fraud_indicators_present": ["<string>"],\n'
+            '  "fraud_account_ids": ["<account_ids of the internal mule/layering accounts ONLY — '
+            'the accounts that receive and forward funds between placement and extraction. '
+            'Do NOT include the victim/source accounts that originate the funds (they are external senders). '
+            'Do NOT include the final attacker/destination accounts that receive extracted funds (they are external receivers). '
+            'Do NOT include cover activity accounts>"]\n'
             "}\n\n"
-            "Generate at minimum hop_count + 2 fraud transactions (placement + hops + "
-            "extraction) plus cover activity proportional to the cover_activity_level.\n"
+            "Generate at minimum hop_count + 2 fraud transactions (placement → hops → extraction) "
+            "plus cover activity proportional to the cover_activity_level. "
+            "IMPORTANT: cover activity transactions must use accounts that are NOT in fraud_account_ids — "
+            "any transaction involving a mule account will be labeled as fraud by the pipeline regardless of intent. "
+            "Do NOT add fraud_role or is_fraud fields to transactions — those are assigned automatically.\n"
             "Return ONLY the JSON object."
         )
 
@@ -440,20 +470,42 @@ class FraudConstructorAgent:
                     "1. Do timestamps between fraud hops match the timing_interval_hrs "
                     "from the network plan? Calculate actual hours between hops.\n"
                     "2. Are all amounts within realistic ranges per the grounding data?\n"
-                    "3. Are all fraud_role labels accurate for each transaction's position?\n"
-                    "4. Does the topology (chain/fan_out/hybrid) match the "
-                    "sender→receiver flow in the transactions?\n"
-                    "5. STRUCTURED PERSONA AUDIT — check each constraint individually:\n"
-                    "   a. risk_tolerance=low → timing_interval_hrs must be >= 12, "
-                    "cover_activity must be 'low' or 'high', no same-day multi-hop.\n"
-                    "   b. risk_tolerance=high → timing_interval_hrs < 6 is acceptable.\n"
-                    "   c. timeline_pressure urgent/days → timing_interval_hrs must be <= 24.\n"
-                    "   d. resources states no crypto → extraction_method must NOT be crypto "
-                    "and no transaction channel may be crypto.\n"
-                    "   e. resources states no international reach → geographic_spread must be domestic only.\n"
-                    "   f. operational_scale=small → hop_count must be <= 4.\n"
-                    "   Fix any violation before returning.\n"
-                    "6. Are there any payment rail violations? "
+                    "3. Does the topology (chain/fan_out/hybrid) match the "
+                    "sender→receiver flow in the transactions? Also verify that the "
+                    "fraud_type string is consistent with that topology — if you generated "
+                    "a fan_out topology, fraud_type must not describe a chain structure, "
+                    "and vice versa. Fix fraud_type if it contradicts variant_parameters.topology.\n"
+                    "3b. Using your fraud_account_ids list, count transactions where BOTH "
+                    "sender_account_id AND receiver_account_id are NOT in fraud_account_ids — "
+                    "these are the cover activity transactions. Does that count match "
+                    "variant_parameters.cover_activity? (none → 0, low → 1–3, high → 4+). "
+                    "Correct the field value if the count does not match.\n"
+                    "3c. Verify fraud_account_ids is present in your output and contains only "
+                    "internal mule accounts — not victim accounts, not extraction destination "
+                    "accounts, not cover activity accounts.\n"
+                    "4. PERSONA CONSTRAINT AUDIT — check every field in the constraint_audit "
+                    "from Step 1 against your output. For each field, state ✓ (compliant) or "
+                    "✗ (violation + what you will fix), then apply all fixes:\n"
+                    "   - constraint_audit.crypto_allowed=false → no transaction channel may be "
+                    "'crypto', extraction_method must not be 'crypto'\n"
+                    "   - constraint_audit.international_allowed=false → geographic_spread must "
+                    "be domestic only, no cross-border routing\n"
+                    "   - constraint_audit.max_hop_count → hop_count in variant_parameters must "
+                    "be ≤ this value\n"
+                    "   - constraint_audit.min_timing_interval_hrs → all inter-hop timestamp "
+                    "gaps must be ≥ this value\n"
+                    "   - constraint_audit.max_timing_interval_hrs → all inter-hop timestamp "
+                    "gaps must be ≤ this value\n"
+                    "   - constraint_audit.cover_activity_required=true → cover_activity must "
+                    "not be 'none'\n"
+                    "   - constraint_audit.mule_account_age_range → participant account ages in "
+                    "profiles must reflect this range\n"
+                    "   - constraint_audit.allowed_channels → every transaction.channel must "
+                    "appear in this list\n"
+                    "   - constraint_audit.extraction_methods_allowed → extraction_method must "
+                    "be one of these values\n"
+                    "   Fix all violations before returning.\n"
+                    "5. Are there any payment rail violations? "
                     "(ACH cannot settle in <1 hour; Zelle >$2,500/transaction is over limit)\n\n"
                     "Fix any inconsistencies and return the corrected full JSON object "
                     "using the same schema as Step 4. Return ONLY the corrected JSON."
@@ -474,6 +526,12 @@ class FraudConstructorAgent:
         # Ensure the variant_id is the one we generated (model may have changed it)
         final_data["variant_id"] = variant_id
         final_data["persona_id"] = persona.persona_id
+
+        # Deterministically assign fraud_role and is_fraud from the declared fraud network
+        fraud_account_ids = set(final_data.pop("fraud_account_ids", []))
+        final_data["transactions"] = label_transactions(
+            final_data["transactions"], fraud_account_ids
+        )
 
         return RawVariant.model_validate(final_data)
 
