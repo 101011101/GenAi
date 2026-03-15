@@ -12,6 +12,7 @@ from agents.persona_generator import PersonaGeneratorAgent
 from models.persona import Persona
 from models.run_config import RunConfig
 from models.variant import ScoredVariant
+from pipeline.cell_generator import generate_cells
 from pipeline.coverage_matrix import CoverageMatrix
 from pipeline.output_handler import OutputHandler
 from pipeline.run_state import RunState, VariantSummary
@@ -122,15 +123,17 @@ class PipelineRunner:
         run_state.log_event("Orchestrator -> Claude [thinking mode] decomposing fraud description...")
         orchestrator_output = await OrchestratorAgent().run(config)
         run_state.log_event(
-            f"Orchestrator done: {len(orchestrator_output.coverage_cells)} cells across "
-            f"{len(orchestrator_output.variation_dimensions)} dimensions"
+            f"Orchestrator done: {len(orchestrator_output.variation_dimensions)} dimensions discovered"
         )
 
-        cells: list[dict] = orchestrator_output.coverage_cells
-
-        # Demo mode: cap at 12 cells
-        if config.demo_mode:
-            cells = cells[:12]
+        # Generate coverage cells deterministically from dimensions
+        target_cells = min(config.variant_count, 12) if config.demo_mode else config.variant_count
+        cells: list[dict] = generate_cells(
+            dimensions=orchestrator_output.variation_dimensions,
+            target_count=target_cells,
+            suggested_persona_count=orchestrator_output.suggested_persona_count,
+        )
+        run_state.log_event(f"CellGenerator: {len(cells)} cells from Cartesian product of dimensions")
 
         # ------------------------------------------------------------------
         # Step 2 — Build coverage matrix
@@ -375,7 +378,7 @@ class PipelineRunner:
                         f"persona={persona.name}"
                     )
                     try:
-                        raw_variant = await constructor.run(
+                        raw_variant, persona_ok, consistency_notes = await constructor.run(
                             persona=persona,
                             cell_assignment=cell,
                             critic_feedback=feedback,
@@ -413,10 +416,13 @@ class PipelineRunner:
                     # Critic evaluation
                     # ----------------------------------------------------------
                     run_state.log_event(f"{cell_id}: Critic -> Claude evaluating variant...")
+                    if not persona_ok:
+                        run_state.log_event(f"{cell_id}: persona_consistency=False — {consistency_notes}")
                     try:
                         scored = await critic_agent.run(
                             variant=validated,
                             persona=persona,
+                            persona_consistency=persona_ok,
                             critic_floor=config.critic_floor,
                         )
                     except Exception as exc:
@@ -480,13 +486,11 @@ class PipelineRunner:
                         )
                         if not scored.persona_consistency:
                             feedback = (
-                                f"PERSONA CONSISTENCY FAILURE: {scored.feedback} "
+                                f"PERSONA CONSISTENCY FAILURE: {consistency_notes} "
                                 "Do NOT change the cell assignment parameters. "
                                 "Adapt the persona's behavior to work within the cell's "
                                 "structural constraints instead."
                             )
-                        elif not scored.label_correctness:
-                            feedback = f"LABEL CORRECTNESS FAILURE: {scored.feedback}"
                         else:
                             feedback = scored.feedback
                         logger.info(

@@ -14,9 +14,9 @@ Think through the following before generating your output:
 
 5. PERSONA AXES — What criminal profiles are plausible for this fraud type, and how do those profiles produce structurally different operations? (organized crime vs solo operator vs compromised insider, time-pressured vs patient, high-resource vs low-resource)
 
-For each dimension you identify: describe what varies, what the plausible range is, and give concrete example values.
+For each dimension you identify: describe what varies, what the plausible range is, and give 3–5 concrete example values that span the full range — including both extremes.
 
-Then, construct coverage cells. Each cell is one specific point in the variation space — the configuration for one sub-agent task. Cells should be distributed to maximize structural diversity: avoid clustering in the center of each dimension's range.
+NOTE: Coverage cells are generated automatically from your example_values by a downstream Python process. Your job is only to identify the right dimensions and populate example_values with values that genuinely span the space.
 
 Finally, suggest a persona count. This is the number of distinct criminal profiles the persona generator should create. Personas should map onto the behavioral extremes you identified — not average cases.
 
@@ -29,16 +29,7 @@ You MUST return a JSON object with exactly this structure:
       "description": "string — what this dimension represents and why it matters for fraud detection",
       "range_low": "string — the low end of the plausible range (e.g. '2 hops')",
       "range_high": "string — the high end (e.g. '10+ hops')",
-      "example_values": ["array of 3–5 concrete example values across the range"]
-    }
-  ],
-  "coverage_cells": [
-    {
-      "cell_id": "string — unique ID, e.g. 'cell_001'",
-      "dimension_values": {
-        "dimension_name": "short_snake_case_identifier (max 30 chars, NO prose — e.g. '5_hop_fan_out', 'crypto_btc_otc', 'staggered_3day', 'fully_witting_paid')"
-      },
-      "persona_slot": "string — which type of persona should be assigned here (e.g. 'high_risk_international' or 'low_risk_domestic_patient')"
+      "example_values": ["array of 3–5 concrete example values spanning the full range, including extremes"]
     }
   ],
   "suggested_persona_count": "integer — recommended number of distinct personas to generate"
@@ -46,8 +37,6 @@ You MUST return a JSON object with exactly this structure:
 
 Important constraints:
 - Identify at least 6 and at most 12 variation dimensions. More is better if the fraud type genuinely varies along those axes.
-- Generate at least as many coverage cells as the requested variant count. Cells should not all cluster in the same dimension values.
-- Cells must cover extreme values (not just midpoints) on the most important dimensions.
-- persona_slot values across cells should reference diverse persona types — do not assign the same type to every cell.
-- dimension_values in coverage_cells MUST be short snake_case identifiers, maximum 30 characters each. Do NOT write prose descriptions as cell values. The prose context belongs in variation_dimensions[].description — not in cell values. Good: "5_hop_fan_out". Bad: "5 hops — maximum domestic layering with four intermediate buffer accounts before extraction".
+- example_values MUST be short snake_case identifiers, maximum 30 characters each. Do NOT write prose. Good: "5_hop_fan_out". Bad: "5 hops — maximum domestic layering with four buffer accounts".
+- example_values must include the low and high extremes of each dimension, not just midpoints.
 - Return ONLY the JSON object. No preamble, no explanation outside the JSON.

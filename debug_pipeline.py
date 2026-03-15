@@ -38,6 +38,7 @@ from agents.orchestrator import OrchestratorAgent, OrchestratorOutput
 from agents.persona_generator import PersonaGeneratorAgent
 from models.persona import Persona
 from models.run_config import RunConfig
+from pipeline.cell_generator import generate_cells
 from utils.schema_validator import validate_raw_variant
 
 # ---------------------------------------------------------------------------
@@ -256,7 +257,13 @@ async def main() -> None:
         _save_cache(_CACHE_ORCHESTRATOR, orchestrator_output)
         _ok("Cached orchestrator output to .debug_cache/orchestrator.json")
 
-    _ok(f"Orchestrator: {len(orchestrator_output.coverage_cells)} cells "
+    coverage_cells = generate_cells(
+        dimensions=orchestrator_output.variation_dimensions,
+        target_count=DEBUG_CONFIG.variant_count,
+        suggested_persona_count=orchestrator_output.suggested_persona_count,
+    )
+
+    _ok(f"Orchestrator: {len(coverage_cells)} cells "
         f"across {len(orchestrator_output.variation_dimensions)} dimensions")
     _ok(f"Suggested persona count: {orchestrator_output.suggested_persona_count}")
 
@@ -265,12 +272,12 @@ async def main() -> None:
         print(f"  • {dim.get('name')}: {dim.get('description', '')[:60]}")
 
     print(f"\n{_BOLD}Coverage cells (first 6):{_RESET}")
-    for cell in orchestrator_output.coverage_cells[:6]:
+    for cell in coverage_cells[:6]:
         dims = cell.get("dimension_values", {})
         dims_str = ", ".join(f"{k}={v}" for k, v in list(dims.items())[:3])
         print(f"  [{cell['cell_id']}]  slot={cell['persona_slot']}  {dims_str}")
-    if len(orchestrator_output.coverage_cells) > 6:
-        print(f"  … and {len(orchestrator_output.coverage_cells) - 6} more")
+    if len(coverage_cells) > 6:
+        print(f"  … and {len(coverage_cells) - 6} more")
 
     print(f"\n{_BOLD}Full orchestrator output:{_RESET}")
     _dump(orchestrator_output.__dict__)
@@ -312,7 +319,7 @@ async def main() -> None:
     # -----------------------------------------------------------------------
     # STAGE 3 + 4 — FraudConstructor → Critic (per cell)
     # -----------------------------------------------------------------------
-    cells = orchestrator_output.coverage_cells
+    cells = coverage_cells
     if DEBUG_CELL_LIMIT is not None:
         cells = cells[:DEBUG_CELL_LIMIT]
 
@@ -354,12 +361,15 @@ async def main() -> None:
             _prelabel_capture.append(raw_txns)
             _prelabel_capture.append(fraud_ids)
 
+        persona_ok: bool = True
+        consistency_notes: str = "all persona constraints satisfied"
+
         if raw_variant is None:
             on_step, _cleanup = make_on_step()
 
             print()
             try:
-                raw_variant = await FraudConstructorAgent().run(
+                raw_variant, persona_ok, consistency_notes = await FraudConstructorAgent().run(
                     persona=persona,
                     cell_assignment=cell,
                     on_step=on_step,
@@ -452,10 +462,16 @@ async def main() -> None:
         _section(f"STAGE 4 / 4  —  CriticAgent  [{cell_id}]")
         _info(f"Critic floor: realism≥{DEBUG_CONFIG.critic_floor}, distinctiveness≥6.0")
 
+        if not persona_ok:
+            _err(f"Persona consistency: FAIL — {consistency_notes}")
+        else:
+            _ok(f"Persona consistency: PASS — {consistency_notes}")
+
         try:
             scored = await CriticAgent().run(
                 variant=validated,
                 persona=persona,
+                persona_consistency=persona_ok,
                 critic_floor=DEBUG_CONFIG.critic_floor,
             )
         except Exception as exc:
@@ -473,7 +489,6 @@ async def main() -> None:
         print(f"  Distinctiveness   : {scored.distinctiveness_score}")
         print(f"  Avg score         : {avg}")
         print(f"  Persona consistent: {scored.persona_consistency}")
-        print(f"  Label correct     : {scored.label_correctness}")
         if scored.feedback:
             print(f"\n  {_DIM}Feedback: {scored.feedback[:200]}{_RESET}")
 
