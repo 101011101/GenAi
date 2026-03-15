@@ -259,48 +259,44 @@ def _repair_constraint_violations(
             if ch not in allowed_channels:
                 txn["channel"] = fallback
 
-    # 2. Re-space fraud transaction timestamps to respect min_timing_interval_hrs
-    min_interval = audit.get("min_timing_interval_hrs")
-    if min_interval:
-        min_delta = timedelta(hours=float(min_interval))
+    def _parse(ts: str) -> datetime | None:
+        if not ts:
+            return None
+        try:
+            dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+            return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+        except (ValueError, AttributeError):
+            return None
 
-        def _parse(ts: str) -> datetime | None:
-            if not ts:
-                return None
-            try:
-                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
-                return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
-            except (ValueError, AttributeError):
-                return None
-
-        fraud_txns = [
-            t for t in transactions
-            if t.get("sender_account_id") in fraud_ids
-            or t.get("receiver_account_id") in fraud_ids
-        ]
-
-        # Re-sort and sweep until no violations remain (handles cascading pushes)
+    def _respace_fraud_txns(txns: list[dict], min_delta: timedelta) -> None:
+        """Sort fraud transactions by timestamp and push any that are too close forward.
+        Loops until stable so cascading fixes and post-ACH shifts are all caught."""
         for _pass in range(10):
-            fraud_txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
+            txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
             fixed_any = False
-            for i in range(1, len(fraud_txns)):
-                prev_ts = _parse(fraud_txns[i - 1].get("timestamp", ""))
-                curr_ts = _parse(fraud_txns[i].get("timestamp", ""))
+            for i in range(1, len(txns)):
+                prev_ts = _parse(txns[i - 1].get("timestamp", ""))
+                curr_ts = _parse(txns[i].get("timestamp", ""))
                 if prev_ts is None or curr_ts is None:
                     continue
                 if (curr_ts - prev_ts) < min_delta:
-                    # Add a small random jitter beyond the minimum so timestamps look organic
-                    jitter = timedelta(hours=_random.uniform(0, float(min_interval) * 0.1))
-                    new_ts = prev_ts + min_delta + jitter
-                    fraud_txns[i]["timestamp"] = new_ts.isoformat()
+                    jitter = timedelta(hours=_random.uniform(0, min_delta.total_seconds() / 3600 * 0.1))
+                    txns[i]["timestamp"] = (prev_ts + min_delta + jitter).isoformat()
                     fixed_any = True
             if not fixed_any:
                 break
 
-    # 3. ACH settlement floor (1h)
+    min_interval = audit.get("min_timing_interval_hrs")
+    fraud_txns = [
+        t for t in transactions
+        if t.get("sender_account_id") in fraud_ids
+        or t.get("receiver_account_id") in fraud_ids
+    ]
+
+    # 2. ACH settlement floor (1h) — runs first so timing re-spacing catches any shifts it introduces
     sorted_all = sorted(
         transactions,
-        key=lambda t: (_parse(t.get("timestamp", "")) if min_interval else datetime.max.replace(tzinfo=timezone.utc)) or datetime.max.replace(tzinfo=timezone.utc),
+        key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)),
     )
     ach_floor = timedelta(hours=1.0)
     for i in range(1, len(sorted_all)):
@@ -312,6 +308,10 @@ def _repair_constraint_violations(
         curr_ts = _parse(curr.get("timestamp", ""))
         if prev_ts and curr_ts and (curr_ts - prev_ts) < ach_floor:
             curr["timestamp"] = (prev_ts + ach_floor).isoformat()
+
+    # 3. Re-space fraud transaction timestamps — runs after ACH floor so it catches any gaps it created
+    if min_interval:
+        _respace_fraud_txns(fraud_txns, timedelta(hours=float(min_interval)))
 
     # 4. Zelle amount cap
     zelle_max = float(rail_constraints.get("Zelle", {}).get("max_per_transaction", 2500))
