@@ -2,10 +2,15 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import os
 import random
 import time
+import uuid
+from datetime import datetime, timedelta
 from typing import Callable
+
+logger = logging.getLogger(__name__)
 
 import anthropic
 
@@ -25,7 +30,7 @@ class LLMClient:
 
     Usage:
         client = LLMClient()
-        result = await client.call(system_prompt, messages, model="claude-sonnet-4-5")
+        result = await client.call(system_prompt, messages, model="claude-sonnet-4-6")
     """
 
     def __init__(self) -> None:
@@ -78,13 +83,32 @@ class LLMClient:
                     response_schema=response_schema,
                     timeout=timeout,
                 )
+                if not raw_text.strip():
+                    # Model returned no text content — send a clean retry with no
+                    # assistant prefill (echoing "(empty)" confuses the model).
+                    last_error = ValueError("API returned empty response")
+                    current_messages = list(messages) + [
+                        {
+                            "role": "user",
+                            "content": (
+                                "You returned an empty response. "
+                                "Return only a valid JSON object matching the schema. "
+                                "Do not include any text outside the JSON object."
+                            ),
+                        }
+                    ]
+                    continue
+
                 try:
                     return json.loads(raw_text)
                 except json.JSONDecodeError as parse_err:
                     last_error = parse_err
-                    # Append a correction turn and retry
-                    current_messages = list(current_messages) + [
-                        {"role": "assistant", "content": raw_text},
+                    # Reset to original messages + a short preview of the bad response.
+                    # Using list(messages) (not current_messages) discards accumulated
+                    # correction turns so token cost stays flat across retries.
+                    bad_preview = raw_text[:200]
+                    current_messages = list(messages) + [
+                        {"role": "assistant", "content": bad_preview},
                         {
                             "role": "user",
                             "content": (
@@ -106,9 +130,8 @@ class LLMClient:
                 else:
                     raise LLMClientError(f"Anthropic internal server error: {exc}") from exc
             except asyncio.TimeoutError as exc:
-                raise LLMClientError(
-                    f"API call timed out after {timeout}s on attempt {attempt + 1}"
-                ) from exc
+                last_error = exc
+                await self._backoff(attempt)
             except Exception as exc:
                 raise LLMClientError(f"Unexpected error during API call: {exc}") from exc
 
@@ -122,40 +145,71 @@ class LLMClient:
         messages: list[dict],
         model: str,
         on_text: Callable[[str], None] | None = None,
+        timeout: float = 120.0,
     ) -> str:
-        """Stream the response, invoke *on_text* for each text chunk, return full text."""
+        """Stream the response, invoke *on_text* for each text chunk, return full text.
+
+        Retries up to 3 times on rate-limit (429), overload (529), and timeout errors.
+        """
         if self._mock:
-            text = "Mock strategy: Criminal uses layered transfers to obscure fund origin."
-            for chunk in text.split(" "):
-                await asyncio.sleep(0.05)
-                if on_text:
-                    on_text(chunk + " ")
+            data = _mock_response(messages)
+            text = json.dumps(data)
+            if on_text:
+                on_text(text)
+            await asyncio.sleep(0.3)
             return text
 
-        try:
-            full_text_parts: list[str] = []
-            async with self._client.messages.stream(
-                model=model,
-                max_tokens=8192,
-                system=system_prompt,
-                messages=messages,
-            ) as stream:
-                async for chunk in stream.text_stream:
-                    full_text_parts.append(chunk)
-                    if on_text is not None:
-                        on_text(chunk)
+        last_error: Exception | None = None
+        for attempt in range(3):
+            try:
+                return await asyncio.wait_for(
+                    self._stream_all(system_prompt, messages, model, on_text),
+                    timeout=timeout,
+                )
+            except asyncio.TimeoutError as exc:
+                last_error = exc
+                await self._backoff(attempt)
+            except anthropic.RateLimitError as exc:
+                last_error = exc
+                await self._backoff(attempt)
+            except anthropic.InternalServerError as exc:
+                if hasattr(exc, "status_code") and exc.status_code == 529:
+                    last_error = exc
+                    await self._backoff(attempt)
+                else:
+                    raise LLMClientError(f"Streaming call failed: {exc}") from exc
+            except Exception as exc:
+                raise LLMClientError(f"Streaming call failed: {exc}") from exc
 
-                # Capture final message for token accounting
-                final_msg = await stream.get_final_message()
-                self.total_input_tokens += final_msg.usage.input_tokens
-                self.total_output_tokens += final_msg.usage.output_tokens
+        raise LLMClientError(
+            f"Streaming call failed after 3 attempts. Last error: {last_error}"
+        ) from last_error
 
-            return "".join(full_text_parts)
+    async def _stream_all(
+        self,
+        system_prompt: str,
+        messages: list[dict],
+        model: str,
+        on_text: Callable[[str], None] | None,
+    ) -> str:
+        """Execute one streaming request and return the full text."""
+        full_text_parts: list[str] = []
+        async with self._client.messages.stream(
+            model=model,
+            max_tokens=32768,
+            system=system_prompt,
+            messages=messages,
+        ) as stream:
+            async for chunk in stream.text_stream:
+                full_text_parts.append(chunk)
+                if on_text is not None:
+                    on_text(chunk)
 
-        except anthropic.RateLimitError as exc:
-            raise LLMClientError(f"Rate limit hit during streaming: {exc}") from exc
-        except Exception as exc:
-            raise LLMClientError(f"Streaming call failed: {exc}") from exc
+            final_msg = await stream.get_final_message()
+            self.total_input_tokens += final_msg.usage.input_tokens
+            self.total_output_tokens += final_msg.usage.output_tokens
+
+        return "".join(full_text_parts)
 
     async def call_with_thinking(
         self,
@@ -163,6 +217,7 @@ class LLMClient:
         messages: list[dict],
         model: str,
         budget_tokens: int = 5000,
+        timeout: float = 300.0,
     ) -> dict:
         """Call the API with extended thinking enabled (used by the orchestrator).
 
@@ -173,48 +228,66 @@ class LLMClient:
             await asyncio.sleep(0.5)
             return _mock_response(messages)
 
-        try:
-            response = await asyncio.wait_for(
-                self._client.messages.create(
-                    model=model,
-                    max_tokens=budget_tokens + 8192,
-                    thinking={
-                        "type": "enabled",
-                        "budget_tokens": budget_tokens,
-                    },
-                    system=system_prompt,
-                    messages=messages,
-                ),
-                timeout=120.0,  # thinking calls can take longer
-            )
-            self.total_input_tokens += response.usage.input_tokens
-            self.total_output_tokens += response.usage.output_tokens
-
-            # Extract text blocks (skip thinking blocks)
-            text_content = ""
-            for block in response.content:
-                if block.type == "text":
-                    text_content += block.text
-
+        last_error: Exception | None = None
+        for attempt in range(3):
             try:
-                return json.loads(text_content)
-            except json.JSONDecodeError:
-                # Try to extract JSON from within the text (agent may add preamble)
-                extracted = _extract_json_from_text(text_content)
-                if extracted is not None:
-                    return extracted
-                raise LLMClientError(
-                    f"Could not parse JSON from thinking response. Raw text: {text_content[:500]}"
+                response = await asyncio.wait_for(
+                    self._client.messages.create(
+                        model=model,
+                        max_tokens=budget_tokens + 8192,
+                        thinking={
+                            "type": "enabled",
+                            "budget_tokens": budget_tokens,
+                        },
+                        system=system_prompt,
+                        messages=messages,
+                    ),
+                    timeout=timeout,
                 )
+                self.total_input_tokens += response.usage.input_tokens
+                self.total_output_tokens += response.usage.output_tokens
 
-        except asyncio.TimeoutError as exc:
-            raise LLMClientError("call_with_thinking timed out after 120s") from exc
-        except LLMClientError:
-            raise
-        except Exception as exc:
-            raise LLMClientError(
-                f"call_with_thinking failed: {exc}"
-            ) from exc
+                # Extract text blocks (skip thinking blocks)
+                text_content = ""
+                for block in response.content:
+                    if block.type == "text":
+                        text_content += block.text
+
+                try:
+                    return json.loads(text_content)
+                except json.JSONDecodeError:
+                    extracted = _extract_json_from_text(text_content)
+                    if extracted is not None:
+                        return extracted
+                    raise LLMClientError(
+                        f"Could not parse JSON from thinking response. Raw text: {text_content[:500]}"
+                    )
+
+            except asyncio.TimeoutError as exc:
+                last_error = exc
+                await self._backoff(attempt)
+            except anthropic.RateLimitError as exc:
+                last_error = exc
+                await self._backoff(attempt)
+            except anthropic.InternalServerError as exc:
+                if hasattr(exc, "status_code") and exc.status_code == 529:
+                    last_error = exc
+                    await self._backoff(attempt)
+                else:
+                    raise LLMClientError(f"call_with_thinking failed: {exc}") from exc
+            except LLMClientError:
+                raise
+            except Exception as exc:
+                raise LLMClientError(f"call_with_thinking failed: {exc}") from exc
+
+        raise LLMClientError(
+            f"call_with_thinking failed after 3 attempts. Last error: {last_error}"
+        ) from last_error
+
+    async def close(self) -> None:
+        """Close the underlying HTTP client and release connections."""
+        if self._client is not None:
+            await self._client.close()
 
     @property
     def cost_usd(self) -> float:
@@ -238,24 +311,18 @@ class LLMClient:
         """Low-level call. Returns raw response text string."""
         kwargs: dict = {
             "model": model,
-            "max_tokens": 8192,
+            "max_tokens": 16384,
             "system": system_prompt,
             "messages": messages,
         }
 
         if response_schema is not None:
-            # Structured output: tell the model to return JSON matching the schema.
-            # We inject the schema into the system prompt and pre-fill the assistant turn
-            # with `{` to force JSON output. The Anthropic API does not yet support
-            # native JSON schema enforcement on all models, so this is the robust approach.
             schema_instruction = (
                 "\n\nYou MUST respond with a single valid JSON object that strictly "
                 f"conforms to this JSON schema:\n{json.dumps(response_schema, indent=2)}\n"
                 "Return ONLY the JSON object — no explanation, no markdown fences, no preamble."
             )
             kwargs["system"] = system_prompt + schema_instruction
-            # Pre-fill assistant response to force JSON
-            kwargs["messages"] = list(messages) + [{"role": "assistant", "content": "{"}]
 
         response = await asyncio.wait_for(
             self._client.messages.create(**kwargs),
@@ -265,11 +332,19 @@ class LLMClient:
         self.total_input_tokens += response.usage.input_tokens
         self.total_output_tokens += response.usage.output_tokens
 
-        text = response.content[0].text if response.content else ""
+        text = ""
+        for block in response.content:
+            if block.type == "text":
+                text = block.text
+                break
 
-        # If we pre-filled with `{`, re-attach the opening brace
-        if response_schema is not None:
-            text = "{" + text
+        if not text:
+            block_types = [getattr(b, "type", "unknown") for b in response.content]
+            logger.warning(
+                "Empty text response from API. stop_reason=%s blocks=%s",
+                response.stop_reason,
+                block_types,
+            )
 
         return text
 
@@ -285,16 +360,39 @@ class LLMClient:
 def _mock_response(messages: list[dict]) -> dict:
     """Return a plausible stub response for mock mode.
 
-    Detects which agent is calling based on message content and returns
-    a schema-matching response so the full pipeline can run end-to-end.
+    Detects which agent is calling based on the LAST user message content only
+    (not accumulated history) to avoid misfiring on retry turns.
     """
-    import uuid, random
-    from datetime import datetime, timedelta
+    # Use only the last user message for reliable branch detection
+    last_user_content = ""
+    for m in reversed(messages):
+        if m.get("role") == "user" and isinstance(m.get("content"), str):
+            last_user_content = m["content"].lower()
+            break
 
-    content = " ".join(
-        m.get("content", "") if isinstance(m.get("content"), str) else ""
-        for m in messages
-    ).lower()
+    content = last_user_content
+
+    # Fraud constructor — check first: its steps have explicit step labels
+    if "step 1: persona analysis" in content or "step 4: transaction generation" in content or "step 5: self-review" in content:
+        now = datetime.now()
+        acct = lambda: f"ACC-{uuid.uuid4().hex[:8].upper()}"
+        a1, a2, a3, a4 = acct(), acct(), acct(), acct()
+        txns = [
+            {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=i*8)).isoformat(), "amount": round(random.uniform(3000, 9800), 2), "sender_account_id": [a1,a2,a3][min(i,2)], "receiver_account_id": [a2,a3,a4][min(i,2)], "merchant_category": "wire_transfer", "channel": "wire_domestic", "is_fraud": True, "fraud_role": f"hop_{i+1}_of_3"}
+            for i in range(3)
+        ] + [
+            {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=2)).isoformat(), "amount": round(random.uniform(20, 85), 2), "sender_account_id": a2, "receiver_account_id": acct(), "merchant_category": "grocery", "channel": "card_debit", "is_fraud": False, "fraud_role": "cover_activity"}
+        ]
+        return {
+            "variant_id": f"V-{uuid.uuid4().hex[:6].upper()}",
+            "fraud_type": "mule_network",
+            "persona_id": "P-01",
+            "strategy_description": "Mock: 3-hop domestic chain with burst timing. Funds moved via same-day wire transfers structured below $10K CTR threshold. Cover activity via grocery purchases on mule accounts.",
+            "variant_parameters": {"hop_count": 3, "timing_interval_hrs": 8, "amount_logic": "structured_below_10k", "cover_activity": "low", "topology": "chain", "extraction_method": "wire", "geographic_spread": "domestic"},
+            "transactions": txns,
+            "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions"],
+            "fraud_indicators_present": ["rapid sequential transfers", "round-trip timing pattern", "new payee relationships"],
+        }
 
     # Orchestrator output
     if "variation_dimensions" in content or "coverage_cells" in content or "decompose" in content:
@@ -342,27 +440,8 @@ def _mock_response(messages: list[dict]) -> dict:
             "feedback": "",
         }
 
-    # Fraud constructor — any step (persona analysis, planning, profiles, transactions, self-review)
-    # Return a full RawVariant-shaped response for the self-review step
-    now = datetime.now()
-    acct = lambda: f"ACC-{uuid.uuid4().hex[:8].upper()}"
-    a1, a2, a3, a4 = acct(), acct(), acct(), acct()
-    txns = [
-        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=i*8)).isoformat(), "amount": round(random.uniform(3000, 9800), 2), "sender_account_id": [a1,a2,a3][min(i,2)], "receiver_account_id": [a2,a3,a4][min(i,2)], "merchant_category": "wire_transfer", "channel": "wire_domestic", "is_fraud": True, "fraud_role": f"hop_{i+1}_of_3"}
-        for i in range(3)
-    ] + [
-        {"transaction_id": f"T-{uuid.uuid4().hex[:6].upper()}", "timestamp": (now + timedelta(hours=2)).isoformat(), "amount": round(random.uniform(20, 85), 2), "sender_account_id": a2, "receiver_account_id": acct(), "merchant_category": "grocery", "channel": "card_debit", "is_fraud": False, "fraud_role": "cover_activity"}
-    ]
-    return {
-        "variant_id": f"V-{uuid.uuid4().hex[:6].upper()}",
-        "fraud_type": "mule_network",
-        "persona_id": "P-01",
-        "strategy_description": "Mock: 3-hop domestic chain with burst timing. Funds moved via same-day wire transfers structured below $10K CTR threshold. Cover activity via grocery purchases on mule accounts.",
-        "variant_parameters": {"hop_count": 3, "timing_interval_hrs": 8, "amount_logic": "structured_below_10k", "cover_activity": "low", "topology": "chain", "extraction_method": "wire", "geographic_spread": "domestic"},
-        "transactions": txns,
-        "evasion_techniques": ["structuring below CTR threshold", "cover activity transactions"],
-        "fraud_indicators_present": ["rapid sequential transfers", "round-trip timing pattern", "new payee relationships"],
-    }
+    # Fallback — should not normally be reached
+    return {}
 
 
 def _extract_json_from_text(text: str) -> dict | None:
