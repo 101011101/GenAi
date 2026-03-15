@@ -72,6 +72,17 @@ def _get_run(run_id: str) -> dict[str, Any]:
 class StartRunRequest(BaseModel):
     fraud_description: str
     variant_count: int = 7
+    fidelity_level: int = 3
+    max_parallel: int = 3
+    critic_floor: float = 7.0
+    max_revisions: int = 2
+    persona_count: int = 5
+    risk_distribution: dict = {"high": 33, "mid": 34, "low": 33}
+    geographic_scope: list[str] = ["domestic"]
+    mule_context_depth: str = "medium"
+    cost_cap_usd: float = 20.0
+    auto_second_pass: bool = False
+    demo_mode: bool = True
 
 
 class ControlRequest(BaseModel):
@@ -86,8 +97,17 @@ def start_run(req: StartRunRequest) -> dict:
     config = RunConfig(
         fraud_description=req.fraud_description,
         variant_count=max(1, min(req.variant_count, 20)),
-        demo_mode=True,
-        max_parallel=3,
+        fidelity_level=req.fidelity_level,
+        max_parallel=req.max_parallel,
+        critic_floor=req.critic_floor,
+        max_revisions=req.max_revisions,
+        persona_count=req.persona_count,
+        risk_distribution=req.risk_distribution,
+        geographic_scope=req.geographic_scope,
+        mule_context_depth=req.mule_context_depth,
+        cost_cap_usd=req.cost_cap_usd,
+        auto_second_pass=req.auto_second_pass,
+        demo_mode=req.demo_mode,
     )
     run_state = RunState()
     approved_variants: list = []
