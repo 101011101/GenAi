@@ -1,8 +1,23 @@
 from __future__ import annotations
 
 import threading
+import time
+import uuid
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
+from typing import Any
+
+
+@dataclass
+class CellStatus:
+    cell_id: str
+    dimension_values: dict
+    assigned_persona_id: str = ""
+    assigned_persona_name: str = ""
+    status: str = "empty"  # "empty" | "in_progress" | "completed" | "failed"
+    attempt_count: int = 0
+    critic_score: float | None = None
+    variant_id: str | None = None
 
 
 @dataclass
@@ -10,10 +25,14 @@ class VariantSummary:
     variant_id: str
     persona_name: str
     parameters_summary: str  # human-readable one-liner, e.g. "6-hop fan-out, crypto extraction, international"
-    critic_score: float
-    status: str  # "approved" / "rejected" / "revised"
+    critic_score: float       # kept for backwards compat with Streamlit console (avg of realism + distinctiveness)
+    status: str               # "approved" / "rejected" / "revised"
     strategy_description: str  # first 200 chars of the agent's strategy text
-    completed_at: str  # ISO timestamp
+    completed_at: str          # ISO timestamp
+    realism_score: float = 0.0
+    distinctiveness_score: float = 0.0
+    attempt_count: int = 1
+    passed: bool = False
 
 
 class RunState:
@@ -31,6 +50,11 @@ class RunState:
     def __init__(self, variants_total: int = 0) -> None:
         self._lock = threading.Lock()
 
+        # --- identity / timing ---
+        self.run_id: str = str(uuid.uuid4())
+        self.start_time: float = time.time()
+
+        # --- progress ---
         self.variants_completed: int = 0
         self.variants_total: int = variants_total
         self.active_agent_count: int = 0
@@ -43,6 +67,12 @@ class RunState:
         self.revisions_count: int = 0
         self.rejections_count: int = 0
         self.event_log: list[str] = []  # real-time agent activity log
+
+        # --- web app additions ---
+        self.coverage_cells: dict[str, CellStatus] = {}  # cell_id → CellStatus
+        self.personas: list[Any] = []                    # list[Persona]
+        self.orchestrator_output: Any = None             # OrchestratorOutput | None
+        self.scored_variants: list[Any] = []             # list[ScoredVariant]
 
     # ------------------------------------------------------------------
     # Mutation methods — all thread-safe
@@ -118,14 +148,54 @@ class RunState:
             self.is_complete = True
             self.current_phase = "complete"
 
+    # --- web app mutation methods ---
+
+    def upsert_cell(self, cell: CellStatus) -> None:
+        """Insert or update a cell status entry."""
+        with self._lock:
+            self.coverage_cells[cell.cell_id] = cell
+
+    def set_personas(self, personas: list) -> None:
+        """Store the generated personas list."""
+        with self._lock:
+            self.personas = list(personas)
+
+    def set_orchestrator_output(self, output: Any) -> None:
+        """Store the orchestrator output."""
+        with self._lock:
+            self.orchestrator_output = output
+
+    def add_scored_variant(self, variant: Any) -> None:
+        """Append an approved ScoredVariant."""
+        with self._lock:
+            self.scored_variants.append(variant)
+
     # ------------------------------------------------------------------
     # Convenience read — no lock (eventually consistent is fine for display)
     # ------------------------------------------------------------------
+
+    @property
+    def elapsed_s(self) -> float:
+        return time.time() - self.start_time
+
+    @property
+    def health_status(self) -> str:
+        if self.variants_completed == 0:
+            return "healthy"
+        failure_rate = self.rejections_count / self.variants_completed
+        if failure_rate < 0.2:
+            return "healthy"
+        if failure_rate < 0.5:
+            return "warning"
+        return "critical"
 
     def snapshot(self) -> dict:
         """Return a plain-dict snapshot suitable for serialization or display."""
         with self._lock:
             return {
+                "run_id": self.run_id,
+                "start_time": self.start_time,
+                "elapsed_s": time.time() - self.start_time,
                 "variants_completed": self.variants_completed,
                 "variants_total": self.variants_total,
                 "active_agent_count": self.active_agent_count,
@@ -137,4 +207,5 @@ class RunState:
                 "rejections_count": self.rejections_count,
                 "error_count": len(self.errors),
                 "variant_count": len(self.variant_log),
+                "health_status": self.health_status,
             }

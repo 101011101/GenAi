@@ -15,7 +15,7 @@ from models.variant import ScoredVariant
 from pipeline.cell_generator import generate_cells
 from pipeline.coverage_matrix import CoverageMatrix
 from pipeline.output_handler import OutputHandler
-from pipeline.run_state import RunState, VariantSummary
+from pipeline.run_state import CellStatus, RunState, VariantSummary
 from utils.schema_validator import validate_raw_variant
 
 logger = logging.getLogger(__name__)
@@ -127,6 +127,7 @@ class PipelineRunner:
         run_state.log_event(
             f"Orchestrator done: {len(orchestrator_output.variation_dimensions)} dimensions discovered"
         )
+        run_state.set_orchestrator_output(orchestrator_output)
 
         # Generate coverage cells deterministically from dimensions
         target_cells = min(config.variant_count, 12) if config.demo_mode else config.variant_count
@@ -157,6 +158,7 @@ class PipelineRunner:
             config.fraud_description, config
         )
         run_state.log_event(f"PersonaGenerator done: {len(personas)} personas — {', '.join(p.name for p in personas)}")
+        run_state.set_personas(personas)
 
         if personas_out is not None:
             personas_out.extend(personas)
@@ -348,6 +350,13 @@ class PipelineRunner:
                 matrix.reject_cell(cell_id)
                 return
 
+            run_state.upsert_cell(CellStatus(
+                cell_id=cell_id,
+                dimension_values=cell.get("dimension_values", {}),
+                assigned_persona_id=getattr(persona, "persona_id", ""),
+                assigned_persona_name=persona.name,
+                status="in_progress",
+            ))
             run_state.increment_active()
 
             # Log cell start with dimension parameters
@@ -453,8 +462,19 @@ class PipelineRunner:
                         # --------------------------------------------------------
                         async with approved_lock:
                             approved_variants.append(scored)
+                        run_state.add_scored_variant(scored)
 
                         matrix.complete_cell(cell_id, variant_id=scored.variant_id)
+                        run_state.upsert_cell(CellStatus(
+                            cell_id=cell_id,
+                            dimension_values=cell.get("dimension_values", {}),
+                            assigned_persona_id=getattr(persona, "persona_id", ""),
+                            assigned_persona_name=persona.name,
+                            status="completed",
+                            attempt_count=attempt_count,
+                            critic_score=avg_score,
+                            variant_id=scored.variant_id,
+                        ))
 
                         # Build a human-readable parameters summary
                         params = scored.variant_parameters
@@ -478,6 +498,10 @@ class PipelineRunner:
                             status=status,
                             strategy_description=scored.strategy_description[:200],
                             completed_at=datetime.now(tz=timezone.utc).isoformat(),
+                            realism_score=scored.realism_score,
+                            distinctiveness_score=scored.distinctiveness_score,
+                            attempt_count=attempt_count,
+                            passed=True,
                         )
                         run_state.update_variant(summary)
                         passed_this_cell = True
@@ -512,6 +536,14 @@ class PipelineRunner:
                 # ----------------------------------------------------------------
                 if not passed_this_cell:
                     matrix.reject_cell(cell_id)
+                    run_state.upsert_cell(CellStatus(
+                        cell_id=cell_id,
+                        dimension_values=cell.get("dimension_values", {}),
+                        assigned_persona_id=getattr(persona, "persona_id", ""),
+                        assigned_persona_name=persona.name,
+                        status="failed",
+                        attempt_count=attempt_count,
+                    ))
                     logger.warning(
                         "Cell %s permanently rejected after %d attempt(s).",
                         cell_id,
@@ -526,6 +558,8 @@ class PipelineRunner:
                         status="rejected",
                         strategy_description="",
                         completed_at=datetime.now(tz=timezone.utc).isoformat(),
+                        passed=False,
+                        attempt_count=attempt_count,
                     )
                     run_state.update_variant(summary)
 

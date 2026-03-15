@@ -1,11 +1,22 @@
 output/runs/
 __pycache__/
+**/__pycache__/
 *.pyc
+*.pyo
 .env
 *.egg-info/
 .venv/
 venv/
+
+# Next.js
+web/node_modules/
+web/.next/
+web/out/
+web/.env.local
+
+# Misc
 .debug_cache/
+.trace_cache/
 .edp_intent/
 .DS_Store
 **/.DS_Store

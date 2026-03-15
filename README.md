@@ -17,11 +17,12 @@ FraudGen deploys a Red Team of AI agents that proactively explores fraud variant
 4. [How It Works](#4-how-it-works)
 5. [Technical Architecture](#5-technical-architecture)
 6. [Fidelity Levels](#6-fidelity-levels)
-7. [Console Features](#7-console-features)
-8. [User Guide](#8-user-guide)
-9. [Output Reference](#9-output-reference)
-10. [Project Status & Roadmap](#10-project-status--roadmap)
-11. [Safety & Ethics](#11-safety--ethics)
+7. [Time & Cost](#7-time--cost)
+8. [Console Features](#8-console-features)
+9. [User Guide](#9-user-guide)
+10. [Output Reference](#10-output-reference)
+11. [Project Status & Roadmap](#11-project-status--roadmap)
+12. [Safety & Ethics](#12-safety--ethics)
 
 ---
 
@@ -518,7 +519,89 @@ The emergent behavior from these interactions — the mule introducing an unplan
 
 ---
 
-## 7. Console Features
+## 7. Time & Cost
+
+### Where time goes
+
+A run has two phases: **setup** (orchestrator + personas, runs once) and **generation** (constructor + critic, runs per variant in parallel).
+
+| Phase | Who runs it | Typical duration | Notes |
+|---|---|---|---|
+| Orchestrator | Claude Opus + extended thinking | 30–60 s | One-time upfront. Extended thinking budget = 5,000 tokens. |
+| Persona generation | Claude Sonnet | 5–15 s | One-time. Scales slightly with persona count. |
+| FraudConstructor (per variant) | Claude Sonnet × 4 calls | 20–40 s | Sequential within each variant; variants run in parallel up to `max_parallel`. |
+| SchemaValidator (per variant) | Python (synchronous) | < 1 s | Negligible. |
+| Critic (per variant) | Claude Sonnet × 1 call | 8–15 s | Runs after constructor finishes. |
+| Revision loop (if triggered) | Claude Sonnet × 1–3 more calls | +20–60 s per variant | Only on critic failures. Rare at default settings. |
+| Output writing | Python | 1–3 s | One-time at end. |
+
+**Wall-clock time ≈ setup + (variants ÷ max_parallel) × time_per_variant**
+
+At default settings (5 parallel agents, Level 3, no revisions): ~30 s per variant / 5 agents = ~6 s of wall-clock time per variant.
+
+---
+
+### How it scales
+
+**Variant count** — linear. Double the variants, double the time and cost. Parallelism is the main lever to keep wall-clock time manageable as count grows.
+
+**Parallelism (`max_parallel`)** — near-linear speedup up to the API rate limit. At 10 parallel agents you approach Anthropic's TPM (tokens per minute) ceiling — stay at ≤ 5 for safety unless you have an elevated rate limit tier.
+
+**Fidelity level** — step-change cost multiplier:
+
+| Fidelity | Constructor calls per variant | Approx. multiplier vs. Level 2 |
+|---|---|---|
+| 2 | 1 | 1× |
+| 3 | 4 | ~3–4× |
+| 4 | 4 + multi-agent turns per hop | ~8–12× (depends on hop count) |
+
+**Revision loops** — the worst-case multiplier. Each revision adds a full constructor + critic cycle per variant. At the default critic floor of 7, revision rates are typically < 10%. If you see high rejection counts, lowering the critic floor is faster than waiting for retries.
+
+---
+
+### Quick-reference: time and cost by run size
+
+All estimates at **Level 3, 5 parallel agents, default settings**. Add ~1 min for setup overhead.
+
+| Variants | Wall-clock time | API cost | Output size |
+|---|---|---|---|
+| 10 (quick test) | ~3–4 min | ~$1–2 | ~0.2 MB |
+| 20 (fast demo) | ~5–7 min | ~$4–6 | ~0.5 MB |
+| 50 (standard) | ~12–15 min | ~$10–15 | ~1 MB |
+| 100 (full run) | ~25–30 min | ~$20–30 | ~2 MB |
+| 1,000 (production) | ~1.5–2 hr | ~$40–60 | ~20 MB |
+
+At **10 parallel agents**: halve the wall-clock times above. At **Level 4**: multiply cost by ~8–12×.
+
+---
+
+### Token budget breakdown (per 20-variant run at Level 3)
+
+| Agent | Calls | Avg input tokens | Avg output tokens | Subtotal |
+|---|---|---|---|---|
+| Orchestrator (+ thinking) | 1 | 2,000 | 4,000 + 5,000 thinking | ~11K |
+| Persona Generator | 1 | 1,000 | 2,000 | ~3K |
+| Fraud Constructors | ~25 | 3,500 | 7,000 | ~262K |
+| Critic | ~25 | 6,000 | 800 | ~170K |
+| **Total** | | | | **~446K tokens** |
+
+At Sonnet pricing (~$3 input / $15 output per million tokens): ~$4–6 for 20 variants.
+
+---
+
+### How to make it faster
+
+| Want to... | Do this |
+|---|---|
+| Minimise wall-clock time | Increase `max_parallel` (up to 10) |
+| Minimise cost | Lower `max_parallel`, use Level 2 for exploration |
+| See results in 60 seconds | Use demo mode (`?demo=true`) — 12 variants on Haiku |
+| Test without any cost | Enable mock mode (`FRAUDGEN_MOCK=1`) — instant, no API calls |
+| Avoid runaway cost | Hard cap defaults to $20 — runner stops and saves on breach |
+
+---
+
+## 8. Console Features
 
 The Streamlit console is organized around four phases the analyst moves through in a single session.
 
@@ -584,7 +667,7 @@ For live demos with an audience, append `?demo=true` to the URL. Pre-configured 
 
 ---
 
-## 8. User Guide
+## 9. User Guide
 
 ### 8a. Running your first generation
 
@@ -685,7 +768,7 @@ Mock mode is ideal for:
 
 ---
 
-## 9. Output Reference
+## 10. Output Reference
 
 ### dataset.csv columns
 
@@ -740,7 +823,7 @@ Mock mode is ideal for:
 
 ---
 
-## 10. Project Status & Roadmap
+## 11. Project Status & Roadmap
 
 ### MVP — completed
 
@@ -772,7 +855,7 @@ Mock mode is ideal for:
 
 ---
 
-## 11. Safety & Ethics
+## 12. Safety & Ethics
 
 **All data is synthetic.** FraudGen generates data representing what transactions would look like if fraud had occurred. It is not connected to any live banking system and does not generate, access, or store any real financial data or PII.
 
