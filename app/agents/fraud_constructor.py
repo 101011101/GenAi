@@ -593,6 +593,12 @@ class FraudConstructorAgent:
 
         # Deterministically assign fraud_role and is_fraud from the declared fraud network
         fraud_account_ids = set(final_data.pop("fraud_account_ids", []))
+        if not fraud_account_ids:
+            raise ValueError(
+                "Constraint violations (retry will fix): fraud_account_ids is empty — "
+                "the model must declare the internal mule/layering account IDs so the "
+                "pipeline can label placement, hop, and extraction transactions."
+            )
         if on_labeling:
             on_labeling(list(final_data["transactions"]), fraud_account_ids)
         final_data["transactions"] = label_transactions(
