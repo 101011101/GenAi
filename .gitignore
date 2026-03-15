@@ -6,3 +6,4 @@ __pycache__/
 .venv/
 venv/
 .debug_cache/
+.edp_intent/
