@@ -1,7 +1,4 @@
-> [!NOTE]
-> **DRAFT** — This project is a hackathon prototype in active development. Interfaces and output formats are subject to change.
-
-# FraudGen [DRAFT]
+# FraudGen
 
 **Synthetic fraud variant generation via adversarial AI agents — closing the known-unknown gap in ML-based fraud detection.**
 
@@ -22,10 +19,13 @@ FraudGen deploys a Red Team of AI agents that proactively explores fraud variant
 6. [Fidelity Levels](#6-fidelity-levels)
 7. [Time & Cost](#7-time--cost)
 8. [Console Features](#8-console-features)
-9. [User Guide](#9-user-guide)
-10. [Output Reference](#10-output-reference)
-11. [Project Status & Roadmap](#11-project-status--roadmap)
-12. [Safety & Ethics](#12-safety--ethics)
+9. [Admin Console](#9-admin-console)
+10. [API Backend](#10-api-backend)
+11. [Landing Page](#11-landing-page)
+12. [User Guide](#12-user-guide)
+13. [Output Reference](#13-output-reference)
+14. [Project Status & Roadmap](#14-project-status--roadmap)
+15. [Safety & Ethics](#15-safety--ethics)
 
 ---
 
@@ -65,9 +65,9 @@ The known-unknown tier is where institutions are most exposed. They know mule ne
 
 | Model type | Minimum viable (new fraud variant) | Typical bank has | Gap |
 |---|---|---|---|
-| XGBoost / Random Forest | ~1,000 fraud rows | 200–500 | 2–5× |
-| Graph Neural Network | ~1,000–5,000 fraud graphs | 30–50 | **20–100×** |
-| Sequence Model (LSTM) | ~500–2,000 fraud sequences | 30–50 | 10–40× |
+| XGBoost / Random Forest | ~1,000 fraud rows | 200–500 | 2–5x |
+| Graph Neural Network | ~1,000–5,000 fraud graphs | 30–50 | **20–100x** |
+| Sequence Model (LSTM) | ~500–2,000 fraud sequences | 30–50 | 10–40x |
 
 GNNs face the largest gap for network fraud types — which is why mule networks are the primary demonstration case for FraudGen.
 
@@ -130,22 +130,38 @@ source .venv/bin/activate      # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 
 # Configure your API key
-cp .env.example .env
-# Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
+echo "ANTHROPIC_API_KEY=sk-ant-..." > .env
+# Or for mock mode (no API key needed):
+echo "FRAUDGEN_MOCK=1" > .env
 ```
 
 ### Run
 
 ```bash
-# Real mode (uses API credits)
+# Streamlit console (primary interface)
 streamlit run app.py
 
 # Mock mode (no API key consumed, instant — good for UI dev/testing)
-# In .env, uncomment: FRAUDGEN_MOCK=1
+# Set FRAUDGEN_MOCK=1 in .env, then:
 streamlit run app.py
+
+# Demo mode (pre-configured 12-variant run, ~60 seconds)
+# Open: http://localhost:8501?demo=true
 ```
 
-App opens at `http://localhost:8501`. Demo mode: `http://localhost:8501?demo=true`
+### Other entry points
+
+```bash
+# FastAPI backend (headless, for programmatic access)
+cd api && pip install -r requirements.txt
+PYTHONPATH=app uvicorn api.main:app --reload --port 8000
+
+# Interactive trace pipeline (step-through debugging)
+python3 trace_pipeline.py
+
+# Landing page (Next.js marketing site)
+cd landing && npm install && npm run dev
+```
 
 ---
 
@@ -296,11 +312,11 @@ Each node and edge maps directly to rows in `dataset.csv` — the fraud path row
 
 ### System components
 
-The system has three layers. The backend pipeline does all the real work; the console and data display are thin layers on top.
+The system has four layers: the backend pipeline does the core work, the Streamlit console provides interactive UI, the FastAPI backend provides programmatic access, and the Next.js app provides the landing page and admin console.
 
 ```mermaid
 graph TB
-    subgraph CONSOLE["CONSOLE"]
+    subgraph CONSOLE["STREAMLIT CONSOLE"]
         IP[Input Panel] & OC[Orchestrator Controls]
         LM[Live Monitoring Panel]
         IP & OC --> LM
@@ -323,8 +339,19 @@ graph TB
         SP[Stats Panel] & EP[Export Panel]
     end
 
+    subgraph API["FASTAPI BACKEND"]
+        FAPI["api/main.py — REST endpoints"]
+    end
+
+    subgraph ADMIN["NEXT.JS ADMIN CONSOLE"]
+        ADM["landing/src/app/admin/ — 7-tab observability dashboard"]
+    end
+
     CONSOLE -->|RunConfig| PIPELINE
+    API -->|RunConfig| PIPELINE
     PIPELINE -->|completed run folder| DISPLAY
+    PIPELINE -->|live state + results| API
+    API -->|JSON| ADMIN
 ```
 
 ### Agent hierarchy
@@ -338,10 +365,10 @@ graph TD
     R --> CA[CriticAgent]
     R --> OH[OutputHandler]
 
-    FC -. "Level 4" .-> CMA[CriminalMastermindAgent]
-    CMA -. "Level 4" .-> CSA[CoverStoryAgent]
-    FC -. "Level 4" .-> MA["MuleAgent × N\none per hop"]
-    FC -. "Level 4" .-> BSA[BankSystemAgent]
+    FC -. "Level 4 (planned)" .-> CMA[CriminalMastermindAgent]
+    CMA -. "Level 4 (planned)" .-> CSA[CoverStoryAgent]
+    FC -. "Level 4 (planned)" .-> MA["MuleAgent × N\none per hop"]
+    FC -. "Level 4 (planned)" .-> BSA[BankSystemAgent]
 
     OH --> F1["Flat CSV\nXGBoost · Random Forest"]
     OH --> F2["Nested JSON\nGeneral purpose"]
@@ -385,8 +412,8 @@ RunState           → monitoring_panel    (pipeline writes, console reads every
 
 | Dimension | Type | Default threshold |
 |---|---|---|
-| Realism | Score 1–10 | ≥ 7 (configurable) |
-| Variant distinctiveness | Score 1–10 | ≥ 6 (configurable) |
+| Realism | Score 1–10 | >= 7 (configurable) |
+| Variant distinctiveness | Score 1–10 | >= 6 (configurable) |
 | Persona consistency | Boolean (deterministic) | Must be True |
 
 Variants below threshold receive specific feedback and are returned to the FraudConstructor for revision. Maximum 2–3 revision iterations before the cell is discarded and reassigned to a fresh agent.
@@ -405,82 +432,104 @@ Revision loops run within the same async task — a failed variant retries witho
 
 ### Grounding data (static, no external APIs)
 
-All real-world grounding is bundled as static JSON. No external API calls, no demo risk.
+All real-world grounding is bundled as static JSON in `app/data/`. No external API calls, no demo risk.
 
 | File | Contents |
 |---|---|
-| `data/mcc_stats.json` | Amount distributions by merchant category (mean, std, range) |
-| `data/payment_rail_constraints.json` | Processing windows, per-transaction limits (ACH, Interac, SWIFT, Zelle) |
-| `data/account_balance_distributions.json` | Balance ranges by demographic and account type |
-| `data/regulatory_thresholds.json` | Reporting thresholds by jurisdiction (US $10K CTR, CA $10K LCTR, etc.) |
+| `mcc_stats.json` | Amount distributions by merchant category (mean, std, range) |
+| `payment_rail_constraints.json` | Processing windows, per-transaction limits (ACH, Interac, SWIFT, Zelle) |
+| `account_balance_distributions.json` | Balance ranges by demographic and account type |
+| `regulatory_thresholds.json` | Reporting thresholds by jurisdiction (US $10K CTR, CA $10K LCTR, etc.) |
 
 ### Folder structure
 
 ```
-app.py                              ← Streamlit entry point
-.env                                ← ANTHROPIC_API_KEY + optional FRAUDGEN_MOCK=1
+app.py                                  ← Streamlit entry point
+trace_pipeline.py                       ← Interactive step-through debugger (cached stages)
+requirements.txt                        ← Python dependencies
+.env                                    ← ANTHROPIC_API_KEY + optional FRAUDGEN_MOCK=1
 
-models/                             ← Pydantic data models
-  run_config.py                     ← All settings for one run
-  persona.py                        ← Criminal profile
-  variant.py                        ← Transaction, RawVariant, ValidatedVariant, ScoredVariant
-  output_record.py                  ← Flat row for final CSV/dataset
+app/
+  models/                               ← Pydantic data models
+    run_config.py                       ← All settings for one run
+    persona.py                          ← Criminal profile
+    variant.py                          ← Transaction, RawVariant, ValidatedVariant, ScoredVariant
+    output_record.py                    ← Flat row for final CSV/dataset
 
-agents/                             ← LLM-powered agents
-  orchestrator.py
-  persona_generator.py
-  fraud_constructor.py
-  critic.py
-  level4/                           ← Next level — builds after MVP
-    criminal_agent.py
-    mule_agent.py
-    bank_agent.py
-    cover_story_agent.py
+  agents/                               ← LLM-powered agents
+    orchestrator.py
+    persona_generator.py
+    fraud_constructor.py                ← 5-step reasoning chain (~700 lines)
+    critic.py
 
-pipeline/                           ← Pure Python, no LLM calls (except through agents/)
-  runner.py                         ← Async coordinator
-  run_state.py                      ← Thread-safe shared state
-  coverage_matrix.py                ← Variant space tracker
-  cell_generator.py                 ← Deterministic Cartesian product cell builder
-  variant_validator.py              ← 8-rule constraint checker
-  output_handler.py                 ← File writer
+  pipeline/                             ← Pure Python orchestration (no LLM calls except through agents/)
+    runner.py                           ← Async coordinator (~600 lines)
+    run_state.py                        ← Thread-safe shared state
+    coverage_matrix.py                  ← Variant space tracker
+    cell_generator.py                   ← Deterministic Cartesian product cell builder
+    variant_validator.py                ← 8-rule constraint checker
+    output_handler.py                   ← File writer (CSV/JSON/graph)
 
-utils/
-  llm_client.py                     ← Async Claude API wrapper (retries, cost tracking, mock)
-  schema_validator.py               ← Fast sync JSON schema validation
-  label_transactions.py             ← BFS graph labeler
+  utils/
+    llm_client.py                       ← Async Claude API wrapper (retries, cost tracking, mock)
+    schema_validator.py                 ← Fast sync JSON schema validation
+    label_transactions.py               ← BFS graph labeler
 
-prompts/                            ← Plain text system prompts, one per agent
-  orchestrator.txt
-  persona_generator.txt
-  fraud_constructor.txt
-  critic.txt
+  prompts/                              ← Plain text system prompts, one per agent
+    orchestrator.txt
+    persona_generator.txt
+    fraud_constructor.txt
+    critic.txt
 
-data/                               ← Static grounding data
-  mcc_stats.json
-  payment_rail_constraints.json
-  account_balance_distributions.json
-  regulatory_thresholds.json
+  data/                                 ← Static grounding data (no external APIs)
+    mcc_stats.json
+    payment_rail_constraints.json
+    account_balance_distributions.json
+    regulatory_thresholds.json
 
-console/                            ← Streamlit UI (no agent imports)
-  input_panel.py
-  orchestrator_controls.py
-  monitoring_panel.py
-  data_display/
-    coverage_matrix_view.py
-    network_graph_view.py
-    stats_panel.py
-    dataset_browser.py
-    export_panel.py
+  console/                              ← Streamlit UI components (no agent imports)
+    input_panel.py
+    orchestrator_controls.py
+    monitoring_panel.py
+    admin_demo.html                     ← Standalone HTML admin demo
+    data_display/
+      coverage_matrix_view.py
+      network_graph_view.py
+      stats_panel.py
+      dataset_browser.py
+      export_panel.py
 
-output/runs/                        ← Auto-created per run, gitignored
+api/                                    ← FastAPI REST backend (optional)
+  main.py                               ← HTTP wrapper around the pipeline
+  requirements.txt                      ← Additional deps (fastapi, uvicorn)
+  start.sh                              ← Launch script
+  README.md                             ← Endpoint documentation
+
+landing/                                ← Next.js marketing site + admin console
+  src/app/
+    page.tsx                            ← Landing page (v2 section components)
+    admin/                              ← Admin observability console (API-connected)
+    administrative/                     ← Admin demo (self-contained mock data)
+  src/components/
+    sections/v2/                        ← Landing page sections (Hero, Problem, Solution, etc.)
+    stage-panels/                       ← Pipeline stage detail panels
+    ui/                                 ← ShadCN/UI components
+
+design/                                 ← UI mockup screenshots (JPG/PNG)
+
+docs/                                   ← Documentation
+  DEVELOPER_GUIDE.md                    ← Setup, testing, troubleshooting
+  ideas.md                              ← Brainstorm notes
+  prd/                                  ← Product Requirements Documents (11 files)
+  draft_prd/                            ← Earlier draft PRDs
+
+scripts/
+  validate_run.py                       ← Output validation script
+
+output/runs/                            ← Auto-created per run, gitignored
   run_YYYYMMDD_HHMMSS/
-    config.json
-    personas.json
-    variants.json
-    dataset.csv
-    dataset.json
-    run_summary.json
+    config.json, personas.json, variants.json
+    dataset.csv, dataset.json, run_summary.json
 ```
 
 ---
@@ -493,7 +542,7 @@ Controls how deeply sub-agents model fraudster behavior. Cascades through the en
 |---|---|---|---|---|
 | 2 | Fast | Single-pass constructor — no persona, no chain-of-thought | Moderate — plausible but gravitates toward generic "average fraud" | Available |
 | 3 | Default | Multi-step reasoning chain (4 LLM calls), persona-seeded constructor | Good — internally consistent, persona-grounded, structurally diverse | **Recommended** |
-| 4 | Deep | Full role simulation — Criminal Mastermind, Mule Agents (one per hop), Cover Story Agent, Bank System Agent with tool use | Very good — emergent evasion from information asymmetry between agents | Coming soon |
+| 4 | Deep | Full role simulation — Criminal Mastermind, Mule Agents (one per hop), Cover Story Agent, Bank System Agent with tool use | Very good — emergent evasion from information asymmetry between agents | Planned |
 
 **Level 3 detail — the four-step reasoning chain:**
 
@@ -503,7 +552,7 @@ Before generating transactions, the FraudConstructor reasons through the scenari
 3. **Participant profiles** — for each account in the network, who are they and what do they think they're doing?
 4. **Transaction generation** — full sequence, grounded in real-world constraints
 
-**Level 4 detail — information asymmetry (preview):**
+**Level 4 detail — information asymmetry (planned):**
 
 Each fraud participant gets their own agent with limited information scope:
 - *Criminal Mastermind* — knows the full plan, gives compartmentalized instructions to mules
@@ -530,15 +579,15 @@ A run has two phases: **setup** (orchestrator + personas, runs once) and **gener
 
 | Phase | Who runs it | Typical duration | Notes |
 |---|---|---|---|
-| Orchestrator | Claude Opus + extended thinking | 30–60 s | One-time upfront. Extended thinking budget = 5,000 tokens. |
+| Orchestrator | Claude Sonnet + extended thinking | 30–60 s | One-time upfront. Extended thinking budget = 5,000 tokens. |
 | Persona generation | Claude Sonnet | 5–15 s | One-time. Scales slightly with persona count. |
-| FraudConstructor (per variant) | Claude Sonnet × 4 calls | 20–40 s | Sequential within each variant; variants run in parallel up to `max_parallel`. |
+| FraudConstructor (per variant) | Claude Sonnet x 4 calls | 20–40 s | Sequential within each variant; variants run in parallel up to `max_parallel`. |
 | SchemaValidator (per variant) | Python (synchronous) | < 1 s | Negligible. |
-| Critic (per variant) | Claude Sonnet × 1 call | 8–15 s | Runs after constructor finishes. |
-| Revision loop (if triggered) | Claude Sonnet × 1–3 more calls | +20–60 s per variant | Only on critic failures. Rare at default settings. |
+| Critic (per variant) | Claude Sonnet x 1 call | 8–15 s | Runs after constructor finishes. |
+| Revision loop (if triggered) | Claude Sonnet x 1–3 more calls | +20–60 s per variant | Only on critic failures. Rare at default settings. |
 | Output writing | Python | 1–3 s | One-time at end. |
 
-**Wall-clock time ≈ setup + (variants ÷ max_parallel) × time_per_variant**
+**Wall-clock time = setup + (variants / max_parallel) x time_per_variant**
 
 At default settings (5 parallel agents, Level 3, no revisions): ~30 s per variant / 5 agents = ~6 s of wall-clock time per variant.
 
@@ -548,15 +597,15 @@ At default settings (5 parallel agents, Level 3, no revisions): ~30 s per varian
 
 **Variant count** — linear. Double the variants, double the time and cost. Parallelism is the main lever to keep wall-clock time manageable as count grows.
 
-**Parallelism (`max_parallel`)** — near-linear speedup up to the API rate limit. At 10 parallel agents you approach Anthropic's TPM (tokens per minute) ceiling — stay at ≤ 5 for safety unless you have an elevated rate limit tier.
+**Parallelism (`max_parallel`)** — near-linear speedup up to the API rate limit. At 10 parallel agents you approach Anthropic's TPM (tokens per minute) ceiling — stay at 5 or below for safety unless you have an elevated rate limit tier.
 
 **Fidelity level** — step-change cost multiplier:
 
 | Fidelity | Constructor calls per variant | Approx. multiplier vs. Level 2 |
 |---|---|---|
-| 2 | 1 | 1× |
-| 3 | 4 | ~3–4× |
-| 4 | 4 + multi-agent turns per hop | ~8–12× (depends on hop count) |
+| 2 | 1 | 1x |
+| 3 | 4 | ~3–4x |
+| 4 | 4 + multi-agent turns per hop | ~8–12x (depends on hop count) |
 
 **Revision loops** — the worst-case multiplier. Each revision adds a full constructor + critic cycle per variant. At the default critic floor of 7, revision rates are typically < 10%. If you see high rejection counts, lowering the critic floor is faster than waiting for retries.
 
@@ -574,7 +623,7 @@ All estimates at **Level 3, 5 parallel agents, default settings**. Add ~1 min fo
 | 100 (full run) | ~25–30 min | ~$20–30 | ~2 MB |
 | 1,000 (production) | ~1.5–2 hr | ~$40–60 | ~20 MB |
 
-At **10 parallel agents**: halve the wall-clock times above. At **Level 4**: multiply cost by ~8–12×.
+At **10 parallel agents**: halve the wall-clock times above. At **Level 4**: multiply cost by ~8–12x.
 
 ---
 
@@ -640,9 +689,9 @@ Shows a real-time estimate: *~25 variants · Est. $5.00 · Est. 4 min*
 
 While the pipeline runs:
 
-- **Progress bar + phase label** — `Generating personas… ████░░░░░░ 35%`
+- **Progress bar + phase label** — `Generating personas... 35%`
 - **Persona cards** — stream in as generated; each shows name, risk badge, and backstory snippet
-- **Variant feed** — each variant appears as its agent completes, showing persona, parameters, and critic score (green ≥ 7 / yellow 5–6.9 / red < 5)
+- **Variant feed** — each variant appears as its agent completes, showing persona, parameters, and critic score (green >= 7 / yellow 5–6.9 / red < 5)
 - **Coverage matrix** — live grid filling as cells are covered (gray = unassigned, pulsing blue = in progress, green = approved, yellow = revised, red = rejected)
 - **Agent status strip** — N dots showing running / done / retrying status per parallel agent
 - **Pause / Resume / Stop** — Pause waits for in-flight agents to finish; Stop saves all approved variants and exits cleanly
@@ -670,9 +719,91 @@ For live demos with an audience, append `?demo=true` to the URL. Pre-configured 
 
 ---
 
-## 9. User Guide
+## 9. Admin Console
 
-### 8a. Running your first generation
+The admin console is a separate Next.js observability dashboard built for monitoring and reviewing pipeline runs. It connects to the FastAPI backend and provides deep visibility into each stage of the generation pipeline.
+
+**Access:**
+- **API-connected mode:** `http://localhost:3000/admin` (requires FastAPI backend running on port 8000)
+- **Self-contained demo mode:** `http://localhost:3000/administrative` (uses mock data, no backend needed)
+
+### Dashboard tabs
+
+The admin console has 7 tabs that walk through the pipeline stages:
+
+| Tab | What it shows |
+|---|---|
+| **Mission Brief** | Run configuration, fraud description, orchestrator decomposition output |
+| **Coverage** | Coverage matrix visualization — cell states, saturation metrics, dimension breakdown |
+| **Constructor** | Fraud constructor agent output — reasoning chain steps, generated transactions per variant |
+| **Quality Gate** | Critic scores, revision history, pass/fail breakdown, score distributions |
+| **Operations** | Agent status, parallelism metrics, timing breakdown, cost tracking |
+| **Journey** | End-to-end pipeline journey view — timeline of how each variant moved through stages |
+| **Output** | Final dataset preview, export options, run summary statistics |
+
+### Configuration panel
+
+Before launching a run (API mode), the admin console provides the same configuration controls as the Streamlit console: fraud description, variant count, fidelity level, parallelism, critic floor, persona count, and risk distribution.
+
+---
+
+## 10. API Backend
+
+The FastAPI backend (`api/main.py`) wraps the pipeline for programmatic and headless access. It powers the admin console and can be used directly for integration with other systems.
+
+### Running the API
+
+```bash
+PYTHONPATH=app uvicorn api.main:app --reload --port 8000
+```
+
+### Endpoints
+
+| Method | Path | Description |
+|---|---|---|
+| `POST` | `/api/runs` | Start a new pipeline run, returns `run_id` |
+| `GET` | `/api/runs/{run_id}/status` | Poll live run state (phase, progress, agent status) |
+| `POST` | `/api/runs/{run_id}/control` | Pause / resume / stop a running pipeline |
+| `GET` | `/api/runs/{run_id}/matrix` | Coverage matrix state |
+| `GET` | `/api/runs/{run_id}/personas` | Generated personas |
+| `GET` | `/api/runs/{run_id}/results` | Full results once run completes |
+| `GET` | `/api/runs/{run_id}/dataset` | Paginated transaction data |
+| `GET` | `/api/runs/{run_id}/export/{format}` | Download CSV / JSON / graph adjacency list |
+
+See `api/README.md` for full endpoint documentation including request/response schemas.
+
+---
+
+## 11. Landing Page
+
+The marketing site is a Next.js app at `landing/` with the following sections:
+
+- **Navbar** — fixed, transparent
+- **Hero** — headline with mouse-tracking gradient glow
+- **Problem** — the known-unknown gap, data scarcity framing
+- **Solution** — Red Team / Blue Team model
+- **MVP** — what the system does today
+- **Architecture** — system component diagram
+- **Agent Stack** — table of all agents and their roles
+- **Data Pipeline** — animated flow from input to output
+- **Footer**
+
+**Tech stack:** Next.js 16, React 19, TypeScript, Tailwind CSS v4, ShadCN/UI, Framer Motion, Recharts, D3, React Flow.
+
+### Running locally
+
+```bash
+cd landing
+npm install
+npm run dev
+# Opens at http://localhost:3000
+```
+
+---
+
+## 12. User Guide
+
+### Running your first generation
 
 1. Open `http://localhost:8501`
 2. Select **Mule Network** from the fraud type dropdown — this pre-fills the description field with a well-formed example
@@ -687,7 +818,7 @@ For live demos with an audience, append `?demo=true` to the URL. Pre-configured 
 
 **If variants are all failing:** check the Advanced Controls — the critic floor may be set too high. Try lowering it from 7 to 5 for an exploratory run.
 
-### 8b. Understanding the Coverage Matrix
+### Understanding the Coverage Matrix
 
 The coverage matrix is how the system proves it explored the fraud space rather than clustering around the same pattern.
 
@@ -704,7 +835,7 @@ The orchestrator decomposes your fraud description into variation dimensions (e.
 
 If saturation ends below ~60%, enable **Auto second-pass** in Advanced Controls — the system will automatically target underrepresented cells in a follow-up batch.
 
-### 8c. Tuning advanced controls
+### Tuning advanced controls
 
 **Fidelity level**
 - Level 2 for quick exploratory runs or when cost matters more than realism
@@ -712,7 +843,7 @@ If saturation ends below ~60%, enable **Auto second-pass** in Advanced Controls 
 - Level 4 (when available) for the highest fidelity — use when structural diversity and emergent evasion behavior are the priority
 
 **Parallelism**
-`max_parallel` is the main speed lever. 5 agents (default) balances speed and cost. At 10 agents, runs finish ~2× faster but consume API budget ~2× faster simultaneously. Stay at ≤ 5 to avoid hitting Anthropic's rate limits.
+`max_parallel` is the main speed lever. 5 agents (default) balances speed and cost. At 10 agents, runs finish ~2x faster but consume API budget ~2x faster simultaneously. Stay at 5 or below to avoid hitting Anthropic's rate limits.
 
 **Critic floor**
 - Floor 7 (default): good balance — rejects clearly unrealistic variants but lets reasonable outputs through
@@ -721,8 +852,8 @@ If saturation ends below ~60%, enable **Auto second-pass** in Advanced Controls 
 
 **Risk distribution**
 Controls the mix of criminal risk profiles across generated personas:
-- High risk → aggressive networks: same-day transfers, high hop counts, international routing
-- Low risk → conservative networks: slow timing, few hops, heavy cover activity, domestic only
+- High risk: aggressive networks — same-day transfers, high hop counts, international routing
+- Low risk: conservative networks — slow timing, few hops, heavy cover activity, domestic only
 
 Match this to the threat profile you're most concerned about. For training data that covers both ends, use a balanced distribution.
 
@@ -734,44 +865,46 @@ More personas = more structural diversity. The runner assigns personas round-rob
 - Full persona: adds financial situation and motivation — recommended for Level 3
 - Deep cover story: full backstory, suspicion level, relationship to criminal org — required for Level 4 mule agents to behave realistically
 
-### 8d. Reading the output files
-
-Each run creates a timestamped folder at `output/runs/run_YYYYMMDD_HHMMSS/` with six files:
-
-| File | What it contains | When to use it |
-|---|---|---|
-| `config.json` | The `RunConfig` settings for this run | Reproducibility — re-run with the same settings |
-| `personas.json` | The criminal personas used | Understanding behavioral diversity in the dataset |
-| `variants.json` | All approved variants (metadata only, no transactions) | Variant-level analysis, coverage audit |
-| `dataset.csv` | One row per transaction, flat tabular | XGBoost / Random Forest training input |
-| `dataset.json` | Full nested structure: variant + persona metadata + transactions | GNN / Sequence model training; any use needing the full context |
-| `run_summary.json` | Aggregate stats: variant count, mean critic score, coverage %, cost, timing | Quick quality check; sharing run results |
-
-### 8e. Using mock mode
+### Using mock mode
 
 Mock mode lets you run the full pipeline — validation, coverage matrix, revision loop, file output — without consuming any API credits. The `LLMClient` returns instant stub data instead of calling Claude.
 
 **Enable mock mode:**
 ```bash
-# In .env, uncomment:
+# In .env, set:
 FRAUDGEN_MOCK=1
 ```
 
 **What stubs are returned:**
-- Orchestrator calls → 6-cell coverage grid
-- Persona generator calls → 3 personas (Viktor Sokolov, James Harlow, Maria Chen)
-- Critic calls → random score 6.5–9.2
-- All other calls (fraud constructor) → 3-hop chain, 4 transactions
+- Orchestrator calls: 6-cell coverage grid
+- Persona generator calls: 3 personas (Viktor Sokolov, James Harlow, Maria Chen)
+- Critic calls: random score 6.5–9.2
+- All other calls (fraud constructor): 3-hop chain, 4 transactions
 
 Mock mode is ideal for:
 - UI development and testing
 - Verifying the pipeline plumbing without spending API credits
 - Running quick structural tests after code changes
-- Demo setup and rehearsal (use demo mode for demos instead: `?demo=true`)
+- Demo setup and rehearsal (use demo mode for actual demos: `?demo=true`)
+
+### Trace pipeline (step-through debugging)
+
+`trace_pipeline.py` is an interactive terminal tool that runs the pipeline one stage at a time, pausing between each step for inspection:
+
+```bash
+python3 trace_pipeline.py
+```
+
+**Controls at each pause:**
+- `Enter` — continue to next stage
+- `s` / `skip` — skip this cell (variant loop only)
+- `q` / `quit` — exit immediately
+
+Stage outputs are cached to `.trace_cache/` so you can resume from where you left off without re-running earlier stages.
 
 ---
 
-## 10. Output Reference
+## 13. Output Reference
 
 ### dataset.csv columns
 
@@ -794,10 +927,10 @@ Mock mode is ideal for:
 | `critic_scores` | dict | `{realism, distinctiveness, passed}` |
 
 **Label semantics:**
-- `placement` — external source → first fraud account (most traceable moment)
-- `hop_N_of_M` — fraud account → fraud account (layering; N = hop depth, M = total hops)
-- `extraction` — last fraud account → external destination
-- `cover_activity` — external → external (legitimate-looking noise transactions; `is_fraud = False`)
+- `placement` — external source to first fraud account (most traceable moment)
+- `hop_N_of_M` — fraud account to fraud account (layering; N = hop depth, M = total hops)
+- `extraction` — last fraud account to external destination
+- `cover_activity` — external to external (legitimate-looking noise transactions; `is_fraud = False`)
 
 ### run_summary.json fields
 
@@ -826,7 +959,7 @@ Mock mode is ideal for:
 
 ---
 
-## 11. Project Status & Roadmap
+## 14. Project Status & Roadmap
 
 ### MVP — completed
 
@@ -839,13 +972,18 @@ Mock mode is ideal for:
 - [x] Critic agent (realism + distinctiveness scoring)
 - [x] Revision loop with critic feedback
 - [x] Coverage matrix tracking + saturation check
-- [x] Thread-safe `RunState` bridge (pipeline ↔ console)
+- [x] Thread-safe `RunState` bridge (pipeline <-> console)
 - [x] Streamlit console: input panel, advanced controls, live monitoring, data display
 - [x] Network graph visualization (NetworkX + Matplotlib)
 - [x] All 6 output files per run
 - [x] Mock mode for keyless testing
 - [x] Demo mode (`?demo=true`)
 - [x] Cost tracking + configurable hard cap ($20 default)
+- [x] FastAPI backend with REST endpoints
+- [x] Next.js admin console (7-tab observability dashboard)
+- [x] Next.js landing page (v2 with full section set)
+- [x] Interactive trace pipeline for step-through debugging
+- [x] Static grounding data (MCC stats, payment rails, balances, regulatory thresholds)
 
 ### Next level — planned
 
@@ -858,7 +996,7 @@ Mock mode is ideal for:
 
 ---
 
-## 12. Safety & Ethics
+## 15. Safety & Ethics
 
 **All data is synthetic.** FraudGen generates data representing what transactions would look like if fraud had occurred. It is not connected to any live banking system and does not generate, access, or store any real financial data or PII.
 
