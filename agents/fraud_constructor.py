@@ -3,13 +3,15 @@ from __future__ import annotations
 
 import json
 import time
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Callable
 from uuid import uuid4
 
 from models.persona import Persona
 from models.variant import RawVariant
-from utils.label_transactions import label_transactions
+from pipeline.variant_validator import check_variant_constraints
+from utils.label_transactions import label_transactions, detect_topology
 from utils.llm_client import LLMClient
 
 # ---------------------------------------------------------------------------
@@ -160,6 +162,7 @@ _PARTICIPANT_PROFILES_SCHEMA = {
                     "account_type": {"type": "string"},
                     "typical_balance_range": {"type": "string"},
                     "response_time_hrs": {"type": "number"},
+                    "account_age_days": {"type": "integer"},
                 },
                 "required": [
                     "account_id", "role", "owner_description",
@@ -227,6 +230,96 @@ _SELF_REVIEW_SCHEMA = {
 }
 
 
+def _repair_constraint_violations(
+    variant_data: dict,
+    persona_analysis: dict,
+    rail_constraints: dict,
+) -> dict:
+    """Deterministically fix common LLM constraint violations before validation.
+
+    Repairs in-place (mutates transactions list) and returns variant_data.
+    Fixes applied:
+      1. Channel substitution — replace disallowed channels with first allowed channel
+      2. Timestamp re-spacing — enforce min_timing_interval_hrs between fraud txns
+      3. ACH settlement floor — enforce 1h gap after each ACH txn
+      4. Zelle amount cap — clamp amounts to per-transaction limit
+    """
+    import random as _random
+
+    audit = persona_analysis.get("constraint_audit", {})
+    transactions: list[dict] = variant_data.get("transactions", [])
+    fraud_ids: set[str] = set(variant_data.get("fraud_account_ids", []))
+
+    # 1. Channel substitution
+    allowed_channels = [str(c).lower() for c in audit.get("allowed_channels", [])]
+    if allowed_channels:
+        fallback = allowed_channels[0]
+        for txn in transactions:
+            ch = str(txn.get("channel", "")).lower()
+            if ch not in allowed_channels:
+                txn["channel"] = fallback
+
+    # 2. Re-space fraud transaction timestamps to respect min_timing_interval_hrs
+    min_interval = audit.get("min_timing_interval_hrs")
+    if min_interval:
+        min_delta = timedelta(hours=float(min_interval))
+
+        def _parse(ts: str) -> datetime | None:
+            if not ts:
+                return None
+            try:
+                dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                return dt if dt.tzinfo else dt.replace(tzinfo=timezone.utc)
+            except (ValueError, AttributeError):
+                return None
+
+        fraud_txns = [
+            t for t in transactions
+            if t.get("sender_account_id") in fraud_ids
+            or t.get("receiver_account_id") in fraud_ids
+        ]
+        fraud_txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
+
+        for i in range(1, len(fraud_txns)):
+            prev_ts = _parse(fraud_txns[i - 1].get("timestamp", ""))
+            curr_ts = _parse(fraud_txns[i].get("timestamp", ""))
+            if prev_ts is None or curr_ts is None:
+                continue
+            if (curr_ts - prev_ts) < min_delta:
+                # Add a small random jitter beyond the minimum so timestamps look organic
+                jitter = timedelta(hours=_random.uniform(0, float(min_interval) * 0.1))
+                new_ts = prev_ts + min_delta + jitter
+                fraud_txns[i]["timestamp"] = new_ts.isoformat()
+
+    # 3. ACH settlement floor (1h)
+    sorted_all = sorted(
+        transactions,
+        key=lambda t: (_parse(t.get("timestamp", "")) if min_interval else datetime.max.replace(tzinfo=timezone.utc)) or datetime.max.replace(tzinfo=timezone.utc),
+    )
+    ach_floor = timedelta(hours=1.0)
+    for i in range(1, len(sorted_all)):
+        prev = sorted_all[i - 1]
+        if str(prev.get("channel", "")).upper() != "ACH":
+            continue
+        curr = sorted_all[i]
+        prev_ts = _parse(prev.get("timestamp", ""))
+        curr_ts = _parse(curr.get("timestamp", ""))
+        if prev_ts and curr_ts and (curr_ts - prev_ts) < ach_floor:
+            curr["timestamp"] = (prev_ts + ach_floor).isoformat()
+
+    # 4. Zelle amount cap
+    zelle_max = float(rail_constraints.get("Zelle", {}).get("max_per_transaction", 2500))
+    for txn in transactions:
+        if str(txn.get("channel", "")).lower() == "zelle":
+            try:
+                if float(txn.get("amount", 0)) > zelle_max:
+                    txn["amount"] = zelle_max
+            except (ValueError, TypeError):
+                pass
+
+    return variant_data
+
+
 class FraudConstructorAgent:
     """Level 3 Fraud Network Constructor.
 
@@ -253,7 +346,7 @@ class FraudConstructorAgent:
         on_strategy_text: Callable[[str], None] | None = None,
         on_step: Callable[[str], None] | None = None,
         on_labeling: Callable[[list[dict], set[str]], None] | None = None,
-    ) -> RawVariant:
+    ) -> tuple[RawVariant, bool, str]:
         """Execute the five-step reasoning chain and return a RawVariant.
 
         Parameters
@@ -368,7 +461,16 @@ class FraudConstructorAgent:
                     "what_they_think_is_happening, account_type (from the grounding data "
                     "account types), typical_balance_range, and response_time_hrs.\n\n"
                     "The number of accounts must match the topology and hop_count from "
-                    "Step 2. Return a JSON object with an 'accounts' array."
+                    "Step 2.\n\n"
+                    "CONSTRAINT AUDIT — enforce these limits NOW before returning profiles:\n"
+                    "  - mule_account_age_range from Step 1: every mule account's account_age_days "
+                    "must fall within this range. Convert the range to days (e.g. '6 months to 2 years' "
+                    "= 180–730 days) and set account_age_days accordingly.\n"
+                    "  - allowed_channels from Step 1: note these for Step 4 — only these channels "
+                    "may appear in transactions.\n"
+                    "  - max_hop_count: confirm the number of mule accounts does not exceed this.\n"
+                    "Include account_age_days (integer, days since account opened) on each mule account.\n\n"
+                    "Return a JSON object with an 'accounts' array."
                 ),
             },
         ]
@@ -386,9 +488,21 @@ class FraudConstructorAgent:
         # ------------------------------------------------------------------
         # Step 4 — Transaction generation (streaming)
         # ------------------------------------------------------------------
+        constraint_audit = persona_analysis.get("constraint_audit", {})
+        allowed_channels = constraint_audit.get("allowed_channels", [])
+        min_timing = constraint_audit.get("min_timing_interval_hrs", 0)
+        max_timing = constraint_audit.get("max_timing_interval_hrs", "")
+
         step4_prompt = (
             "STEP 4: TRANSACTION GENERATION\n\n"
             f"Variant ID to use: {variant_id}\n\n"
+            "⚠️  HARD CONSTRAINTS FROM YOUR STEP 1 CONSTRAINT AUDIT — VIOLATIONS WILL FAIL VALIDATION:\n"
+            f"  • allowed_channels: {allowed_channels} — ONLY use these channel values. No others.\n"
+            f"  • min_timing_interval_hrs: {min_timing} — consecutive inter-hop timestamps must be "
+            f"at least {min_timing} hours apart.\n"
+            f"  • max_timing_interval_hrs: {max_timing}\n"
+            f"  • crypto_allowed: {constraint_audit.get('crypto_allowed', True)}\n"
+            f"  • international_allowed: {constraint_audit.get('international_allowed', True)}\n\n"
             "Using the persona analysis, network plan, participant profiles, and the "
             "grounding data in the system prompt, generate the complete transaction "
             "sequence.\n\n"
@@ -456,73 +570,22 @@ class FraudConstructorAgent:
             on_step(f"Step 4/5: Transaction generation — done ({time.perf_counter() - _t0:.1f}s)")
 
         # ------------------------------------------------------------------
-        # Step 5 — Self-review
+        # Step 5 — Repair obvious violations, then validate
         # ------------------------------------------------------------------
+        final_data = _repair_constraint_violations(step4_data, persona_analysis, _RAIL_CONSTRAINTS)
         if on_step:
-            txn_count = len(step4_data.get("transactions", []))
-            on_step(f"Step 5/5: Self-review — running… ({txn_count} transactions)")
-        step5_messages = step4_messages + [
-            {"role": "assistant", "content": json.dumps(step4_data)},
-            {
-                "role": "user",
-                "content": (
-                    "STEP 5: SELF-REVIEW\n\n"
-                    "Review the transaction sequence you just generated against these checks:\n\n"
-                    "1. Do timestamps between fraud hops match the timing_interval_hrs "
-                    "from the network plan? Calculate actual hours between hops.\n"
-                    "2. Are all amounts within realistic ranges per the grounding data?\n"
-                    "3. Does the topology (chain/fan_out/hybrid) match the "
-                    "sender→receiver flow in the transactions? Also verify that the "
-                    "fraud_type string is consistent with that topology — if you generated "
-                    "a fan_out topology, fraud_type must not describe a chain structure, "
-                    "and vice versa. Fix fraud_type if it contradicts variant_parameters.topology.\n"
-                    "3b. Using your fraud_account_ids list, count transactions where BOTH "
-                    "sender_account_id AND receiver_account_id are NOT in fraud_account_ids — "
-                    "these are the cover activity transactions. Does that count match "
-                    "variant_parameters.cover_activity? (none → 0, low → 1–3, high → 4+). "
-                    "Correct the field value if the count does not match.\n"
-                    "3c. Verify fraud_account_ids is present in your output and contains only "
-                    "internal mule accounts — not victim accounts, not extraction destination "
-                    "accounts, not cover activity accounts.\n"
-                    "4. PERSONA CONSTRAINT AUDIT — check every field in the constraint_audit "
-                    "from Step 1 against your output. For each field, state ✓ (compliant) or "
-                    "✗ (violation + what you will fix), then apply all fixes:\n"
-                    "   - constraint_audit.crypto_allowed=false → no transaction channel may be "
-                    "'crypto', extraction_method must not be 'crypto'\n"
-                    "   - constraint_audit.international_allowed=false → geographic_spread must "
-                    "be domestic only, no cross-border routing\n"
-                    "   - constraint_audit.max_hop_count → hop_count in variant_parameters must "
-                    "be ≤ this value\n"
-                    "   - constraint_audit.min_timing_interval_hrs → all inter-hop timestamp "
-                    "gaps must be ≥ this value\n"
-                    "   - constraint_audit.max_timing_interval_hrs → all inter-hop timestamp "
-                    "gaps must be ≤ this value\n"
-                    "   - constraint_audit.cover_activity_required=true → cover_activity must "
-                    "not be 'none'\n"
-                    "   - constraint_audit.mule_account_age_range → participant account ages in "
-                    "profiles must reflect this range\n"
-                    "   - constraint_audit.allowed_channels → every transaction.channel must "
-                    "appear in this list\n"
-                    "   - constraint_audit.extraction_methods_allowed → extraction_method must "
-                    "be one of these values\n"
-                    "   Fix all violations before returning.\n"
-                    "5. Are there any payment rail violations? "
-                    "(ACH cannot settle in <1 hour; Zelle >$2,500/transaction is over limit)\n\n"
-                    "Fix any inconsistencies and return the corrected full JSON object "
-                    "using the same schema as Step 4. Return ONLY the corrected JSON."
-                ),
-            },
-        ]
-        _t0 = time.perf_counter()
-        final_data: dict = await self._client.call(
-            system_prompt=system_prompt,
-            messages=step5_messages,
-            model=self._MODEL,
-            response_schema=_SELF_REVIEW_SCHEMA,
-            timeout=None,
+            txn_count = len(final_data.get("transactions", []))
+            on_step(f"Step 5/5: Constraint validation — running… ({txn_count} transactions)")
+        violations = check_variant_constraints(
+            final_data, persona_analysis, network_plan, _RAIL_CONSTRAINTS
         )
         if on_step:
-            on_step(f"Step 5/5: Self-review — done ({time.perf_counter() - _t0:.1f}s)")
+            status = f"{len(violations)} violation(s)" if violations else "OK"
+            on_step(f"Step 5/5: Constraint validation — {status}")
+        if violations:
+            raise ValueError(
+                "Constraint violations (retry will fix): " + "; ".join(violations)
+            )
 
         # Ensure the variant_id is the one we generated (model may have changed it)
         final_data["variant_id"] = variant_id
@@ -536,11 +599,70 @@ class FraudConstructorAgent:
             final_data["transactions"], fraud_account_ids
         )
 
-        return RawVariant.model_validate(final_data)
+        # Overwrite topology with ground-truth detected from the actual graph
+        final_data["variant_parameters"]["topology"] = detect_topology(
+            final_data["transactions"], fraud_account_ids
+        )
+
+        raw_variant = RawVariant.model_validate(final_data)
+
+        # Deterministic persona_consistency check
+        persona_ok, consistency_notes = self._check_persona_consistency(
+            persona_analysis["constraint_audit"],
+            raw_variant.transactions,
+            final_data["variant_parameters"],
+        )
+        return raw_variant, persona_ok, consistency_notes
 
     # ------------------------------------------------------------------
     # Private helpers
     # ------------------------------------------------------------------
+
+    @staticmethod
+    def _check_persona_consistency(
+        constraint_audit: dict,
+        transactions: list,
+        variant_parameters: dict,
+    ) -> tuple[bool, str]:
+        """Deterministically check persona constraints against labeled transactions."""
+        import re as _re
+        notes = []
+
+        allowed_channels = set(constraint_audit.get("allowed_channels", []))
+        if allowed_channels:
+            bad = [t.channel for t in transactions if t.is_fraud and t.channel not in allowed_channels]
+            if bad:
+                notes.append(f"Disallowed channels used: {sorted(set(bad))}")
+
+        if not constraint_audit.get("crypto_allowed", True):
+            crypto_txns = [t for t in transactions if t.channel == "crypto"]
+            if crypto_txns:
+                notes.append("crypto channel used but crypto_allowed=False")
+            if variant_parameters.get("extraction_method") == "crypto":
+                notes.append("extraction_method=crypto but crypto_allowed=False")
+
+        if not constraint_audit.get("international_allowed", True):
+            spread = variant_parameters.get("geographic_spread", "").lower()
+            if any(kw in spread for kw in ("international", "cross-border", "offshore", "foreign")):
+                notes.append("international geographic spread but international_allowed=False")
+
+        max_hops = constraint_audit.get("max_hop_count")
+        if max_hops is not None:
+            hop_indices = []
+            for t in transactions:
+                m = _re.match(r"^hop_(\d+)_of_\d+$", t.fraud_role)
+                if m:
+                    hop_indices.append(int(m.group(1)))
+            if hop_indices and max(hop_indices) > max_hops:
+                notes.append(f"hop count {max(hop_indices)} exceeds max_hop_count={max_hops}")
+
+        if constraint_audit.get("cover_activity_required"):
+            if not any(t.fraud_role == "cover_activity" for t in transactions):
+                notes.append("cover_activity_required=True but no cover activity transactions")
+
+        ok = len(notes) == 0
+        feedback = "; ".join(notes) if notes else "all persona constraints satisfied"
+        return ok, feedback
 
     @staticmethod
     def _build_system_prompt(critic_feedback: str) -> str:

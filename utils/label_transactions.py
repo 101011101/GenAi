@@ -142,3 +142,25 @@ def label_transactions(
             txn["is_fraud"] = False
 
     return transactions
+
+
+def detect_topology(transactions: list[dict], fraud_account_ids: set[str]) -> str:
+    """Detect chain/fan_out/hybrid from the actual transaction graph."""
+    out_edges: dict[str, set[str]] = {}
+    for txn in transactions:
+        s = txn["sender_account_id"]
+        r = txn["receiver_account_id"]
+        if s in fraud_account_ids and r in fraud_account_ids:
+            out_edges.setdefault(s, set()).add(r)
+
+    if not out_edges:
+        return "chain"
+
+    has_fanout = any(len(v) > 1 for v in out_edges.values())
+    has_chain_node = any(len(v) == 1 for v in out_edges.values())
+
+    if has_fanout and has_chain_node:
+        return "hybrid"
+    elif has_fanout:
+        return "fan_out"
+    return "chain"
