@@ -42,6 +42,7 @@ class RunState:
         self.total_cost_usd: float = 0.0
         self.revisions_count: int = 0
         self.rejections_count: int = 0
+        self.event_log: list[str] = []  # real-time agent activity log
 
     # ------------------------------------------------------------------
     # Mutation methods — all thread-safe
@@ -51,15 +52,14 @@ class RunState:
         """
         Record a completed variant.
 
-        Appends the summary to variant_log, increments variants_completed,
-        and decrements active_agent_count. Tracks rejections and revisions
-        via the summary status field so callers do not need to update those
-        counters separately.
+        Appends the summary to variant_log and increments variants_completed.
+        Does NOT decrement active_agent_count — callers must call decrement_active()
+        explicitly so the increment/decrement pair is always balanced.
+        Tracks rejections and revisions via the summary status field.
         """
         with self._lock:
             self.variant_log.append(summary)
             self.variants_completed += 1
-            self.active_agent_count = max(0, self.active_agent_count - 1)
             if summary.status == "rejected":
                 self.rejections_count += 1
             elif summary.status == "revised":
@@ -102,6 +102,16 @@ class RunState:
         with self._lock:
             self.total_cost_usd += usd
 
+    def log_event(self, msg: str) -> None:
+        """Append a timestamped agent activity event (non-blocking, capped at 200 entries)."""
+        ts = datetime.now(timezone.utc).strftime("%H:%M:%S")
+        with self._lock:
+            self.event_log.append(f"[{ts}] {msg}")
+            if len(self.event_log) > 200:
+                dropped = len(self.event_log) - 200
+                self.event_log = self.event_log[-200:]
+                self.event_log[0] = f"[{ts}] [WARNING: {dropped} earlier event(s) dropped — log cap 200 reached]"
+
     def mark_complete(self) -> None:
         """Mark the run as finished and set phase to 'complete'."""
         with self._lock:
@@ -114,16 +124,17 @@ class RunState:
 
     def snapshot(self) -> dict:
         """Return a plain-dict snapshot suitable for serialization or display."""
-        return {
-            "variants_completed": self.variants_completed,
-            "variants_total": self.variants_total,
-            "active_agent_count": self.active_agent_count,
-            "control_signal": self.control_signal,
-            "is_complete": self.is_complete,
-            "current_phase": self.current_phase,
-            "total_cost_usd": self.total_cost_usd,
-            "revisions_count": self.revisions_count,
-            "rejections_count": self.rejections_count,
-            "error_count": len(self.errors),
-            "variant_count": len(self.variant_log),
-        }
+        with self._lock:
+            return {
+                "variants_completed": self.variants_completed,
+                "variants_total": self.variants_total,
+                "active_agent_count": self.active_agent_count,
+                "control_signal": self.control_signal,
+                "is_complete": self.is_complete,
+                "current_phase": self.current_phase,
+                "total_cost_usd": self.total_cost_usd,
+                "revisions_count": self.revisions_count,
+                "rejections_count": self.rejections_count,
+                "error_count": len(self.errors),
+                "variant_count": len(self.variant_log),
+            }

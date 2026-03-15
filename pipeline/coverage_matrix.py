@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import copy
 import threading
 import uuid
 from typing import Any
@@ -150,7 +151,7 @@ class CoverageMatrix:
         """
         with self._lock:
             return [
-                dict(cell)
+                copy.deepcopy(cell)
                 for cell in self._cells.values()
                 if len(cell["assigned_variant_ids"]) == 0
             ]

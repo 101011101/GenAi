@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import tempfile
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -103,7 +104,15 @@ class OutputHandler:
         csv_path = os.path.join(run_folder, "dataset.csv")
         if all_records:
             df = self._records_to_dataframe(all_records)
-            df.to_csv(csv_path, index=False)
+            tmp_csv = csv_path + f".{os.getpid()}.tmp"
+            try:
+                df.to_csv(tmp_csv, index=False)
+                os.replace(tmp_csv, csv_path)
+            finally:
+                try:
+                    os.remove(tmp_csv)
+                except OSError:
+                    pass
         else:
             # Write an empty CSV with column headers so the file always exists.
             pd.DataFrame(columns=self._output_record_columns()).to_csv(csv_path, index=False)
@@ -159,8 +168,9 @@ class OutputHandler:
         """
         Incrementally append one variant's transactions to the run's CSV.
 
-        Opens the file in append mode so the full dataset is never held in
-        memory.  If the file does not yet exist, writes the header row first.
+        Writes to a temp file first then appends atomically so a crash cannot
+        leave a partial row in the CSV.  If the file does not yet exist,
+        writes the header row first.
 
         Intended for large runs (1000+ variants) where writing all records at
         the end would consume too much RAM.
@@ -172,7 +182,19 @@ class OutputHandler:
 
         df = self._records_to_dataframe(records)
         write_header = not os.path.exists(csv_path)
-        df.to_csv(csv_path, mode="a", index=False, header=write_header)
+
+        tmp_path = csv_path + f".{os.getpid()}.tmp"
+        try:
+            df.to_csv(tmp_path, index=False, header=write_header)
+            with open(tmp_path, "rb") as src:
+                data = src.read()
+            with open(csv_path, "ab") as dst:
+                dst.write(data)
+        finally:
+            try:
+                os.remove(tmp_path)
+            except OSError:
+                pass
 
     # ------------------------------------------------------------------
     # Internal helpers
@@ -248,6 +270,11 @@ class OutputHandler:
 
     @staticmethod
     def _write_json(path: str, data: Any) -> None:
-        """Write data to a JSON file with 2-space indentation."""
-        with open(path, "w", encoding="utf-8") as f:
-            json.dump(data, f, indent=2, default=str)
+        """Write data to a JSON file atomically (temp file + rename)."""
+        dir_name = os.path.dirname(path) or "."
+        with tempfile.NamedTemporaryFile(
+            "w", dir=dir_name, suffix=".tmp", delete=False, encoding="utf-8"
+        ) as tmp:
+            json.dump(data, tmp, indent=2, default=str)
+            tmp_path = tmp.name
+        os.replace(tmp_path, path)
