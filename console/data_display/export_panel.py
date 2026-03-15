@@ -185,7 +185,7 @@ def render_export_panel(
                 data=minimal_bytes,
                 file_name="run_summary.json",
                 mime="application/json",
-                key="export_summary_btn",
+                key="export_summary_minimal_btn",
                 help="Full summary not found — downloading a minimal version.",
             )
         with col_sum_info:

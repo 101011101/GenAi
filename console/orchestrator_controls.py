@@ -155,8 +155,25 @@ def render_orchestrator_controls() -> dict:
         risk_total = risk_high + risk_mid + risk_low
         st.caption(f"Total: {risk_total}% (High: {risk_high}%, Mid: {risk_mid}%, Low: {risk_low}%)")
 
-        if risk_total != 100:
-            st.error(f"Risk distribution must sum to 100. Currently: {risk_total}%")
+        if risk_total != 100 and risk_total > 0:
+            # Auto-normalize so the pipeline always receives a valid distribution
+            normalized = {
+                "high": round(risk_high * 100 / risk_total),
+                "mid": round(risk_mid * 100 / risk_total),
+                "low": round(risk_low * 100 / risk_total),
+            }
+            # Fix any rounding error by adjusting the largest bucket
+            diff = 100 - sum(normalized.values())
+            if diff != 0:
+                largest = max(normalized, key=normalized.get)
+                normalized[largest] += diff
+            st.warning(
+                f"Risk distribution ({risk_total}%) auto-normalized to 100%: "
+                f"High {normalized['high']}% / Mid {normalized['mid']}% / Low {normalized['low']}%"
+            )
+            overrides["risk_distribution"] = normalized
+        elif risk_total == 0:
+            st.error("Risk distribution total is 0% — set at least one value above 0.")
         else:
             overrides["risk_distribution"] = {"high": risk_high, "mid": risk_mid, "low": risk_low}
 

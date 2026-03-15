@@ -86,13 +86,13 @@ def _variant_passed(v: Any) -> bool:
         # Check critic_scores.passed or top-level passed field
         critic = v.get("critic_scores", {})
         if isinstance(critic, dict):
-            return bool(critic.get("passed", True))
-        return bool(v.get("passed", True))
+            return bool(critic.get("passed", False))
+        return bool(v.get("passed", False))
     passed = getattr(v, "passed", None)
     if passed is not None:
         return bool(passed)
-    # ScoredVariant has a .passed field; RawVariant does not — treat as passed
-    return True
+    # ScoredVariant has a .passed field; RawVariant does not — treat as not passed
+    return False
 
 
 def _get_realism_score(v: Any) -> float:

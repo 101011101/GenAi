@@ -62,10 +62,12 @@ def render_monitoring_panel(run_state: Any) -> str | None:
         snap = run_state
         variant_log = snap.get("variant_log", [])
         errors = snap.get("errors", [])
+        event_log = snap.get("event_log", [])
     else:
         snap = run_state.snapshot()
         variant_log = getattr(run_state, "variant_log", [])
         errors = getattr(run_state, "errors", [])
+        event_log = getattr(run_state, "event_log", [])
 
     variants_completed = snap.get("variants_completed", 0)
     variants_total = max(snap.get("variants_total", 1), 1)
@@ -163,6 +165,13 @@ def render_monitoring_panel(run_state: Any) -> str | None:
     # --- Cost caption ---
     st.caption(f"Est. cost so far: ${total_cost:.2f}")
 
+    # --- Agent activity log ---
+    if event_log:
+        with st.expander("Agent Activity Log", expanded=True):
+            recent_events = list(reversed(event_log[-30:]))
+            log_text = "\n".join(recent_events)
+            st.code(log_text, language=None)
+
     # --- Errors ---
     if errors:
         recent_errors = errors[-3:]
@@ -182,7 +191,8 @@ def render_monitoring_panel(run_state: Any) -> str | None:
         pause_label = "Resume" if st.session_state.is_paused else "Pause"
         if st.button(pause_label, use_container_width=True, key="pause_resume_btn"):
             st.session_state.is_paused = not st.session_state.is_paused
-            clicked_action = "Resume" if st.session_state.is_paused else "Pause"
+            # After toggling: is_paused=True means we just paused → send "pause"
+            clicked_action = "pause" if st.session_state.is_paused else "resume"
 
     with btn_col2:
         # Resume is a no-op slot when not paused (grayed via disabled)
