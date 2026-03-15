@@ -1,14 +1,14 @@
 """
-debug_pipeline.py — Interactive step-through runner for the FraudGen pipeline.
+trace_pipeline.py — Interactive step-through runner for the FraudGen pipeline.
 
 Runs each pipeline stage manually, pretty-prints the output, then waits for
 your confirmation before moving to the next stage.
 
-Stage outputs are cached to .debug_cache/ so you can resume from where you
+Stage outputs are cached to .trace_cache/ so you can resume from where you
 left off without re-running earlier stages.
 
 Usage:
-    python3 debug_pipeline.py
+    python3 trace_pipeline.py
 
 Controls at each pause:
     Enter       → continue to next stage
@@ -43,27 +43,27 @@ from pipeline.cell_generator import generate_cells
 from utils.schema_validator import validate_raw_variant
 
 # ---------------------------------------------------------------------------
-# Config — edit these to change what the debug run targets
+# Config — edit these to change what the trace run targets
 # ---------------------------------------------------------------------------
-DEBUG_CONFIG = RunConfig(
+TRACE_CONFIG = RunConfig(
     fraud_description=(
         "Layered 3-hop mule account network, burst withdrawal pattern, "
         "domestic transfers only. Criminal organization uses recruited "
         "account holders to move stolen funds rapidly before extraction."
     ),
-    variant_count=4,       # keep small for debug
+    variant_count=4,       # keep small for trace runs
     fidelity_level=3,
     persona_count=2,
     max_parallel=1,
-    critic_floor=6.0,      # lower floor so debug runs pass more easily
+    critic_floor=6.0,      # lower floor so trace runs pass more easily
     max_revisions=1,
 )
 
 # How many cells to process in the variant loop (set to None for all)
-DEBUG_CELL_LIMIT = 2
+TRACE_CELL_LIMIT = 2
 
 # Cache directory
-_CACHE_DIR = _ROOT / ".debug_cache"
+_CACHE_DIR = _ROOT / ".trace_cache"
 _CACHE_ORCHESTRATOR = _CACHE_DIR / "orchestrator.json"
 _CACHE_PERSONAS = _CACHE_DIR / "personas.json"
 
@@ -134,7 +134,7 @@ def _pause(prompt: str = "") -> str:
 
 def _check_quit(response: str) -> None:
     if response in ("q", "quit", "exit"):
-        print("Exiting debug run.")
+        print("Exiting trace run.")
         sys.exit(0)
 
 
@@ -230,12 +230,12 @@ def make_on_step() -> tuple[callable, callable]:
 # ---------------------------------------------------------------------------
 
 async def main() -> None:
-    _header("FraudGen — Pipeline Step-Through Debugger")
-    print(f"  Fraud description : {DEBUG_CONFIG.fraud_description[:80]}…")
-    print(f"  Variant count     : {DEBUG_CONFIG.variant_count}")
-    print(f"  Persona count     : {DEBUG_CONFIG.persona_count}")
-    print(f"  Cell limit        : {DEBUG_CELL_LIMIT}")
-    print(f"  Critic floor      : {DEBUG_CONFIG.critic_floor}")
+    _header("FraudGen — Pipeline Tracer")
+    print(f"  Fraud description : {TRACE_CONFIG.fraud_description[:80]}…")
+    print(f"  Variant count     : {TRACE_CONFIG.variant_count}")
+    print(f"  Persona count     : {TRACE_CONFIG.persona_count}")
+    print(f"  Cell limit        : {TRACE_CELL_LIMIT}")
+    print(f"  Critic floor      : {TRACE_CONFIG.critic_floor}")
     print(f"  Cache dir         : {_CACHE_DIR}")
 
     resp = _pause("Ready to start? Press Enter or [q]uit")
@@ -254,13 +254,13 @@ async def main() -> None:
                 f"{len(orchestrator_output.variation_dimensions)} dimensions")
     else:
         _info("Calling Claude with extended thinking to decompose the fraud description…")
-        orchestrator_output = await OrchestratorAgent().run(DEBUG_CONFIG)
+        orchestrator_output = await OrchestratorAgent().run(TRACE_CONFIG)
         _save_cache(_CACHE_ORCHESTRATOR, orchestrator_output)
-        _ok("Cached orchestrator output to .debug_cache/orchestrator.json")
+        _ok("Cached orchestrator output to .trace_cache/orchestrator.json")
 
     coverage_cells = generate_cells(
         dimensions=orchestrator_output.variation_dimensions,
-        target_count=DEBUG_CONFIG.variant_count,
+        target_count=TRACE_CONFIG.variant_count,
         suggested_persona_count=orchestrator_output.suggested_persona_count,
     )
 
@@ -299,10 +299,10 @@ async def main() -> None:
     else:
         _info(f"Generating {orchestrator_output.suggested_persona_count} criminal personas…")
         personas = await PersonaGeneratorAgent().run(
-            DEBUG_CONFIG.fraud_description, DEBUG_CONFIG
+            TRACE_CONFIG.fraud_description, TRACE_CONFIG
         )
         _save_cache(_CACHE_PERSONAS, [p.model_dump() for p in personas])
-        _ok("Cached personas to .debug_cache/personas.json")
+        _ok("Cached personas to .trace_cache/personas.json")
 
     _ok(f"Personas ready: {len(personas)}")
     for p in personas:
@@ -321,8 +321,8 @@ async def main() -> None:
     # STAGE 3 + 4 — FraudConstructor → Critic (per cell)
     # -----------------------------------------------------------------------
     cells = coverage_cells
-    if DEBUG_CELL_LIMIT is not None:
-        cells = cells[:DEBUG_CELL_LIMIT]
+    if TRACE_CELL_LIMIT is not None:
+        cells = cells[:TRACE_CELL_LIMIT]
 
     approved: list = []
 
@@ -378,7 +378,7 @@ async def main() -> None:
                 )
                 _cleanup()
                 _save_cache(cell_cache_path, raw_variant)
-                _ok(f"Cached variant to .debug_cache/variant_{cell_id}.json")
+                _ok(f"Cached variant to .trace_cache/variant_{cell_id}.json")
             except Exception as exc:
                 _cleanup()
                 _err(f"FraudConstructor failed: {exc}")
@@ -461,7 +461,7 @@ async def main() -> None:
         # Critic
         # -------------------------------------------------------------------
         _section(f"STAGE 4 / 4  —  CriticAgent  [{cell_id}]")
-        _info(f"Critic floor: realism≥{DEBUG_CONFIG.critic_floor}, distinctiveness≥6.0")
+        _info(f"Critic floor: realism≥{TRACE_CONFIG.critic_floor}, distinctiveness≥6.0")
 
         if not persona_ok:
             _err(f"Persona consistency: FAIL — {consistency_notes}")
@@ -473,7 +473,7 @@ async def main() -> None:
                 variant=validated,
                 persona=persona,
                 persona_consistency=persona_ok,
-                critic_floor=DEBUG_CONFIG.critic_floor,
+                critic_floor=TRACE_CONFIG.critic_floor,
             )
         except Exception as exc:
             _err(f"CriticAgent failed: {exc}")
@@ -505,7 +505,7 @@ async def main() -> None:
     # -----------------------------------------------------------------------
     # Summary
     # -----------------------------------------------------------------------
-    _header("Debug Run Complete")
+    _header("Trace Run Complete")
     _ok(f"Cells processed : {len(cells)}")
     _ok(f"Approved        : {len(approved)}")
     _ok(f"Rejected        : {len(cells) - len(approved)}")
