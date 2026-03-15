@@ -43,6 +43,16 @@ class OutputRecord(BaseModel):
             raise ValueError("Transaction amount must be positive")
         return v
 
+    @field_validator("variant_parameters")
+    @classmethod
+    def variant_parameters_must_have_required_keys(cls, v: dict) -> dict:
+        required = {"hop_count", "timing_interval_hrs", "amount_logic",
+                    "cover_activity", "topology", "extraction_method", "geographic_spread"}
+        missing = required - set(v.keys())
+        if missing:
+            raise ValueError(f"variant_parameters is missing required keys: {missing}")
+        return v
+
     @field_validator("critic_scores")
     @classmethod
     def critic_scores_must_have_required_keys(cls, v: dict) -> dict:
@@ -50,4 +60,10 @@ class OutputRecord(BaseModel):
         missing = required - set(v.keys())
         if missing:
             raise ValueError(f"critic_scores is missing required keys: {missing}")
+        for key in ("realism", "distinctiveness"):
+            val = v.get(key)
+            if val is not None and not (1.0 <= float(val) <= 10.0):
+                raise ValueError(f"critic_scores[{key!r}] must be between 1 and 10, got {val}")
+        if "passed" in v and not isinstance(v["passed"], bool):
+            raise ValueError(f"critic_scores['passed'] must be a bool, got {type(v['passed'])}")
         return v
