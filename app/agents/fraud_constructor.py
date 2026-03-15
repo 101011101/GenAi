@@ -510,20 +510,19 @@ class FraudConstructorAgent:
         # Step 4 — Transaction generation (streaming)
         # ------------------------------------------------------------------
         constraint_audit = persona_analysis.get("constraint_audit", {})
-        allowed_channels = constraint_audit.get("allowed_channels", [])
-        min_timing = constraint_audit.get("min_timing_interval_hrs", 0)
-        max_timing = constraint_audit.get("max_timing_interval_hrs", "")
 
         step4_prompt = (
             "STEP 4: TRANSACTION GENERATION\n\n"
             f"Variant ID to use: {variant_id}\n\n"
-            "⚠️  HARD CONSTRAINTS FROM YOUR STEP 1 CONSTRAINT AUDIT — VIOLATIONS WILL FAIL VALIDATION:\n"
-            f"  • allowed_channels: {allowed_channels} — ONLY use these channel values. No others.\n"
-            f"  • min_timing_interval_hrs: {min_timing} — consecutive inter-hop timestamps must be "
-            f"at least {min_timing} hours apart.\n"
-            f"  • max_timing_interval_hrs: {max_timing}\n"
-            f"  • crypto_allowed: {constraint_audit.get('crypto_allowed', True)}\n"
-            f"  • international_allowed: {constraint_audit.get('international_allowed', True)}\n\n"
+            "⚠️  HARD CONSTRAINTS — every transaction timestamp and channel MUST satisfy all of these. "
+            "Violations will fail automated validation and the entire variant will be rejected:\n\n"
+            f"```json\n{json.dumps(constraint_audit, indent=2)}\n```\n\n"
+            "Key rules derived from the above:\n"
+            f"  • channel must be one of: {constraint_audit.get('allowed_channels', [])} — no other values\n"
+            f"  • inter-hop timestamp gap must be ≥ {constraint_audit.get('min_timing_interval_hrs', 0)}h "
+            f"AND ≤ {constraint_audit.get('max_timing_interval_hrs', '(no max)')}h between consecutive fraud transactions\n"
+            f"  • crypto_allowed={constraint_audit.get('crypto_allowed', True)} — if False, no crypto channel or extraction\n"
+            f"  • international_allowed={constraint_audit.get('international_allowed', True)} — if False, domestic only\n\n"
             "Using the persona analysis, network plan, participant profiles, and the "
             "grounding data in the system prompt, generate the complete transaction "
             "sequence.\n\n"
