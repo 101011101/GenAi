@@ -137,6 +137,5 @@ class ScoredVariant(RawVariant):
     realism_score: float = Field(ge=1.0, le=10.0)
     distinctiveness_score: float = Field(ge=1.0, le=10.0)
     persona_consistency: bool
-    label_correctness: bool
     passed: bool
     feedback: str

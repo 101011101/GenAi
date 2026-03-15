@@ -430,13 +430,11 @@ def _mock_response(messages: list[dict]) -> dict:
         }
 
     # Critic output
-    if "realism" in content or "critic" in content or "persona_consistency" in content:
+    if "realism" in content or "critic" in content or "score this variant" in content:
         score = round(random.uniform(6.5, 9.2), 1)
         return {
             "realism_score": score,
             "distinctiveness_score": round(random.uniform(6.0, 8.5), 1),
-            "persona_consistency": True,
-            "label_correctness": True,
             "feedback": "",
         }
 

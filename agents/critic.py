@@ -27,15 +27,11 @@ _CRITIC_RESPONSE_SCHEMA = {
     "properties": {
         "realism_score": {"type": "number", "minimum": 1.0, "maximum": 10.0},
         "distinctiveness_score": {"type": "number", "minimum": 1.0, "maximum": 10.0},
-        "persona_consistency": {"type": "boolean"},
-        "label_correctness": {"type": "boolean"},
         "feedback": {"type": "string"},
     },
     "required": [
         "realism_score",
         "distinctiveness_score",
-        "persona_consistency",
-        "label_correctness",
         "feedback",
     ],
 }
@@ -45,11 +41,12 @@ class CriticAgent:
     """Independent critic agent that scores a ValidatedVariant before dataset entry.
 
     The critic has NO knowledge of the coverage matrix or other variants.
-    It evaluates the variant on its own merits across four dimensions:
+    It evaluates the variant on its own merits across two scored dimensions:
       - Realism (score 1–10)
-      - Persona consistency (pass/fail)
-      - Label correctness (pass/fail)
       - Distinctiveness (score 1–10)
+
+    Persona consistency is checked deterministically by FraudConstructorAgent
+    and passed in as a parameter.
     """
 
     _MODEL = "claude-sonnet-4-6"
@@ -61,6 +58,7 @@ class CriticAgent:
         self,
         variant: ValidatedVariant,
         persona: Persona,
+        persona_consistency: bool,
         critic_floor: float = 7.0,
         distinctiveness_floor: float | None = None,
     ) -> ScoredVariant:
@@ -72,6 +70,8 @@ class CriticAgent:
             The schema-validated fraud variant to evaluate.
         persona:
             The original persona that generated this variant.
+        persona_consistency:
+            Result of the deterministic persona constraint check from FraudConstructorAgent.
         critic_floor:
             Minimum realism score required to pass (default 7.0).
         distinctiveness_floor:
@@ -88,7 +88,7 @@ class CriticAgent:
             f"{variant.model_dump_json(indent=2)}\n\n"
             "PERSONA THAT GENERATED IT:\n"
             f"{persona.model_dump_json(indent=2)}\n\n"
-            "Score this variant on all four dimensions and return only the JSON object."
+            "Score this variant on both dimensions and return only the JSON object."
         )
 
         messages = [{"role": "user", "content": user_message}]
@@ -103,26 +103,21 @@ class CriticAgent:
 
         realism_score: float = float(raw_scores["realism_score"])
         distinctiveness_score: float = float(raw_scores["distinctiveness_score"])
-        persona_consistency: bool = bool(raw_scores["persona_consistency"])
-        label_correctness: bool = bool(raw_scores["label_correctness"])
         feedback: str = str(raw_scores.get("feedback", ""))
 
         passed: bool = (
             realism_score >= critic_floor
             and distinctiveness_score >= distinctiveness_floor
             and persona_consistency
-            and label_correctness
         )
 
         # Build ScoredVariant by merging the ValidatedVariant fields with critic scores.
-        # model_dump() gives us the full variant data; we extend it with critic fields.
         variant_data = variant.model_dump()
         variant_data.update(
             {
                 "realism_score": realism_score,
                 "distinctiveness_score": distinctiveness_score,
                 "persona_consistency": persona_consistency,
-                "label_correctness": label_correctness,
                 "passed": passed,
                 "feedback": feedback,
             }
