@@ -1,0 +1,78 @@
+transaction_id,timestamp,amount,sender_account_id,receiver_account_id,merchant_category,channel,is_fraud,fraud_role,variant_id,persona_id,persona_name,fraud_type,realism_score,distinctiveness_score
+txn_V-0555A5_001,2025-03-10T09:15:00Z,46800.0,ACC-SRC,ACC-M1,wire_transfer,RTP_FedNow,True,placement,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_002,2025-03-10T11:42:00Z,34.87,ACC-COVER-A,ACC-COVER-MERCHANT1,grocery,card,False,cover_activity,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_003,2025-03-10T22:48:00Z,4750.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_004,2025-03-11T10:48:00.033936+00:00,4620.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_005,2025-03-11T23:10:10.559551+00:00,4480.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_006,2025-03-12T11:30:33.332828+00:00,4390.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_007,2025-03-12T23:42:15.757292+00:00,4310.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_008,2025-03-13T12:25:04.423857+00:00,3980.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_009,2025-03-14T00:30:35.168409+00:00,3850.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_010,2025-03-14T12:52:24.412760+00:00,3720.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_011,2025-03-15T01:45:31.657849+00:00,3640.0,ACC-M1,ACC-M2,peer_to_peer,RTP_FedNow,True,hop_1_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_012,2025-03-11T08:30:00Z,18.99,ACC-COVER-B,ACC-COVER-MERCHANT2,subscription_services,card,False,cover_activity,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_013,2025-03-15T14:28:25.901953+00:00,4820.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_014,2025-03-16T03:39:17.048644+00:00,4690.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_015,2025-03-16T16:30:26.418754+00:00,4560.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_016,2025-03-17T05:32:02.857898+00:00,4430.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_017,2025-03-17T17:32:06.730115+00:00,4270.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_018,2025-03-18T05:43:56.555289+00:00,4110.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_019,2025-03-18T18:01:23.774191+00:00,3990.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_020,2025-03-19T06:47:07.707146+00:00,3880.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_021,2025-03-19T19:18:28.879328+00:00,3760.0,ACC-M2,ACC-M3,peer_to_peer,RTP_FedNow,True,hop_2_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_022,2025-03-20T08:26:06.968809+00:00,4850.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_023,2025-03-20T21:01:09.618731+00:00,4720.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_024,2025-03-21T10:11:47.783539+00:00,4590.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_025,2025-03-21T22:44:50.089131+00:00,4450.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_026,2025-03-22T10:45:07.823233+00:00,4310.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_027,2025-03-22T23:14:17.359997+00:00,4160.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_028,2025-03-23T12:07:18.498581+00:00,3980.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_029,2025-03-24T00:56:40.100380+00:00,3820.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_030,2025-03-24T13:30:18.348818+00:00,3620.0,ACC-M3,ACC-M4,peer_to_peer,RTP_FedNow,True,hop_3_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_031,2025-03-25T02:06:47.044188+00:00,4840.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_032,2025-03-25T14:12:35.558093+00:00,4700.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_033,2025-03-26T02:19:24.944550+00:00,4560.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_034,2025-03-26T15:02:14.296119+00:00,4420.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_035,2025-03-27T03:06:59.887583+00:00,4280.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_036,2025-03-27T15:34:32.808070+00:00,4120.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_037,2025-03-28T04:28:41.586964+00:00,3960.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_038,2025-03-28T16:47:39.213477+00:00,3780.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_039,2025-03-29T05:25:26.733455+00:00,3560.0,ACC-M4,ACC-M5,peer_to_peer,RTP_FedNow,True,hop_4_of_4,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_040,2025-03-29T17:30:58.891875+00:00,980.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_041,2025-03-30T06:19:56.218578+00:00,960.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_042,2025-03-30T18:56:35.312394+00:00,940.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_043,2025-03-31T08:06:18.493568+00:00,920.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_044,2025-03-31T20:30:10.481961+00:00,900.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_045,2025-04-01T09:37:11.792631+00:00,980.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_046,2025-04-01T22:20:21.709315+00:00,960.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_047,2025-04-02T10:32:26.799085+00:00,940.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_048,2025-04-02T23:37:11.526467+00:00,920.0,ACC-M5,ACC-DST,atm_withdrawal,cash_ATM,True,extraction,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_049,2025-03-11T13:05:00Z,47.23,ACC-COVER-C,ACC-COVER-MERCHANT3,restaurant,card,False,cover_activity,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-0555A5_050,2025-03-12T17:30:00Z,62.14,ACC-COVER-D,ACC-COVER-MERCHANT4,gas_station,card,False,cover_activity,V-0555A5,P-01,Darren,business_email_compromise_layering_chain,8.7,8.9
+txn_V-09EBF7_001,2025-03-10T09:15:00Z,9750.0,ACC-001,ACC-002,peer_to_peer,Faster Payments,True,placement,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_002,2025-03-10T14:30:00Z,47.5,ACC-006,ACC-007,subscription_services,Faster Payments,False,cover_activity,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_003,2025-03-10T16:45:00Z,82.3,ACC-008,ACC-009,grocery,Faster Payments,False,cover_activity,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_004,2025-03-11T04:00:00Z,9680.0,ACC-002,ACC-003,peer_to_peer,Faster Payments,True,hop_1_of_2,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_005,2025-03-11T11:20:00Z,63.99,ACC-010,ACC-011,utilities,Faster Payments,False,cover_activity,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_006,2025-03-11T22:30:00Z,9590.0,ACC-003,ACC-004,peer_to_peer,Faster Payments,True,hop_2_of_2,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_007,2025-03-12T16:00:00Z,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_008,2025-03-13T04:59:49.533397+00:00,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_009,2025-03-13T17:40:06.719103+00:00,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_010,2025-03-14T06:39:51.849139+00:00,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_011,2025-03-14T19:28:45.919981+00:00,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_012,2025-03-15T08:19:05.447943+00:00,750.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_V-09EBF7_013,2025-03-15T20:47:08.291414+00:00,590.0,ACC-004,ACC-005,atm_withdrawal,ATM,True,extraction,V-09EBF7,P-02,Marlene,pension_liberation_fraud_money_laundering,9.1,8.6
+txn_7e0149f5,2026-03-10T09:00:00Z,9800.0,acct_SRC_001,acct_M1_001,wire_transfer,ACH,True,placement,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_fd503123,2026-03-10T09:30:00Z,124.5,acct_M1_001,acct_MERCH_A,grocery,card,False,cover_activity,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_e8bed4b5,2026-03-10T10:00:00Z,9600.0,acct_M1_001,acct_M2_001,wire_transfer,ACH,True,hop_1_of_3,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_922e365b,2026-03-10T11:30:00Z,9400.0,acct_M2_001,acct_M3_001,wire_transfer,ACH,True,hop_2_of_3,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_f0fdc757,2026-03-10T13:00:00Z,9200.0,acct_M3_001,acct_OTC_001,peer_to_peer,Zelle,True,hop_3_of_3,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_ffdfc4b3,2026-03-10T14:00:00Z,9100.0,acct_OTC_001,wallet_BTC_vk1,cryptocurrency_exchange,crypto,True,extraction,var_001,p_viktor,Viktor Sorokin,layered mule account network,8.7,8.2
+txn_b13904ab,2026-03-10T09:00:00Z,95000.0,acct_SRC_002,acct_SHELL_A,wire_transfer,wire,True,placement,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_4022dcde,2026-03-10T11:00:00Z,18000.0,acct_SHELL_A,acct_M4_001,wire_transfer,ACH,True,hop_1_of_5,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_f9d045a6,2026-03-10T11:17:00Z,19500.0,acct_SHELL_A,acct_M5_001,wire_transfer,ACH,True,hop_2_of_5,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_4249fe28,2026-03-10T15:00:00Z,21000.0,acct_SHELL_A,acct_M6_001,wire_transfer,ACH,True,hop_3_of_5,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_109a3a79,2026-03-10T17:30:00Z,17500.0,acct_SHELL_A,acct_M7_001,wire_transfer,ACH,True,hop_4_of_5,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_b4988268,2026-03-10T33:00:00Z,16000.0,acct_M4_001,acct_SHELL_B,wire_transfer,wire,True,hop_5_of_5,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_6f8ccafd,2026-03-10T34:00:00Z,3200.0,acct_SHELL_B,acct_EMPLOYEE_01,payroll,ACH,False,cover_activity,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5
+txn_71fe0c9b,2026-03-10T35:00:00Z,88000.0,acct_SHELL_B,acct_OFFSHORE_001,international_wire,wire,True,extraction,var_002,p_maria,Maria Chen,layered mule account network,9.1,8.5

@@ -1,0 +1,64 @@
+[
+  {
+    "persona_id": "p_viktor",
+    "name": "Viktor Sorokin",
+    "risk_level": "high",
+    "resources": "Eastern European organized crime network, unregulated crypto exchanges, money service businesses",
+    "geographic_scope": "International",
+    "evasion_targets": [
+      "KYC checks",
+      "CTR thresholds",
+      "velocity alerts"
+    ],
+    "description": "Organized crime affiliate with a multi-country mule network and deep ties to unregulated crypto infrastructure."
+  },
+  {
+    "persona_id": "p_maria",
+    "name": "Maria Chen",
+    "risk_level": "mid",
+    "resources": "Shell companies, business bank accounts, bookkeeping front",
+    "geographic_scope": "Domestic + cross-border",
+    "evasion_targets": [
+      "SARs",
+      "AML transaction monitoring",
+      "CTRs"
+    ],
+    "description": "Former bookkeeper who layers transactions through a chain of seemingly legitimate small businesses."
+  },
+  {
+    "persona_id": "p_james",
+    "name": "James Okafor",
+    "risk_level": "mid",
+    "resources": "Social media reach, student networks, gig-economy accounts",
+    "geographic_scope": "Domestic (multi-city)",
+    "evasion_targets": [
+      "Account linking analysis",
+      "device fingerprinting"
+    ],
+    "description": "Operates a mule recruitment ring via encrypted messaging apps targeting financially vulnerable individuals."
+  },
+  {
+    "persona_id": "p_sandra",
+    "name": "Sandra Kowalski",
+    "risk_level": "low",
+    "resources": "Single personal bank account, limited cash",
+    "geographic_scope": "Local",
+    "evasion_targets": [
+      "None \u2014 unwitting participant"
+    ],
+    "description": "Unwitting mule recruited via fake job advertisement; unaware she is participating in fraud."
+  },
+  {
+    "persona_id": "p_derek",
+    "name": "Derek Liu",
+    "risk_level": "high",
+    "resources": "VPN infrastructure, synthetic identity toolkit, automated scripting",
+    "geographic_scope": "International",
+    "evasion_targets": [
+      "Device fingerprinting",
+      "IP geolocation checks",
+      "biometric verification"
+    ],
+    "description": "Tech-savvy operator using synthetic identities and automation to orchestrate high-volume micro-transaction layering."
+  }
+]

@@ -1,0 +1,1348 @@
+{
+  "variants": [
+    {
+      "variant_id": "V-0555A5",
+      "fraud_type": "business_email_compromise_layering_chain",
+      "persona_id": "P-01",
+      "persona_name": "Darren",
+      "strategy_description": "This variant represents a 5-hop linear BEC laundering chain operated by a mid-level Atlanta-based coordinator using RTP/FedNow instant rails to make each hop irreversible before the victim company's bank can issue a recall. Funds are structured in the $3,200\u2013$4,850 band per leg \u2014 well below both the $5,000 SAR trigger and the $9,500 structuring ceiling \u2014 and routed through five freshly opened personal checking accounts (0\u20137 days old) held at different regional banks across Georgia, Tennessee, and Alabama. Inter-hop delays of 12\u201324 hours are deliberately introduced to break same-day velocity flags while keeping the full chain within a 72-hour burst window. Each mule account shows 1\u20132 cover transactions (small card purchases) to simulate minimal account activity on accounts too new to have legitimate history. Final extraction is ATM cash-out across multiple Birmingham AL machines by the terminal mule, with cash handed off to a courier for physical consolidation.",
+      "variant_parameters": {
+        "hop_count": 5,
+        "timing_interval_hrs": 18,
+        "amount_logic": "structured_below_4900_random_noise",
+        "cover_activity": "low",
+        "topology": "chain",
+        "extraction_method": "atm_cash",
+        "geographic_spread": "domestic_US"
+      },
+      "realism_score": 8.7,
+      "distinctiveness_score": 8.9,
+      "evasion_techniques": [
+        "RTP/FedNow instant rail used for all hop-to-hop transfers \u2014 irreversible once settled, blocking victim bank recall requests",
+        "All individual transfer amounts structured in the $3,560\u2013$4,850 band \u2014 below the $5,000 SAR mandatory filing threshold and well below the $9,500 self-imposed ceiling",
+        "Amount randomization within each hop: no two consecutive transfers share the same amount, avoiding round-number pattern detection rules",
+        "12\u201324 hour inter-hop delays deliberately introduced to break same-day velocity alert triggers at each receiving bank",
+        "5-hop linear chain ensures each mule only knows the immediately adjacent accounts, limiting exposure if any single node is investigated",
+        "Fresh accounts (3\u20137 days old) spread across six different financial institutions in three states, reducing cross-institution linkage signals",
+        "Geographic dispersion across Atlanta GA, Marietta GA, Decatur GA, Nashville TN, and Birmingham AL to avoid single-metro clustering",
+        "Sparse cover activity (grocery, subscription, restaurant, gas station card purchases) on non-mule accounts interspersed to add ambient noise around the fraud window",
+        "Mules instructed to access accounts from separate physical devices and locations to defeat device fingerprinting and IP clustering analysis",
+        "ATM cash extraction spread across multiple machines and two calendar days (Mar 13\u201314) to stay under per-day ATM limits and avoid CTR aggregation",
+        "Each ATM withdrawal kept below $1,000 (ranging $900\u2013$980) to stay under typical daily ATM sub-limits and avoid triggering cash structuring flags individually"
+      ],
+      "fraud_indicators_present": [
+        "Large single inbound wire ($46,800) to a personal checking account opened only 5 days prior \u2014 extreme account age vs. transaction size anomaly",
+        "Receiving account (ACC-M1) immediately disperses funds in 9 rapid sub-$5,000 RTP transfers within a 3-hour window on the same evening as placement",
+        "Each mule account shows zero or near-zero prior balance followed by sudden large multi-transfer inflows \u2014 classic 'balance spike' mule account signature",
+        "All five mule accounts were opened within a 7-day window at different institutions \u2014 coordinated fresh account opening pattern",
+        "Consistent structuring pattern: all 36 inter-mule transfers fall in the $3,560\u2013$4,850 range, clustering just below the $5,000 SAR threshold",
+        "Linear pass-through pattern: each account receives funds and re-transmits nearly the full balance (minus mule cut) within 12\u201324 hours with no spending activity",
+        "RTP/FedNow used exclusively for inter-mule movement \u2014 instant irreversible rail selection is itself a behavioral signal inconsistent with legitimate P2P use at these amounts",
+        "Geographic chain: Atlanta GA \u2192 Marietta GA \u2192 Decatur GA \u2192 Nashville TN \u2192 Birmingham AL mirrors a known mule routing corridor",
+        "Terminal mule (ACC-M5) performs 9 ATM withdrawals across two days totaling approximately $8,560 \u2014 high-velocity cash extraction from a 7-day-old account",
+        "No inbound payroll, rent, or utility transactions on any mule account \u2014 accounts exist solely as pass-through conduits",
+        "Multiple same-day RTP transfers from a single sending account to the same receiver (e.g., ACC-M1 to ACC-M2 nine times in under 3 hours) \u2014 velocity pattern consistent with automated or scripted structuring",
+        "Total funds flowing through the chain ($46,800) far exceeds the combined stated legitimate income profile of all five mule account holders"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_V-0555A5_001",
+          "timestamp": "2025-03-10T09:15:00Z",
+          "amount": 46800.0,
+          "sender_account_id": "ACC-SRC",
+          "receiver_account_id": "ACC-M1",
+          "merchant_category": "wire_transfer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_002",
+          "timestamp": "2025-03-10T11:42:00Z",
+          "amount": 34.87,
+          "sender_account_id": "ACC-COVER-A",
+          "receiver_account_id": "ACC-COVER-MERCHANT1",
+          "merchant_category": "grocery",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_003",
+          "timestamp": "2025-03-10T22:48:00Z",
+          "amount": 4750.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_004",
+          "timestamp": "2025-03-11T10:48:00.033936+00:00",
+          "amount": 4620.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_005",
+          "timestamp": "2025-03-11T23:10:10.559551+00:00",
+          "amount": 4480.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_006",
+          "timestamp": "2025-03-12T11:30:33.332828+00:00",
+          "amount": 4390.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_007",
+          "timestamp": "2025-03-12T23:42:15.757292+00:00",
+          "amount": 4310.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_008",
+          "timestamp": "2025-03-13T12:25:04.423857+00:00",
+          "amount": 3980.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_009",
+          "timestamp": "2025-03-14T00:30:35.168409+00:00",
+          "amount": 3850.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_010",
+          "timestamp": "2025-03-14T12:52:24.412760+00:00",
+          "amount": 3720.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_011",
+          "timestamp": "2025-03-15T01:45:31.657849+00:00",
+          "amount": 3640.0,
+          "sender_account_id": "ACC-M1",
+          "receiver_account_id": "ACC-M2",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_012",
+          "timestamp": "2025-03-11T08:30:00Z",
+          "amount": 18.99,
+          "sender_account_id": "ACC-COVER-B",
+          "receiver_account_id": "ACC-COVER-MERCHANT2",
+          "merchant_category": "subscription_services",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_013",
+          "timestamp": "2025-03-15T14:28:25.901953+00:00",
+          "amount": 4820.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_014",
+          "timestamp": "2025-03-16T03:39:17.048644+00:00",
+          "amount": 4690.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_015",
+          "timestamp": "2025-03-16T16:30:26.418754+00:00",
+          "amount": 4560.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_016",
+          "timestamp": "2025-03-17T05:32:02.857898+00:00",
+          "amount": 4430.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_017",
+          "timestamp": "2025-03-17T17:32:06.730115+00:00",
+          "amount": 4270.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_018",
+          "timestamp": "2025-03-18T05:43:56.555289+00:00",
+          "amount": 4110.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_019",
+          "timestamp": "2025-03-18T18:01:23.774191+00:00",
+          "amount": 3990.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_020",
+          "timestamp": "2025-03-19T06:47:07.707146+00:00",
+          "amount": 3880.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_021",
+          "timestamp": "2025-03-19T19:18:28.879328+00:00",
+          "amount": 3760.0,
+          "sender_account_id": "ACC-M2",
+          "receiver_account_id": "ACC-M3",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_022",
+          "timestamp": "2025-03-20T08:26:06.968809+00:00",
+          "amount": 4850.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_023",
+          "timestamp": "2025-03-20T21:01:09.618731+00:00",
+          "amount": 4720.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_024",
+          "timestamp": "2025-03-21T10:11:47.783539+00:00",
+          "amount": 4590.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_025",
+          "timestamp": "2025-03-21T22:44:50.089131+00:00",
+          "amount": 4450.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_026",
+          "timestamp": "2025-03-22T10:45:07.823233+00:00",
+          "amount": 4310.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_027",
+          "timestamp": "2025-03-22T23:14:17.359997+00:00",
+          "amount": 4160.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_028",
+          "timestamp": "2025-03-23T12:07:18.498581+00:00",
+          "amount": 3980.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_029",
+          "timestamp": "2025-03-24T00:56:40.100380+00:00",
+          "amount": 3820.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_030",
+          "timestamp": "2025-03-24T13:30:18.348818+00:00",
+          "amount": 3620.0,
+          "sender_account_id": "ACC-M3",
+          "receiver_account_id": "ACC-M4",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_031",
+          "timestamp": "2025-03-25T02:06:47.044188+00:00",
+          "amount": 4840.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_032",
+          "timestamp": "2025-03-25T14:12:35.558093+00:00",
+          "amount": 4700.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_033",
+          "timestamp": "2025-03-26T02:19:24.944550+00:00",
+          "amount": 4560.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_034",
+          "timestamp": "2025-03-26T15:02:14.296119+00:00",
+          "amount": 4420.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_035",
+          "timestamp": "2025-03-27T03:06:59.887583+00:00",
+          "amount": 4280.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_036",
+          "timestamp": "2025-03-27T15:34:32.808070+00:00",
+          "amount": 4120.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_037",
+          "timestamp": "2025-03-28T04:28:41.586964+00:00",
+          "amount": 3960.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_038",
+          "timestamp": "2025-03-28T16:47:39.213477+00:00",
+          "amount": 3780.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_039",
+          "timestamp": "2025-03-29T05:25:26.733455+00:00",
+          "amount": 3560.0,
+          "sender_account_id": "ACC-M4",
+          "receiver_account_id": "ACC-M5",
+          "merchant_category": "peer_to_peer",
+          "channel": "RTP_FedNow",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_4"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_040",
+          "timestamp": "2025-03-29T17:30:58.891875+00:00",
+          "amount": 980.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_041",
+          "timestamp": "2025-03-30T06:19:56.218578+00:00",
+          "amount": 960.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_042",
+          "timestamp": "2025-03-30T18:56:35.312394+00:00",
+          "amount": 940.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_043",
+          "timestamp": "2025-03-31T08:06:18.493568+00:00",
+          "amount": 920.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_044",
+          "timestamp": "2025-03-31T20:30:10.481961+00:00",
+          "amount": 900.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_045",
+          "timestamp": "2025-04-01T09:37:11.792631+00:00",
+          "amount": 980.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_046",
+          "timestamp": "2025-04-01T22:20:21.709315+00:00",
+          "amount": 960.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_047",
+          "timestamp": "2025-04-02T10:32:26.799085+00:00",
+          "amount": 940.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_048",
+          "timestamp": "2025-04-02T23:37:11.526467+00:00",
+          "amount": 920.0,
+          "sender_account_id": "ACC-M5",
+          "receiver_account_id": "ACC-DST",
+          "merchant_category": "atm_withdrawal",
+          "channel": "cash_ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_049",
+          "timestamp": "2025-03-11T13:05:00Z",
+          "amount": 47.23,
+          "sender_account_id": "ACC-COVER-C",
+          "receiver_account_id": "ACC-COVER-MERCHANT3",
+          "merchant_category": "restaurant",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-0555A5_050",
+          "timestamp": "2025-03-12T17:30:00Z",
+          "amount": 62.14,
+          "sender_account_id": "ACC-COVER-D",
+          "receiver_account_id": "ACC-COVER-MERCHANT4",
+          "merchant_category": "gas_station",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        }
+      ]
+    },
+    {
+      "variant_id": "V-09EBF7",
+      "fraud_type": "pension_liberation_fraud_money_laundering",
+      "persona_id": "P-02",
+      "persona_name": "Marlene",
+      "strategy_description": "This variant represents a cautious, low-volume pension liberation fraud laundering operation run by a lone coordinator (Marlene) in the West Midlands UK. A retired victim's \u00a355,000 pension lump sum is routed through a three-hop linear chain of personally-vetted mule accounts across Halifax, NatWest, and Lloyds, with each inter-hop transfer deliberately delayed 17-19 hours to defeat same-day inbound/outbound mule detection models. Amounts are structured below \u00a310,000 per transfer to avoid triggering enhanced Faster Payments screening on personal accounts, with minor noise variation between hops to prevent exact-amount pattern matching. The final mule extracts cash via multiple ATM withdrawals spread across two days, staying below daily ATM limits, with no wire or electronic trail connecting the layered funds to the attacker. The operation's key distinguishing feature is deliberate behavioral mimicry: cover transactions pre-seeded on mule accounts before the fraud cycle simulate normal personal spending, and mules are instructed to log in manually and introduce natural delays before forwarding, specifically to defeat behavioral biometric controls on mobile banking apps.",
+      "variant_parameters": {
+        "hop_count": 3,
+        "timing_interval_hrs": 18,
+        "amount_logic": "structured_below_10k_GBP_with_noise",
+        "cover_activity": "low",
+        "topology": "chain",
+        "extraction_method": "atm_cash",
+        "geographic_spread": "domestic_UK"
+      },
+      "realism_score": 9.1,
+      "distinctiveness_score": 8.6,
+      "evasion_techniques": [
+        "Inter-hop delays of 17\u201319 hours between Faster Payments transfers to defeat same-day inbound/outbound mule detection models at Lloyds, NatWest, and Halifax",
+        "Amount structuring below \u00a310,000 per hop (\u00a39,750 \u2192 \u00a39,680 \u2192 \u00a39,590) with incremental reduction noise to avoid exact-amount pattern matching across hops",
+        "Cover transactions pre-seeded on non-mule accounts to establish baseline account activity before fraud cycle begins, mimicking normal personal spending (subscriptions, groceries, utilities)",
+        "Mules instructed via WhatsApp to log in manually to mobile banking app and wait before initiating transfer, specifically to defeat behavioral biometric controls",
+        "Exclusive use of UK high-street banks (Halifax, NatWest, Lloyds) \u2014 neobanks with real-time fraud scoring (Monzo, Starling) deliberately avoided",
+        "Cash extraction via multiple ATM withdrawals spread across two days at amounts well below daily ATM limits, avoiding any single large cash event",
+        "Single transfer per mule account per day to avoid Faster Payments velocity flags",
+        "Linear chain topology with no fan-out hub nodes, reducing the network's visibility to cross-institution AML pattern matching",
+        "Amounts clustered in \u00a39,500\u2013\u00a39,800 range to remain below the psychological threshold where bank staff are trained to query large incoming credits on personal accounts",
+        "No electronic trail at extraction \u2014 cash withdrawals leave no counterparty record linking layered funds to attacker"
+      ],
+      "fraud_indicators_present": [
+        "Victim account (ACC-001) shows a single large outbound Faster Payments transfer of \u00a39,750 inconsistent with typical senior checking account pattern-of-life \u2014 account median balance \u00a33,500, transfer represents near-full pension lump sum",
+        "ACC-002 (Halifax, 274 days old) receives \u00a39,750 inbound and forwards \u00a39,680 outbound within 19 hours \u2014 classic mule pass-through pattern with minimal retention and near-zero haircut",
+        "ACC-003 (NatWest, 335 days old) receives \u00a39,680 inbound and forwards \u00a39,590 outbound within 18.5 hours \u2014 same pass-through signature at second hop",
+        "ACC-004 (Lloyds, 243 days old) receives \u00a39,590 inbound then makes 7 ATM withdrawals totalling \u00a35,090 within 22 hours \u2014 rapid structuring of cash extraction below daily ATM limits",
+        "All three mule accounts are personal checking accounts aged 8\u201312 months receiving transfers significantly above their typical balance range \u2014 balance spike anomaly on all three accounts simultaneously",
+        "Tapering amount pattern across hops (9750 \u2192 9680 \u2192 9590) consistent with mule commission deduction at each hop, a known layering signature",
+        "Cross-bank chain: Halifax \u2192 NatWest \u2192 Lloyds \u2014 three different institutions within the same 72-hour window; cross-institution intelligence sharing would reveal the sequential chain",
+        "All Faster Payments transfers categorised as peer_to_peer with no reference or legitimate business purpose description",
+        "Multiple ATM withdrawals at ACC-004 within a short time window on consecutive days \u2014 structuring behaviour consistent with 31 U.S.C. \u00a7 5324 equivalent (UK Proceeds of Crime Act 2002 structuring)",
+        "ACC-002 borderline credit history combined with sudden large inbound transfer would trigger enhanced due diligence flag under UK bank CDD obligations",
+        "No corresponding inbound payroll or legitimate income source to explain large credits on any mule account \u2014 inconsistent with account holder profiles"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_V-09EBF7_001",
+          "timestamp": "2025-03-10T09:15:00Z",
+          "amount": 9750.0,
+          "sender_account_id": "ACC-001",
+          "receiver_account_id": "ACC-002",
+          "merchant_category": "peer_to_peer",
+          "channel": "Faster Payments",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_002",
+          "timestamp": "2025-03-10T14:30:00Z",
+          "amount": 47.5,
+          "sender_account_id": "ACC-006",
+          "receiver_account_id": "ACC-007",
+          "merchant_category": "subscription_services",
+          "channel": "Faster Payments",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_003",
+          "timestamp": "2025-03-10T16:45:00Z",
+          "amount": 82.3,
+          "sender_account_id": "ACC-008",
+          "receiver_account_id": "ACC-009",
+          "merchant_category": "grocery",
+          "channel": "Faster Payments",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_004",
+          "timestamp": "2025-03-11T04:00:00Z",
+          "amount": 9680.0,
+          "sender_account_id": "ACC-002",
+          "receiver_account_id": "ACC-003",
+          "merchant_category": "peer_to_peer",
+          "channel": "Faster Payments",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_2"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_005",
+          "timestamp": "2025-03-11T11:20:00Z",
+          "amount": 63.99,
+          "sender_account_id": "ACC-010",
+          "receiver_account_id": "ACC-011",
+          "merchant_category": "utilities",
+          "channel": "Faster Payments",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_006",
+          "timestamp": "2025-03-11T22:30:00Z",
+          "amount": 9590.0,
+          "sender_account_id": "ACC-003",
+          "receiver_account_id": "ACC-004",
+          "merchant_category": "peer_to_peer",
+          "channel": "Faster Payments",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_2"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_007",
+          "timestamp": "2025-03-12T16:00:00Z",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_008",
+          "timestamp": "2025-03-13T04:59:49.533397+00:00",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_009",
+          "timestamp": "2025-03-13T17:40:06.719103+00:00",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_010",
+          "timestamp": "2025-03-14T06:39:51.849139+00:00",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_011",
+          "timestamp": "2025-03-14T19:28:45.919981+00:00",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_012",
+          "timestamp": "2025-03-15T08:19:05.447943+00:00",
+          "amount": 750.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        },
+        {
+          "transaction_id": "txn_V-09EBF7_013",
+          "timestamp": "2025-03-15T20:47:08.291414+00:00",
+          "amount": 590.0,
+          "sender_account_id": "ACC-004",
+          "receiver_account_id": "ACC-005",
+          "merchant_category": "atm_withdrawal",
+          "channel": "ATM",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    },
+    {
+      "variant_id": "var_001",
+      "fraud_type": "layered mule account network",
+      "persona_id": "p_viktor",
+      "persona_name": "Viktor Sorokin",
+      "strategy_description": "Viktor's crew moves $48k through three same-day ACH hops then converts to BTC via an OTC broker, exploiting same-day settlement windows before overnight batch reconciliation catches the pattern.",
+      "variant_parameters": {
+        "hop_count": 3,
+        "timing": "same-day",
+        "extraction_method": "crypto",
+        "topology": "linear",
+        "amount_logic": "structured_below_10k"
+      },
+      "realism_score": 8.7,
+      "distinctiveness_score": 8.2,
+      "evasion_techniques": [
+        "structuring below $10k CTR threshold",
+        "same-day settlement exploit",
+        "OTC crypto conversion"
+      ],
+      "fraud_indicators_present": [
+        "rapid successive transfers",
+        "round-number structuring",
+        "crypto off-ramp"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_1e304699",
+          "timestamp": "2026-03-10T09:00:00Z",
+          "amount": 9800.0,
+          "sender_account_id": "acct_SRC_001",
+          "receiver_account_id": "acct_M1_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_df99cbf1",
+          "timestamp": "2026-03-10T09:30:00Z",
+          "amount": 124.5,
+          "sender_account_id": "acct_M1_001",
+          "receiver_account_id": "acct_MERCH_A",
+          "merchant_category": "grocery",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_4271c19c",
+          "timestamp": "2026-03-10T10:00:00Z",
+          "amount": 9600.0,
+          "sender_account_id": "acct_M1_001",
+          "receiver_account_id": "acct_M2_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_3"
+        },
+        {
+          "transaction_id": "txn_6e382591",
+          "timestamp": "2026-03-10T11:30:00Z",
+          "amount": 9400.0,
+          "sender_account_id": "acct_M2_001",
+          "receiver_account_id": "acct_M3_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_3"
+        },
+        {
+          "transaction_id": "txn_d5bba3bc",
+          "timestamp": "2026-03-10T13:00:00Z",
+          "amount": 9200.0,
+          "sender_account_id": "acct_M3_001",
+          "receiver_account_id": "acct_OTC_001",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_3"
+        },
+        {
+          "transaction_id": "txn_6368aac7",
+          "timestamp": "2026-03-10T14:00:00Z",
+          "amount": 9100.0,
+          "sender_account_id": "acct_OTC_001",
+          "receiver_account_id": "wallet_BTC_vk1",
+          "merchant_category": "cryptocurrency_exchange",
+          "channel": "crypto",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    },
+    {
+      "variant_id": "var_002",
+      "fraud_type": "layered mule account network",
+      "persona_id": "p_maria",
+      "persona_name": "Maria Chen",
+      "strategy_description": "Maria's shell company network receives a $95k business wire, splits into five sub-transfers across shell entities over three days with random timing, then consolidates for a final international wire to an offshore account.",
+      "variant_parameters": {
+        "hop_count": 5,
+        "timing": "randomized",
+        "extraction_method": "wire",
+        "topology": "fan-out-then-merge",
+        "amount_logic": "split_and_merge"
+      },
+      "realism_score": 9.1,
+      "distinctiveness_score": 8.5,
+      "evasion_techniques": [
+        "business account cover",
+        "random inter-day delays",
+        "offshore wire to low-scrutiny jurisdiction"
+      ],
+      "fraud_indicators_present": [
+        "large incoming wire split into sub-transfers",
+        "multiple shell entities",
+        "rapid account opening"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_d4d9d317",
+          "timestamp": "2026-03-10T09:00:00Z",
+          "amount": 95000.0,
+          "sender_account_id": "acct_SRC_002",
+          "receiver_account_id": "acct_SHELL_A",
+          "merchant_category": "wire_transfer",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_7c6cddb5",
+          "timestamp": "2026-03-10T11:00:00Z",
+          "amount": 18000.0,
+          "sender_account_id": "acct_SHELL_A",
+          "receiver_account_id": "acct_M4_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_5"
+        },
+        {
+          "transaction_id": "txn_d978c1ed",
+          "timestamp": "2026-03-10T11:17:00Z",
+          "amount": 19500.0,
+          "sender_account_id": "acct_SHELL_A",
+          "receiver_account_id": "acct_M5_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_5"
+        },
+        {
+          "transaction_id": "txn_ba0eb1b2",
+          "timestamp": "2026-03-10T15:00:00Z",
+          "amount": 21000.0,
+          "sender_account_id": "acct_SHELL_A",
+          "receiver_account_id": "acct_M6_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_5"
+        },
+        {
+          "transaction_id": "txn_914f6ba9",
+          "timestamp": "2026-03-10T17:30:00Z",
+          "amount": 17500.0,
+          "sender_account_id": "acct_SHELL_A",
+          "receiver_account_id": "acct_M7_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_5"
+        },
+        {
+          "transaction_id": "txn_31d9a01a",
+          "timestamp": "2026-03-10T33:00:00Z",
+          "amount": 16000.0,
+          "sender_account_id": "acct_M4_001",
+          "receiver_account_id": "acct_SHELL_B",
+          "merchant_category": "wire_transfer",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "hop_5_of_5"
+        },
+        {
+          "transaction_id": "txn_7b624872",
+          "timestamp": "2026-03-10T34:00:00Z",
+          "amount": 3200.0,
+          "sender_account_id": "acct_SHELL_B",
+          "receiver_account_id": "acct_EMPLOYEE_01",
+          "merchant_category": "payroll",
+          "channel": "ACH",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_7d57df3e",
+          "timestamp": "2026-03-10T35:00:00Z",
+          "amount": 88000.0,
+          "sender_account_id": "acct_SHELL_B",
+          "receiver_account_id": "acct_OFFSHORE_001",
+          "merchant_category": "international_wire",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    },
+    {
+      "variant_id": "var_003",
+      "fraud_type": "layered mule account network",
+      "persona_id": "p_james",
+      "persona_name": "James Okafor",
+      "strategy_description": "James's student mule network uses Zelle for rapid sub-$3k hops between personal accounts, with 12\u201336 hour random gaps, before cashing out via a peer crypto platform.",
+      "variant_parameters": {
+        "hop_count": 3,
+        "timing": "randomized",
+        "extraction_method": "crypto",
+        "topology": "linear",
+        "amount_logic": "micro_structured"
+      },
+      "realism_score": 7.9,
+      "distinctiveness_score": 8.8,
+      "evasion_techniques": [
+        "micro-structuring under $3k",
+        "student/young-adult account profiles",
+        "randomized timing to avoid velocity rules"
+      ],
+      "fraud_indicators_present": [
+        "Zelle to multiple new contacts",
+        "young account holders",
+        "crypto off-ramp"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_6164d440",
+          "timestamp": "2026-03-10T09:00:00Z",
+          "amount": 2900.0,
+          "sender_account_id": "acct_SRC_003",
+          "receiver_account_id": "acct_STU_001",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_61899b06",
+          "timestamp": "2026-03-10T21:00:00Z",
+          "amount": 2750.0,
+          "sender_account_id": "acct_STU_001",
+          "receiver_account_id": "acct_STU_002",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_3"
+        },
+        {
+          "transaction_id": "txn_9a449a01",
+          "timestamp": "2026-03-10T45:00:00Z",
+          "amount": 2700.0,
+          "sender_account_id": "acct_STU_002",
+          "receiver_account_id": "acct_STU_003",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_3"
+        },
+        {
+          "transaction_id": "txn_8bdb22db",
+          "timestamp": "2026-03-10T57:00:00Z",
+          "amount": 2650.0,
+          "sender_account_id": "acct_STU_003",
+          "receiver_account_id": "acct_PEER_EXCH",
+          "merchant_category": "cryptocurrency_exchange",
+          "channel": "crypto",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_3"
+        },
+        {
+          "transaction_id": "txn_b0c6cb6f",
+          "timestamp": "2026-03-10T58:00:00Z",
+          "amount": 2580.0,
+          "sender_account_id": "acct_PEER_EXCH",
+          "receiver_account_id": "wallet_BTC_jm1",
+          "merchant_category": "cryptocurrency_exchange",
+          "channel": "crypto",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    },
+    {
+      "variant_id": "var_004",
+      "fraud_type": "layered mule account network",
+      "persona_id": "p_sandra",
+      "persona_name": "Sandra Kowalski",
+      "strategy_description": "Sandra unwittingly forwards $14k she received from a 'remote job' directly to another mule, within hours. The funds move through two more hops the same day before a wire extraction.",
+      "variant_parameters": {
+        "hop_count": 5,
+        "timing": "same-day",
+        "extraction_method": "wire",
+        "topology": "linear",
+        "amount_logic": "pass_through_minus_fee"
+      },
+      "realism_score": 8.3,
+      "distinctiveness_score": 7.6,
+      "evasion_techniques": [
+        "unwitting mule reduces behavioral red flags",
+        "same-day pass-through",
+        "employment cover story"
+      ],
+      "fraud_indicators_present": [
+        "large inbound from unknown sender",
+        "immediate outbound forwarding",
+        "account opened recently"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_26e13647",
+          "timestamp": "2026-03-10T09:00:00Z",
+          "amount": 14200.0,
+          "sender_account_id": "acct_SRC_004",
+          "receiver_account_id": "acct_SANDRA",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_7296f61a",
+          "timestamp": "2026-03-10T10:30:00Z",
+          "amount": 14000.0,
+          "sender_account_id": "acct_SANDRA",
+          "receiver_account_id": "acct_M8_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_5"
+        },
+        {
+          "transaction_id": "txn_015c6572",
+          "timestamp": "2026-03-10T11:30:00Z",
+          "amount": 13800.0,
+          "sender_account_id": "acct_M8_001",
+          "receiver_account_id": "acct_M9_001",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_5"
+        },
+        {
+          "transaction_id": "txn_c9875bf9",
+          "timestamp": "2026-03-10T12:30:00Z",
+          "amount": 13500.0,
+          "sender_account_id": "acct_M9_001",
+          "receiver_account_id": "acct_M10_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_5"
+        },
+        {
+          "transaction_id": "txn_1ec4cf51",
+          "timestamp": "2026-03-10T14:00:00Z",
+          "amount": 13200.0,
+          "sender_account_id": "acct_M10_001",
+          "receiver_account_id": "acct_M11_001",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_5"
+        },
+        {
+          "transaction_id": "txn_9df22043",
+          "timestamp": "2026-03-10T15:00:00Z",
+          "amount": 13000.0,
+          "sender_account_id": "acct_M11_001",
+          "receiver_account_id": "acct_CONSOL_001",
+          "merchant_category": "wire_transfer",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "hop_5_of_5"
+        },
+        {
+          "transaction_id": "txn_efbf1e19",
+          "timestamp": "2026-03-10T13:00:00Z",
+          "amount": 45.99,
+          "sender_account_id": "acct_SANDRA",
+          "receiver_account_id": "acct_MERCH_B",
+          "merchant_category": "restaurant",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_90535570",
+          "timestamp": "2026-03-10T16:30:00Z",
+          "amount": 12700.0,
+          "sender_account_id": "acct_CONSOL_001",
+          "receiver_account_id": "acct_OFFSHORE_002",
+          "merchant_category": "international_wire",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    },
+    {
+      "variant_id": "var_005",
+      "fraud_type": "layered mule account network",
+      "persona_id": "p_derek",
+      "persona_name": "Derek Liu",
+      "strategy_description": "Derek's automated toolkit rotates $220k through 7 synthetic-identity accounts with randomized inter-hop delays of 4\u201372 hours, mimicking organic spending. Final extraction routes to a non-custodial wallet via a privacy coin swap.",
+      "variant_parameters": {
+        "hop_count": 7,
+        "timing": "randomized",
+        "extraction_method": "crypto",
+        "topology": "linear",
+        "amount_logic": "noise_injected"
+      },
+      "realism_score": 9.3,
+      "distinctiveness_score": 9.0,
+      "evasion_techniques": [
+        "synthetic identity accounts",
+        "behavioral noise injection",
+        "privacy coin swap for extraction",
+        "VPN-masked IP per account"
+      ],
+      "fraud_indicators_present": [
+        "consistent account creation pattern",
+        "all accounts <90 days old",
+        "privacy coin usage"
+      ],
+      "transactions": [
+        {
+          "transaction_id": "txn_43a4d49b",
+          "timestamp": "2026-03-10T09:00:00Z",
+          "amount": 29800.0,
+          "sender_account_id": "acct_SRC_005",
+          "receiver_account_id": "acct_SYN_001",
+          "merchant_category": "wire_transfer",
+          "channel": "wire",
+          "is_fraud": true,
+          "fraud_role": "placement"
+        },
+        {
+          "transaction_id": "txn_3a90607c",
+          "timestamp": "2026-03-10T10:00:00Z",
+          "amount": 78.4,
+          "sender_account_id": "acct_SYN_001",
+          "receiver_account_id": "acct_MERCH_C",
+          "merchant_category": "streaming_subscription",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_7de77e4c",
+          "timestamp": "2026-03-10T13:00:00Z",
+          "amount": 29200.0,
+          "sender_account_id": "acct_SYN_001",
+          "receiver_account_id": "acct_SYN_002",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_1_of_7"
+        },
+        {
+          "transaction_id": "txn_b0e5eebc",
+          "timestamp": "2026-03-10T21:00:00Z",
+          "amount": 28600.0,
+          "sender_account_id": "acct_SYN_002",
+          "receiver_account_id": "acct_SYN_003",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_2_of_7"
+        },
+        {
+          "transaction_id": "txn_1d4c07cb",
+          "timestamp": "2026-03-10T24:00:00Z",
+          "amount": 142.99,
+          "sender_account_id": "acct_SYN_002",
+          "receiver_account_id": "acct_MERCH_D",
+          "merchant_category": "electronics",
+          "channel": "card",
+          "is_fraud": false,
+          "fraud_role": "cover_activity"
+        },
+        {
+          "transaction_id": "txn_d25c0f53",
+          "timestamp": "2026-03-10T33:00:00Z",
+          "amount": 28100.0,
+          "sender_account_id": "acct_SYN_003",
+          "receiver_account_id": "acct_SYN_004",
+          "merchant_category": "peer_to_peer",
+          "channel": "Zelle",
+          "is_fraud": true,
+          "fraud_role": "hop_3_of_7"
+        },
+        {
+          "transaction_id": "txn_1194d054",
+          "timestamp": "2026-03-10T57:00:00Z",
+          "amount": 27800.0,
+          "sender_account_id": "acct_SYN_004",
+          "receiver_account_id": "acct_SYN_005",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_4_of_7"
+        },
+        {
+          "transaction_id": "txn_34adad85",
+          "timestamp": "2026-03-10T81:00:00Z",
+          "amount": 27400.0,
+          "sender_account_id": "acct_SYN_005",
+          "receiver_account_id": "acct_SYN_006",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_5_of_7"
+        },
+        {
+          "transaction_id": "txn_53b87ca3",
+          "timestamp": "2026-03-10T105:00:00Z",
+          "amount": 26900.0,
+          "sender_account_id": "acct_SYN_006",
+          "receiver_account_id": "acct_SYN_007",
+          "merchant_category": "wire_transfer",
+          "channel": "ACH",
+          "is_fraud": true,
+          "fraud_role": "hop_6_of_7"
+        },
+        {
+          "transaction_id": "txn_cbe9459a",
+          "timestamp": "2026-03-10T109:00:00Z",
+          "amount": 26400.0,
+          "sender_account_id": "acct_SYN_007",
+          "receiver_account_id": "acct_DEX_001",
+          "merchant_category": "cryptocurrency_exchange",
+          "channel": "crypto",
+          "is_fraud": true,
+          "fraud_role": "hop_7_of_7"
+        },
+        {
+          "transaction_id": "txn_1138832f",
+          "timestamp": "2026-03-10T110:00:00Z",
+          "amount": 25800.0,
+          "sender_account_id": "acct_DEX_001",
+          "receiver_account_id": "wallet_XMR_dk1",
+          "merchant_category": "privacy_coin_swap",
+          "channel": "crypto",
+          "is_fraud": true,
+          "fraud_role": "extraction"
+        }
+      ]
+    }
+  ]
+}

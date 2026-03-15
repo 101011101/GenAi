@@ -1,0 +1,36 @@
+[
+  {
+    "persona_id": "P-01",
+    "name": "Darren",
+    "risk_tolerance": "mid",
+    "operational_scale": "medium",
+    "geographic_scope": "domestic_US",
+    "timeline_pressure": "10\u201314 days \u2014 funds from a business email compromise must be dispersed before the victim company's bank initiates a recall request, estimated window based on prior BEC operations",
+    "evasion_targets": [
+      "ACH return and recall triggers on large single transfers",
+      "Same-day velocity alerts on receiving accounts",
+      "Bank fraud models flagging rapid sequential withdrawals from newly funded accounts",
+      "FinCEN structuring thresholds \u2014 transactions kept below $9,500 per leg",
+      "Cross-account linkage analysis detecting shared device or IP across mule accounts"
+    ],
+    "backstory": "Darren is a mid-level coordinator in a domestic BEC fraud cell operating out of the Atlanta metro area. He was recruited three years ago by a contact from a prior check fraud stint and has since built a reputation for reliable mule management without attracting law enforcement attention. He oversees a tiered network of 18 recruited account holders \u2014 a mix of college students, gig workers, and unemployed contacts \u2014 who were onboarded under the pretense of 'payment processing' or 'remote finance jobs.' He does not control the upstream intrusion or wire fraud; he is the laundering layer, paid a flat fee per successful extraction. His core constraint is that two of his mules were flagged by their banks last quarter, limiting him to 14 operationally clean accounts, all held at a mix of regional credit unions and mid-size national banks across Georgia, Tennessee, and Alabama.",
+    "resources": "14 active mule accounts across 6 financial institutions (3 credit unions, 3 regional banks); accounts range from 4 months to 2 years old; no crypto infrastructure; no international reach; extraction via cashier's checks and ATM cash-out; mules coached on cover story but not sophisticated; Darren has a burner phone network for coordination; no access to business accounts \u2014 all personal checking"
+  },
+  {
+    "persona_id": "P-02",
+    "name": "Marlene",
+    "risk_tolerance": "low",
+    "operational_scale": "small",
+    "geographic_scope": "domestic_UK",
+    "timeline_pressure": "3\u20134 weeks \u2014 must move \u00a355,000 in pension fraud proceeds slowly enough to avoid triggering any SAR from mule account holders who are nervous first-timers and will shut down if they feel exposed",
+    "evasion_targets": [
+      "Faster Payments velocity rules \u2014 avoids multiple same-day transfers from a single account",
+      "Bank mule detection models trained on rapid inbound-then-outbound same-day patterns",
+      "Monzo and Starling real-time fraud flagging on new payees receiving large amounts",
+      "CIFAS fraud sharing database \u2014 two of her mules have borderline credit histories and she fears a markers search",
+      "Behavioral biometrics on mobile banking apps used by mules \u2014 instructs mules to log in manually and wait before initiating transfers"
+    ],
+    "backstory": "Marlene is a 47-year-old lone coordinator operating in the West Midlands, drawn into fraud facilitation after accumulating significant personal debt following a divorce. She was approached by an acquaintance who needed someone to 'manage some transfers' and has been running small laundering operations for 18 months. She is acutely aware of her prior close call \u2014 one of her mules was questioned by Lloyds Bank last year and she had to abandon \u00a312,000 mid-cycle. This has made her extremely cautious: she now uses only mules she has personally vetted, limits herself to 7 active accounts at any time, and introduces deliberate delays between hops to mimic organic account activity. Her biggest structural constraint is that all 7 mules bank with one of only three institutions (Lloyds, NatWest, Halifax), creating a network easily mapped by any cross-bank intelligence sharing.",
+    "resources": "7 mule accounts across 3 UK high street banks (Lloyds, NatWest, Halifax); account ages range from 8 months to 3 years; no crypto; no international transfers; extraction via cash withdrawals at branch or ATM over multiple days; mules are inexperienced and require hand-holding \u2014 Marlene sends step-by-step instructions via WhatsApp; no business accounts; cover activity pre-seeded by Marlene via small legitimate payments to each mule account before the fraud cycle begins"
+  }
+]

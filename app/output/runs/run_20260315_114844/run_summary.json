@@ -1,0 +1,12 @@
+{
+  "variant_count": 7,
+  "mean_critic_score": 8.621,
+  "coverage_saturation_pct": 58.3,
+  "persona_count": 7,
+  "total_transactions": 101,
+  "run_duration_seconds": 2.2,
+  "total_cost_usd": 0.399,
+  "revisions_count": 0,
+  "rejections_count": 0,
+  "timestamp": "2026-03-15T11:48:44.479156+00:00"
+}
