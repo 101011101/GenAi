@@ -1,0 +1,1145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin Observability Console — TD Best AI Hack</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3@7.9.0/dist/d3.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   RESET & TOKENS
+   ═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0B0E14;--surface:#13161E;--surface2:#1C2028;--surface3:#252A34;
+  --border:#2E3442;--border2:#3C4354;
+  --text:#F0F2F5;--text2:#8B92A5;--text3:#5C6478;
+  --accent:#FF4B4B;--accent-dim:#FF4B4B33;
+  --green:#34D399;--green-dim:#34D39922;
+  --yellow:#FBBF24;--yellow-dim:#FBBF2422;
+  --blue:#60A5FA;--blue-dim:#60A5FA22;
+  --orange:#FB923C;--orange-dim:#FB923C22;
+  --purple:#A78BFA;--purple-dim:#A78BFA22;
+  --cyan:#22D3EE;--cyan-dim:#22D3EE22;
+  --red:#F87171;--red-dim:#F8717122;
+  --darkred:#B91C1C;
+  --radius:10px;--radius-sm:6px;
+}
+html{font-size:14px}
+body{font-family:'Inter',system-ui,-apple-system,sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;min-height:100vh}
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══════════════════════════════════════════
+   HEADER
+   ═══════════════════════════════════════════ */
+.header{background:var(--surface);border-bottom:1px solid var(--border);padding:12px 24px;display:flex;align-items:center;gap:24px;flex-wrap:wrap;position:sticky;top:0;z-index:200}
+.header .logo{font-weight:700;font-size:1.05rem;color:var(--text);letter-spacing:-.3px;display:flex;align-items:center;gap:8px}
+.header .logo .icon{width:28px;height:28px;background:var(--accent);border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:.9rem}
+.header .meta{display:flex;gap:20px;flex-wrap:wrap;font-size:.8rem;color:var(--text2)}
+.header .meta span{display:flex;align-items:center;gap:4px}
+.header .meta strong{color:var(--text);font-weight:600}
+.health-badge{padding:3px 10px;border-radius:20px;font-size:.72rem;font-weight:700;letter-spacing:.5px;text-transform:uppercase}
+.health-good{background:var(--green-dim);color:var(--green);border:1px solid var(--green)}
+.progress-wrap{display:flex;align-items:center;gap:8px;min-width:140px}
+.progress-bar{flex:1;height:6px;background:var(--surface3);border-radius:3px;overflow:hidden}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--orange));border-radius:3px}
+.progress-pct{font-size:.78rem;font-weight:700;color:var(--text)}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+   ═══════════════════════════════════════════ */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* Sidebar */
+.sidebar{width:250px;background:var(--surface);border-right:1px solid var(--border);padding:16px;overflow-y:auto;flex-shrink:0;transition:margin-left .25s}
+.sidebar.collapsed{margin-left:-250px}
+.sidebar h3{font-size:.68rem;text-transform:uppercase;letter-spacing:1.5px;color:var(--text3);margin:12px 0 6px;font-weight:600}
+.sidebar h3:first-child{margin-top:0}
+.sb-row{display:flex;justify-content:space-between;padding:5px 0;font-size:.8rem;border-bottom:1px solid var(--border)}
+.sb-row .k{color:var(--text2)}.sb-row .v{color:var(--text);font-weight:500;text-align:right;max-width:130px}
+.sidebar-toggle{position:fixed;left:250px;top:50%;transform:translateY(-50%);background:var(--surface2);border:1px solid var(--border);color:var(--text2);width:18px;height:44px;display:flex;align-items:center;justify-content:center;cursor:pointer;border-radius:0 6px 6px 0;z-index:150;font-size:.7rem;transition:left .25s}
+.sidebar.collapsed~.sidebar-toggle{left:0}
+
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+
+/* ═══════════════════════════════════════════
+   TABS
+   ═══════════════════════════════════════════ */
+.tab-bar{display:flex;background:var(--surface);border-bottom:1px solid var(--border);overflow-x:auto;flex-shrink:0;gap:2px;padding:0 12px}
+.tab{padding:11px 18px;font-size:.8rem;font-weight:500;color:var(--text2);cursor:pointer;white-space:nowrap;border-bottom:2px solid transparent;transition:all .15s;display:flex;align-items:center;gap:8px}
+.tab:hover{color:var(--text);background:var(--surface2)}
+.tab.active{color:var(--accent);border-bottom-color:var(--accent)}
+.tab .chip{font-size:.65rem;padding:1px 7px;border-radius:10px;background:var(--green-dim);color:var(--green);font-weight:600}
+.tab .chip-err{background:var(--red-dim);color:var(--red)}
+
+/* ═══════════════════════════════════════════
+   CONTENT
+   ═══════════════════════════════════════════ */
+.tab-content{flex:1;overflow-y:auto;padding:24px}
+.tab-pane{display:none}.tab-pane.active{display:block}
+.section{margin-bottom:24px}
+.section-title{font-size:.95rem;font-weight:600;margin-bottom:14px;color:var(--text);display:flex;align-items:center;gap:8px}
+.section-title .sub{font-size:.75rem;font-weight:400;color:var(--text2)}
+
+/* Cards */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px;margin-bottom:16px}
+.card-flush{padding:0;overflow:hidden}
+.card h3{font-size:.85rem;font-weight:600;margin-bottom:12px}
+
+/* Grids */
+.g{display:grid;gap:16px}
+.g2{grid-template-columns:repeat(auto-fit,minmax(380px,1fr))}
+.g3{grid-template-columns:repeat(auto-fit,minmax(260px,1fr))}
+.g6{grid-template-columns:repeat(auto-fill,minmax(155px,1fr))}
+
+/* Metric Cards */
+.metric{text-align:center;padding:20px 12px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius)}
+.metric .val{font-size:1.85rem;font-weight:700;color:var(--accent);line-height:1.1}
+.metric .lbl{font-size:.72rem;color:var(--text2);margin-top:4px;text-transform:uppercase;letter-spacing:.5px}
+
+/* Tables */
+table{width:100%;border-collapse:collapse;font-size:.8rem}
+th{text-align:left;padding:8px 12px;background:var(--surface2);color:var(--text3);font-weight:600;text-transform:uppercase;font-size:.68rem;letter-spacing:.8px;border-bottom:1px solid var(--border)}
+td{padding:8px 12px;border-bottom:1px solid var(--border);color:var(--text)}
+tr:hover td{background:rgba(255,255,255,.02)}
+
+/* Badges */
+.badge{display:inline-block;padding:2px 9px;border-radius:10px;font-size:.68rem;font-weight:600}
+.badge-pass{background:var(--green-dim);color:var(--green)}
+.badge-fail{background:var(--red-dim);color:var(--red)}
+.badge-warn{background:var(--yellow-dim);color:var(--yellow)}
+.badge-info{background:var(--blue-dim);color:var(--blue)}
+
+/* Select */
+select{background:var(--surface2);color:var(--text);border:1px solid var(--border);padding:7px 12px;border-radius:var(--radius-sm);font-size:.82rem;cursor:pointer}
+select:focus{outline:none;border-color:var(--accent)}
+
+/* Chart containers */
+.chart-h{position:relative;height:260px}
+.chart-sm{position:relative;height:180px}
+.chart-lg{position:relative;height:380px}
+
+/* Log feed */
+.log-feed{max-height:240px;overflow-y:auto;font-family:'JetBrains Mono','Fira Code',monospace;font-size:.72rem;line-height:1.8;padding:12px 14px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm)}
+.log-line{color:var(--text2)}
+.log-line .ts{color:var(--text3);margin-right:4px}
+.log-line .ok{color:var(--green)}.log-line .er{color:var(--red)}.log-line .wr{color:var(--yellow)}.log-line .in{color:var(--blue)}
+
+/* ═══════════════════════════════════════════
+   VIEW 1 — MISSION BRIEF: Sunburst
+   ═══════════════════════════════════════════ */
+#sunburst-container{width:100%;display:flex;justify-content:center}
+#sunburst-container svg{max-width:520px}
+#sunburst-tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:.78rem;color:var(--text);z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+
+/* Persona Cards */
+.persona-cards{display:flex;gap:14px;overflow-x:auto;padding-bottom:4px}
+.p-card{min-width:200px;max-width:220px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;flex-shrink:0}
+.p-card .risk-bar{height:4px}
+.p-card-body{padding:12px 14px}
+.p-card .name{font-weight:600;font-size:.88rem;margin-bottom:2px}
+.p-card .pid{font-size:.7rem;color:var(--text3)}
+.p-card .spec{font-size:.75rem;color:var(--text2);margin:6px 0 8px;font-style:italic}
+.p-card .tags{display:flex;flex-wrap:wrap;gap:4px}
+.p-card .tag{font-size:.65rem;padding:2px 7px;border-radius:8px;background:var(--surface3);color:var(--text2)}
+.p-card .stats{display:flex;gap:8px;margin-top:8px;font-size:.7rem;color:var(--text2)}
+.p-card .stats strong{color:var(--text)}
+
+/* ═══════════════════════════════════════════
+   VIEW 2 — COVERAGE GRID
+   ═══════════════════════════════════════════ */
+.cov-header{display:flex;align-items:center;gap:16px;margin-bottom:14px;flex-wrap:wrap}
+.cov-stat{font-size:1.4rem;font-weight:700}
+.cov-label{font-size:.78rem;color:var(--text2)}
+.cov-grid{display:grid;gap:6px}
+.cov-cell{border-radius:var(--radius-sm);padding:10px 8px;text-align:center;font-size:.72rem;cursor:default;transition:transform .15s,box-shadow .15s;display:flex;flex-direction:column;gap:3px;min-height:80px;justify-content:center}
+.cov-cell:hover{transform:scale(1.04);box-shadow:0 0 16px rgba(0,0,0,.4);z-index:2}
+.cov-cell .cid{font-weight:600;font-size:.76rem}.cov-cell .cscore{font-size:.68rem}
+.cov-done{background:#0D2818;border:1px solid #1A4D2E;color:var(--green)}
+.cov-fail{background:#2D0F0F;border:1px solid #5C1A1A;color:var(--red);animation:pulse-border 2s infinite}
+.cov-reassign{background:#2D1F0A;border:1px solid #5C3D14;color:var(--orange)}
+.cov-empty{background:var(--surface2);border:1px solid var(--border);color:var(--text3)}
+@keyframes pulse-border{0%,100%{border-color:#5C1A1A}50%{border-color:var(--red)}}
+
+/* ═══════════════════════════════════════════
+   VIEW 3 — CONSTRUCTOR
+   ═══════════════════════════════════════════ */
+.storyboard{display:flex;gap:12px;overflow-x:auto;padding-bottom:8px}
+.scene{min-width:200px;max-width:240px;background:var(--surface2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;flex-shrink:0;cursor:pointer;transition:border-color .15s}
+.scene:hover{border-color:var(--accent)}
+.scene.expanded{border-color:var(--accent)}
+.scene .scene-icon{font-size:1.3rem;margin-bottom:6px}
+.scene .scene-title{font-size:.78rem;font-weight:600;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:.5px}
+.scene .scene-text{font-size:.78rem;color:var(--text2);line-height:1.5;font-style:italic}
+.scene .scene-stats{display:flex;gap:10px;margin-top:8px;font-size:.68rem;color:var(--text3)}
+.scene .scene-stats strong{color:var(--text2)}
+.scene .scene-raw{display:none;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.scene.expanded .scene-raw{display:block}
+.scene pre{background:var(--bg);border:1px solid var(--border);border-radius:4px;padding:8px;font-size:.7rem;color:var(--text3);overflow-x:auto;max-height:200px;overflow-y:auto}
+
+/* Money Trail */
+#money-trail{width:100%;height:380px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+#money-trail .edge-animated{stroke-dasharray:8 4;animation:flow 1s linear infinite}
+@keyframes flow{to{stroke-dashoffset:-12}}
+#trail-tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:.75rem;color:var(--text);z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+
+/* Network Graph */
+#network-graph{width:100%;height:420px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+#net-tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:.75rem;color:var(--text);z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+.net-legend{display:flex;gap:16px;padding:10px 16px;font-size:.72rem;color:var(--text2);flex-wrap:wrap;border-top:1px solid var(--border)}
+.net-legend-item{display:flex;align-items:center;gap:5px}
+.net-legend-swatch{width:12px;height:12px;border-radius:3px}
+
+/* ═══════════════════════════════════════════
+   VIEW 4 — QUALITY GATE
+   ═══════════════════════════════════════════ */
+#quality-battlefield{width:100%;height:420px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius)}
+#qb-tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:.75rem;color:var(--text);z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5);max-width:260px}
+
+/* ═══════════════════════════════════════════
+   VIEW 5 — OPERATIONS: Waterfall
+   ═══════════════════════════════════════════ */
+#waterfall-chart{width:100%;height:440px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);overflow-x:auto}
+#wf-tooltip{position:fixed;pointer-events:none;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);padding:8px 12px;font-size:.75rem;color:var(--text);z-index:300;display:none;box-shadow:0 4px 20px rgba(0,0,0,.5)}
+
+/* ═══════════════════════════════════════════
+   VIEW 6 — JOURNEY TIMELINE
+   ═══════════════════════════════════════════ */
+.timeline{position:relative;padding-left:36px}
+.timeline::before{content:'';position:absolute;left:14px;top:0;bottom:0;width:2px;background:var(--border)}
+.tl-node{position:relative;margin-bottom:10px;padding:10px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-sm);font-size:.8rem;cursor:pointer;transition:border-color .15s}
+.tl-node:hover{border-color:var(--text3)}
+.tl-node::before{content:'';position:absolute;left:-27px;top:14px;width:10px;height:10px;border-radius:50%;border:2px solid var(--border);background:var(--surface)}
+.tl-node.pass::before{border-color:var(--green);background:var(--green)}
+.tl-node.fail::before{border-color:var(--red);background:var(--red)}
+.tl-node.info::before{border-color:var(--blue);background:var(--blue)}
+.tl-node .tl-top{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tl-node .ts{color:var(--text3);font-size:.72rem;font-family:'JetBrains Mono','Fira Code',monospace;flex-shrink:0}
+.tl-node .tl-text{color:var(--text2);flex:1}
+.tl-node .tl-cost{font-size:.68rem;color:var(--text3);margin-left:auto;flex-shrink:0}
+.tl-node .detail{display:none;margin-top:8px;padding-top:8px;border-top:1px solid var(--border);font-size:.75rem;color:var(--text3)}
+.tl-node.expanded .detail{display:block}
+.tl-node .net-thumb{margin-top:8px;height:120px;background:var(--bg);border:1px solid var(--border);border-radius:4px;overflow:hidden}
+</style>
+</head>
+<body>
+
+<!-- ═══════════════ HEADER ═══════════════ -->
+<div class="header">
+  <div class="logo"><div class="icon">S</div>Admin Console</div>
+  <div class="meta">
+    <span>Run: <strong>run_20260314_143448</strong></span>
+    <span><span class="health-badge health-good">Healthy</span></span>
+    <span>Cost: <strong>$2.34 / $20.00</strong></span>
+    <span>Variants: <strong>15/15</strong></span>
+    <span>Elapsed: <strong>2m 48s</strong></span>
+  </div>
+  <div class="progress-wrap">
+    <div class="progress-bar"><div class="progress-fill" style="width:100%"></div></div>
+    <span class="progress-pct">100%</span>
+  </div>
+</div>
+
+<!-- ═══════════════ LAYOUT ═══════════════ -->
+<div class="layout">
+<div class="sidebar" id="sidebar">
+  <h3>Run Configuration</h3>
+  <div class="sb-row"><span class="k">Fraud Type</span><span class="v">Layered mule network</span></div>
+  <div class="sb-row"><span class="k">Target Variants</span><span class="v">15</span></div>
+  <div class="sb-row"><span class="k">Fidelity</span><span class="v">L3 (Full)</span></div>
+  <div class="sb-row"><span class="k">Max Parallel</span><span class="v">5</span></div>
+  <div class="sb-row"><span class="k">Critic Floor</span><span class="v">7.0</span></div>
+  <div class="sb-row"><span class="k">Max Revisions</span><span class="v">2</span></div>
+  <div class="sb-row"><span class="k">Personas</span><span class="v">5</span></div>
+  <div class="sb-row"><span class="k">Risk Dist</span><span class="v">H:33 / M:34 / L:33</span></div>
+  <div class="sb-row"><span class="k">Geo Scope</span><span class="v">Domestic</span></div>
+  <div class="sb-row"><span class="k">Auto 2nd Pass</span><span class="v" style="color:var(--green)">On</span></div>
+  <div class="sb-row"><span class="k">Cost Cap</span><span class="v">$20.00</span></div>
+</div>
+<div class="sidebar-toggle" id="sidebarToggle" onclick="document.getElementById('sidebar').classList.toggle('collapsed');this.textContent=document.getElementById('sidebar').classList.contains('collapsed')?'›':'‹'">‹</div>
+
+<div class="main">
+<div class="tab-bar" id="tabBar">
+  <div class="tab active" data-tab="mission">Mission Brief<span class="chip">4.2s</span></div>
+  <div class="tab" data-tab="coverage">Coverage<span class="chip">2.1s</span></div>
+  <div class="tab" data-tab="constructor">Constructor<span class="chip">108s</span></div>
+  <div class="tab" data-tab="quality">Quality Gate<span class="chip chip-err">1 err</span></div>
+  <div class="tab" data-tab="operations">Operations<span class="chip">168s</span></div>
+  <div class="tab" data-tab="journey">Journey<span class="chip">—</span></div>
+</div>
+
+<div class="tab-content">
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 1 — MISSION BRIEF
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane active" id="mission">
+  <div class="section">
+    <div class="section-title">Variant Space Sunburst <span class="sub">Click to zoom · Hover for details</span></div>
+    <div class="card card-flush" style="padding:20px">
+      <div id="sunburst-container"></div>
+      <div id="sunburst-tooltip"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Variation Dimensions</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>Dimension</th><th>Possible Values</th><th>Count</th><th>Source</th></tr></thead>
+        <tbody>
+          <tr><td>hop_count</td><td>2, 3, 4, 6</td><td>4</td><td>"layered...network"</td></tr>
+          <tr><td>topology</td><td>chain, fan_out, hybrid</td><td>3</td><td>"mule account network"</td></tr>
+          <tr><td>timing_pattern</td><td>burst, staggered, delayed</td><td>3</td><td>"burst withdrawal"</td></tr>
+          <tr><td>cover_activity</td><td>low, high</td><td>2</td><td>inferred from evasion</td></tr>
+          <tr><td>extraction_method</td><td>crypto, wire, cash</td><td>3</td><td>inferred from channels</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Persona Threat Profiles</div>
+    <div class="persona-cards" id="personaCards"></div>
+  </div>
+
+  <div class="section">
+    <div class="section-title">Risk Distribution <span class="sub">Configured vs Actual</span></div>
+    <div class="card" style="max-width:480px"><div class="chart-sm"><canvas id="riskDistChart"></canvas></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 2 — COVERAGE
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane" id="coverage">
+  <div class="section">
+    <div class="card">
+      <div class="cov-header">
+        <div><span class="cov-stat" style="color:var(--green)">91.7%</span></div>
+        <div class="cov-label">11 / 12 cells completed · Threshold: 80% · <span class="badge badge-pass">Above threshold</span></div>
+      </div>
+      <p style="font-size:.72rem;color:var(--text3);margin-bottom:10px">Rows: hop_count &nbsp;·&nbsp; Cols: topology (chain, fan_out, hybrid)</p>
+      <div class="cov-grid" id="covGrid" style="grid-template-columns:repeat(3,1fr)"></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Transition Log</div>
+    <div class="card card-flush"><div class="log-feed" id="transitionLog"></div></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 3 — CONSTRUCTOR
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane" id="constructor">
+  <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+    <label style="font-size:.82rem;color:var(--text2)">Variant:</label>
+    <select id="variantSelect" onchange="renderConstructor()"></select>
+    <span id="variantBadge"></span>
+  </div>
+  <div class="section">
+    <div class="section-title">Heist Storyboard <span class="sub">Click cards to reveal raw JSON</span></div>
+    <div class="storyboard" id="storyboard"></div>
+  </div>
+  <div class="section">
+    <div class="section-title">Transaction Network Graph <span class="sub">Nodes = accounts · Edges = transactions · Drag to rearrange</span></div>
+    <div class="card card-flush">
+      <svg id="network-graph"></svg>
+      <div id="net-tooltip"></div>
+      <div class="net-legend">
+        <div class="net-legend-item"><div class="net-legend-swatch" style="background:#F87171;border-radius:50%"></div>Source</div>
+        <div class="net-legend-item"><div class="net-legend-swatch" style="background:#FB923C;transform:rotate(45deg)"></div>Mule</div>
+        <div class="net-legend-item"><div class="net-legend-swatch" style="background:#B91C1C"></div>Destination</div>
+        <div class="net-legend-item"><div class="net-legend-swatch" style="background:#6B7280;clip-path:polygon(50% 0%,100% 100%,0% 100%)"></div>Cover</div>
+        <div class="net-legend-item" style="margin-left:auto;color:var(--text3)">Edge width = transaction amount · Dashed = animated flow direction</div>
+      </div>
+    </div>
+  </div>
+  <div class="g g2">
+    <div class="section">
+      <div class="section-title">Money Trail <span class="sub">Animated fund flow</span></div>
+      <div class="card card-flush"><svg id="money-trail"></svg><div id="trail-tooltip"></div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Attempt History</div>
+      <div class="card"><table><thead><tr><th>Attempt</th><th>Realism</th><th>Distinct.</th><th>Result</th><th>Feedback</th></tr></thead><tbody id="attemptBody"></tbody></table></div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 4 — QUALITY GATE
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane" id="quality">
+  <div class="section">
+    <div class="section-title">Quality Battlefield <span class="sub">Scatter with revision trails · Pass zone in green</span></div>
+    <div class="card card-flush"><svg id="quality-battlefield"></svg><div id="qb-tooltip"></div></div>
+  </div>
+  <div class="g g2">
+    <div class="section">
+      <div class="section-title">Pass / Fail / Revised</div>
+      <div class="card"><div class="chart-sm"><canvas id="pfrDonut"></canvas></div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Quality Issues</div>
+      <div class="card">
+        <table>
+          <thead><tr><th>Variant</th><th>Gate</th><th>Issue</th><th>Detail</th><th>Severity</th><th>Resolution</th></tr></thead>
+          <tbody id="qualityIssuesBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 5 — OPERATIONS
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane" id="operations">
+  <div class="g g6 section" id="metricCards"></div>
+  <div class="section">
+    <div class="section-title">Pipeline Waterfall <span class="sub">Each row = variant · Segments = pipeline phases</span></div>
+    <div class="card card-flush"><svg id="waterfall-chart"></svg><div id="wf-tooltip"></div></div>
+  </div>
+  <div class="g g2">
+    <div class="section">
+      <div class="section-title">Cost Accumulation</div>
+      <div class="card"><div class="chart-sm"><canvas id="costSparkline"></canvas></div></div>
+    </div>
+    <div class="section">
+      <div class="section-title">Error Log</div>
+      <div class="card"><div style="max-height:200px;overflow-y:auto"><table><thead><tr><th>Time</th><th>Stage</th><th>Variant</th><th>Sev</th><th>Message</th><th>Resolution</th></tr></thead><tbody id="errorLogBody"></tbody></table></div></div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">Export Manifest</div>
+    <div class="card">
+      <table>
+        <thead><tr><th>File</th><th>Format</th><th>Size</th><th>Records</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td>config.json</td><td>JSON</td><td>1.8 KB</td><td>—</td><td>Run configuration snapshot</td></tr>
+          <tr><td>personas.json</td><td>JSON</td><td>14.2 KB</td><td>5 personas</td><td>Full persona profiles</td></tr>
+          <tr><td>variants.json</td><td>JSON</td><td>482 KB</td><td>15 variants</td><td>Complete variant data with metadata</td></tr>
+          <tr><td>dataset.csv</td><td>CSV</td><td>756 KB</td><td>87 txns</td><td>Flat tabular dataset for ML training</td></tr>
+          <tr><td>dataset.json</td><td>JSON</td><td>1.1 MB</td><td>87 txns</td><td>Nested dataset with variant metadata</td></tr>
+          <tr><td>run_summary.json</td><td>JSON</td><td>4.6 KB</td><td>—</td><td>Aggregate stats and quality metrics</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════
+     VIEW 6 — JOURNEY
+     ══════════════════════════════════════════════════ -->
+<div class="tab-pane" id="journey">
+  <div style="margin-bottom:16px;display:flex;align-items:center;gap:12px">
+    <label style="font-size:.82rem;color:var(--text2)">Variant:</label>
+    <select id="journeySelect" onchange="renderJourney()"></select>
+  </div>
+  <div class="card"><div class="timeline" id="journeyTimeline"></div></div>
+</div>
+
+</div><!-- tab-content -->
+</div><!-- main -->
+</div><!-- layout -->
+
+<!-- ═══════════════════════════════════════════════════════════════
+     JAVASCRIPT
+     ═══════════════════════════════════════════════════════════════ -->
+<script>
+// ─── MOCK DATA ───────────────────────────────────────────────
+const PERSONAS = [
+  {id:'P-01',name:'Viktor Semenov',risk:'High',region:'Eastern Europe',spec:'Layered mule networks',evasion:['velocity limits','geo-fencing'],netSize:8,cells:4,radar:[9,8,7]},
+  {id:'P-02',name:'Maria Chen',risk:'Mid',region:'Southeast Asia',spec:'Crypto extraction',evasion:['amount thresholds','new-payee flags'],netSize:5,cells:3,radar:[6,5,8]},
+  {id:'P-03',name:'James Okafor',risk:'High',region:'West Africa',spec:'Fan-out topology',evasion:['velocity limits','amount thresholds'],netSize:10,cells:3,radar:[8,9,6]},
+  {id:'P-04',name:'Lena Petrov',risk:'Low',region:'Domestic US',spec:'Cover activity blending',evasion:['behavioral analytics','geo-fencing'],netSize:3,cells:3,radar:[3,4,5]},
+  {id:'P-05',name:'Carlos Reyes',risk:'Mid',region:'Central America',spec:'Wire structuring',evasion:['amount thresholds','velocity limits'],netSize:6,cells:2,radar:[5,6,7]}
+];
+const P_COLORS = {'P-01':'#FF4B4B','P-02':'#60A5FA','P-03':'#FB923C','P-04':'#34D399','P-05':'#A78BFA'};
+const RISK_COLORS = {High:'var(--red)',Mid:'var(--yellow)',Low:'var(--green)'};
+
+const VARIANTS = [
+  {id:'V-001',p:'P-01',hop:3,timing:'burst',topo:'chain',cover:'low',extract:'wire',r:8.7,d:7.9,pass:true,att:[{r:8.7,d:7.9,p:true,fb:''}],txn:6},
+  {id:'V-002',p:'P-01',hop:4,timing:'staggered',topo:'fan_out',cover:'high',extract:'crypto',r:7.8,d:8.2,pass:true,att:[{r:5.1,d:8.0,p:false,fb:'Amounts too round, no cover interleaving'},{r:7.8,d:8.2,p:true,fb:''}],txn:8},
+  {id:'V-003',p:'P-02',hop:2,timing:'burst',topo:'fan_out',cover:'low',extract:'crypto',r:8.1,d:7.5,pass:true,att:[{r:8.1,d:7.5,p:true,fb:''}],txn:5},
+  {id:'V-004',p:'P-02',hop:3,timing:'delayed',topo:'chain',cover:'high',extract:'wire',r:7.4,d:7.1,pass:true,att:[{r:4.2,d:7.0,p:false,fb:'Timing too uniform, no cover activity'},{r:6.1,d:7.0,p:false,fb:'Amounts are round numbers'},{r:7.4,d:7.1,p:true,fb:''}],txn:7},
+  {id:'V-005',p:'P-03',hop:6,timing:'staggered',topo:'hybrid',cover:'high',extract:'cash',r:9.1,d:8.8,pass:true,att:[{r:9.1,d:8.8,p:true,fb:''}],txn:9},
+  {id:'V-006',p:'P-03',hop:4,timing:'burst',topo:'fan_out',cover:'low',extract:'crypto',r:8.3,d:7.7,pass:true,att:[{r:8.3,d:7.7,p:true,fb:''}],txn:7},
+  {id:'V-007',p:'P-01',hop:3,timing:'delayed',topo:'hybrid',cover:'high',extract:'cash',r:7.9,d:8.4,pass:true,att:[{r:7.9,d:8.4,p:true,fb:''}],txn:6},
+  {id:'V-008',p:'P-04',hop:2,timing:'burst',topo:'chain',cover:'high',extract:'wire',r:7.2,d:7.0,pass:true,att:[{r:7.2,d:7.0,p:true,fb:''}],txn:4},
+  {id:'V-009',p:'P-04',hop:3,timing:'staggered',topo:'fan_out',cover:'high',extract:'wire',r:7.6,d:7.3,pass:true,att:[{r:7.6,d:7.3,p:true,fb:''}],txn:5},
+  {id:'V-010',p:'P-05',hop:4,timing:'delayed',topo:'chain',cover:'low',extract:'cash',r:8.0,d:7.6,pass:true,att:[{r:8.0,d:7.6,p:true,fb:''}],txn:6},
+  {id:'V-011',p:'P-05',hop:2,timing:'burst',topo:'hybrid',cover:'low',extract:'crypto',r:7.5,d:8.1,pass:true,att:[{r:7.5,d:8.1,p:true,fb:''}],txn:5},
+  {id:'V-012',p:'P-03',hop:6,timing:'delayed',topo:'chain',cover:'high',extract:'wire',r:8.5,d:9.0,pass:true,att:[{r:6.0,d:9.0,p:false,fb:'Missing cover activity, amounts unrealistic'},{r:8.5,d:9.0,p:true,fb:''}],txn:10},
+  {id:'V-013',p:'P-04',hop:3,timing:'staggered',topo:'chain',cover:'low',extract:'cash',r:7.1,d:7.2,pass:true,att:[{r:7.1,d:7.2,p:true,fb:''}],txn:5},
+  {id:'V-014',p:'P-01',hop:4,timing:'burst',topo:'hybrid',cover:'high',extract:'crypto',r:8.9,d:8.5,pass:true,att:[{r:8.9,d:8.5,p:true,fb:''}],txn:8},
+  {id:'V-015',p:'P-02',hop:2,timing:'delayed',topo:'chain',cover:'low',extract:'wire',r:5.8,d:6.2,pass:false,att:[{r:4.0,d:5.5,p:false,fb:'Inconsistent persona behavior, no layering'},{r:5.8,d:6.2,p:false,fb:'Still below critic floor after revision'}],txn:4}
+];
+
+const STORIES = {
+  'V-001':[
+    {icon:'🎯',title:'Motive',text:'The criminal needs to move $50K through domestic wires before velocity triggers fire. Prefers speed over stealth — get in, get out.',tokens:1180,lat:3.1,raw:{needs:'Move $50K quickly',constraints:'Domestic only, avoid CTR',fears:'Velocity triggers, pattern detection'}},
+    {icon:'🔗',title:'Blueprint',text:'Plans a 3-hop chain topology with burst timing — all transfers compressed into a 4-hour window. Structured below $10K per leg.',tokens:840,lat:2.3,raw:{hops:3,topology:'chain',timing:'burst — 4hr window',amounts:'Structured below $10K',cover:'Low'}},
+    {icon:'👥',title:'Crew',text:'Source account is a business checking. Mule 1 recruited via encrypted messaging — newly opened personal savings. Mule 2 uses a prepaid debit card.',tokens:2050,lat:5.2,raw:{accounts:[{id:'ACC-A1',role:'source',type:'Business checking'},{id:'ACC-M1',role:'mule_1',type:'Personal savings (new)'},{id:'ACC-M2',role:'mule_2',type:'Prepaid debit'},{id:'ACC-D1',role:'destination',type:'Wire recipient'}]}},
+    {icon:'⚡',title:'Execution',text:'9:34 AM — $9,800 wire from business → mule savings. 9:52 AM — $8,500 follows. By 12:22 PM all funds reach the destination through two mule hops.',tokens:3200,lat:8.4,raw:{txns:[{from:'ACC-A1',to:'ACC-M1',amt:9800,time:'09:34'},{from:'ACC-A1',to:'ACC-M1',amt:8500,time:'09:52'},{from:'ACC-M1',to:'ACC-M2',amt:9200,time:'10:15'},{from:'ACC-M1',to:'ACC-M2',amt:8900,time:'10:38'},{from:'ACC-M2',to:'ACC-D1',amt:8800,time:'11:01'},{from:'ACC-M2',to:'ACC-D1',amt:9100,time:'11:22'}]}},
+    {icon:'🛡️',title:'Cleanup',text:'Self-review catches near-identical amounts on final leg. Adjusts $8,800 → $8,362 and $9,100 → $9,541 to break the pattern. Consistency check passes.',tokens:580,lat:1.7,raw:{check:'PASS',corrections:['Adjusted M2→D1 amounts to break exact-match pattern'],risk:'Medium — burst timing aggressive but amounts structured'}}
+  ]
+};
+
+const COV_GRID = [
+  {hop:2,topo:'chain',st:'done',p:'P-04',sc:7.2,att:1},{hop:2,topo:'fan_out',st:'done',p:'P-02',sc:8.1,att:1},{hop:2,topo:'hybrid',st:'done',p:'P-05',sc:7.5,att:1},
+  {hop:3,topo:'chain',st:'done',p:'P-01',sc:8.7,att:1},{hop:3,topo:'fan_out',st:'done',p:'P-04',sc:7.6,att:1},{hop:3,topo:'hybrid',st:'done',p:'P-01',sc:7.9,att:1},
+  {hop:4,topo:'chain',st:'done',p:'P-05',sc:8.0,att:1},{hop:4,topo:'fan_out',st:'done',p:'P-01',sc:7.8,att:2},{hop:4,topo:'hybrid',st:'done',p:'P-01',sc:8.9,att:1},
+  {hop:6,topo:'chain',st:'reassign',p:'P-03',sc:8.5,att:2},{hop:6,topo:'fan_out',st:'fail',p:'P-02',sc:5.8,att:2},{hop:6,topo:'hybrid',st:'done',p:'P-03',sc:9.1,att:1}
+];
+
+const ERRORS = [
+  {ts:'14:34:52',stage:'Constructor',v:'V-002',sev:'Warning',msg:'Attempt 1 failed critic — realism 5.1',res:'Revision loop'},
+  {ts:'14:35:08',stage:'Schema',v:'V-004',sev:'Warning',msg:'transactions[].amount out of range',res:'Auto-corrected'},
+  {ts:'14:35:22',stage:'Critic',v:'V-004',sev:'Warning',msg:'Failed twice — timing uniform, round amounts',res:'Revision loop'},
+  {ts:'14:35:41',stage:'Critic',v:'V-012',sev:'Warning',msg:'Missing cover activity in first attempt',res:'Revision loop'},
+  {ts:'14:36:15',stage:'Critic',v:'V-015',sev:'Error',msg:'Permanently failed — below floor after 2 attempts',res:'Discarded'},
+  {ts:'14:36:30',stage:'Coverage',v:'V-015',sev:'Info',msg:'Cell (6, fan_out) marked failed, auto second-pass',res:'Reassigned'}
+];
+
+// Waterfall timing mock: each variant has start time + phase durations
+const PHASES = ['Persona Analysis','Network Plan','Profiles','Txn Generation','Self-Review','Schema','Critic'];
+const PHASE_COLORS = ['#A78BFA','#60A5FA','#22D3EE','#FB923C','#FBBF24','#34D399','#FF4B4B'];
+const WF_DATA = VARIANTS.map((v,i)=>{
+  const start = 24 + Math.floor(i/5)*22 + (i%5)*2;
+  const phaseDurs = [1.8+Math.random()*1.5, 1.2+Math.random()*1, 2.5+Math.random()*2, 4+Math.random()*4, 0.8+Math.random()*1, 0.5+Math.random()*0.5, 1+Math.random()*1];
+  const totalAttempts = v.att.length;
+  const segments = [];
+  for(let a=0;a<totalAttempts;a++){
+    let t = start + a*(phaseDurs.reduce((s,x)=>s+x,0)+2);
+    phaseDurs.forEach((d,pi)=>{segments.push({phase:PHASES[pi],start:t,dur:d,attempt:a+1});t+=d;});
+  }
+  return {id:v.id,start,segments,failed:!v.pass,attempts:totalAttempts};
+});
+
+// ─── CHART.JS DEFAULTS ──────────────────────────────────────
+Chart.defaults.color = '#8B92A5';
+Chart.defaults.borderColor = '#2E3442';
+Chart.defaults.font.family = "'Inter',system-ui,sans-serif";
+Chart.defaults.font.size = 11;
+Chart.defaults.plugins.legend.labels.boxWidth = 10;
+Chart.defaults.plugins.tooltip.backgroundColor = '#13161E';
+Chart.defaults.plugins.tooltip.borderColor = '#2E3442';
+Chart.defaults.plugins.tooltip.borderWidth = 1;
+Chart.defaults.plugins.tooltip.cornerRadius = 8;
+Chart.defaults.plugins.tooltip.padding = 10;
+
+// ─── TAB SWITCHING ──────────────────────────────────────────
+const inited = new Set(['mission']);
+document.querySelectorAll('.tab').forEach(t=>{
+  t.addEventListener('click',()=>{
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');
+    document.getElementById(t.dataset.tab).classList.add('active');
+    if(!inited.has(t.dataset.tab)){inited.add(t.dataset.tab);initView(t.dataset.tab)}
+  });
+});
+function initView(v){({coverage:initCoverage,constructor:initConstructor,quality:initQuality,operations:initOperations,journey:initJourney})[v]?.()}
+
+// ═══════════════════════════════════════════
+// VIEW 1 — MISSION BRIEF
+// ═══════════════════════════════════════════
+function initMission(){
+  // ── Sunburst ──
+  const hops = [2,3,4,6];
+  const topos = ['chain','fan_out','hybrid'];
+  const timings = ['burst','staggered','delayed'];
+  const root = {name:'Variant Space',children:hops.map(h=>({
+    name:`${h}-hop`,children:topos.map(tp=>({
+      name:tp,children:timings.map(tm=>{
+        const cell=COV_GRID.find(c=>c.hop===h&&c.topo===tp);
+        return {name:tm,value:1,persona:cell?.p||'—',status:cell?.st||'empty',score:cell?.sc||0,hop:h,topo:tp,timing:tm};
+      })
+    }))
+  }))};
+
+  const w=500,h=500,r=w/2;
+  const svg=d3.select('#sunburst-container').append('svg').attr('viewBox',`0 0 ${w} ${h}`).append('g').attr('transform',`translate(${r},${r})`);
+  const hierarchy=d3.hierarchy(root).sum(d=>d.value).sort((a,b)=>b.value-a.value);
+  const partition=d3.partition().size([2*Math.PI,r-10]);
+  partition(hierarchy);
+
+  const arc=d3.arc().startAngle(d=>d.x0).endAngle(d=>d.x1).innerRadius(d=>d.y0+2).outerRadius(d=>d.y1-1);
+  const tip=document.getElementById('sunburst-tooltip');
+
+  svg.selectAll('path').data(hierarchy.descendants().filter(d=>d.depth>0)).join('path')
+    .attr('d',arc)
+    .attr('fill',d=>{
+      if(d.depth===3){const p=d.data.persona;return P_COLORS[p]||'#3C4354'}
+      if(d.depth===2)return '#252A34';
+      if(d.depth===1)return '#1C2028';
+      return '#13161E';
+    })
+    .attr('stroke','var(--bg)').attr('stroke-width',1.5)
+    .attr('opacity',d=>d.depth===3?.85:.5)
+    .on('mouseover',(e,d)=>{
+      tip.style.display='block';
+      if(d.depth===3)tip.innerHTML=`<strong>${d.data.hop}-hop · ${d.data.topo} · ${d.data.timing}</strong><br>Persona: ${d.data.persona}<br>Status: ${d.data.status}<br>Score: ${d.data.score}`;
+      else if(d.depth===2)tip.innerHTML=`<strong>${d.parent.data.name} → ${d.data.name}</strong><br>${d.children?.length||0} timing variants`;
+      else tip.innerHTML=`<strong>${d.data.name}</strong><br>${d.children?.length||0} topologies`;
+    })
+    .on('mousemove',e=>{tip.style.left=e.clientX+12+'px';tip.style.top=e.clientY-10+'px'})
+    .on('mouseout',()=>{tip.style.display='none'});
+
+  // Center label
+  svg.append('text').attr('text-anchor','middle').attr('dy','-.2em').attr('fill','var(--text)').attr('font-size',14).attr('font-weight',600).text('15 Variants');
+  svg.append('text').attr('text-anchor','middle').attr('dy','1.2em').attr('fill','var(--text2)').attr('font-size',11).text('5 dims · 12 cells');
+
+  // Ring labels
+  const ringLabels = [{r:70,t:'hop_count'},{r:145,t:'topology'},{r:210,t:'timing'}];
+  ringLabels.forEach(l=>{
+    svg.append('text').attr('x',0).attr('y',-l.r+12).attr('text-anchor','middle').attr('fill','var(--text3)').attr('font-size',8).attr('font-weight',600).attr('letter-spacing','1px').text(l.t.toUpperCase());
+  });
+
+  // ── Persona Cards ──
+  const cards=document.getElementById('personaCards');
+  PERSONAS.forEach(p=>{
+    const riskBg=p.risk==='High'?'var(--red)':p.risk==='Mid'?'var(--yellow)':'var(--green)';
+    cards.innerHTML+=`
+    <div class="p-card">
+      <div class="risk-bar" style="background:${riskBg}"></div>
+      <div class="p-card-body">
+        <div class="name">${p.name}</div>
+        <div class="pid">${p.id} · ${p.risk} Risk</div>
+        <div class="spec">${p.spec}</div>
+        <div class="tags">${p.evasion.map(e=>`<span class="tag">${e}</span>`).join('')}<span class="tag" style="background:${P_COLORS[p.id]}22;color:${P_COLORS[p.id]}">${p.region}</span></div>
+        <div class="stats"><span>Net: <strong>${p.netSize}</strong></span><span>Cells: <strong>${p.cells}</strong></span></div>
+      </div>
+    </div>`;
+  });
+
+  // ── Risk Distribution ──
+  new Chart(document.getElementById('riskDistChart'),{
+    type:'bar',
+    data:{labels:['High','Mid','Low'],datasets:[
+      {label:'Configured',data:[33,34,33],backgroundColor:'#60A5FA88',borderRadius:4},
+      {label:'Actual',data:[40,33,27],backgroundColor:'#FF4B4B88',borderRadius:4}
+    ]},
+    options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:50}},plugins:{legend:{position:'bottom'}}}
+  });
+}
+
+// ═══════════════════════════════════════════
+// VIEW 2 — COVERAGE
+// ═══════════════════════════════════════════
+function initCoverage(){
+  const grid=document.getElementById('covGrid');
+  const hopLabels=[2,3,4,6];
+  COV_GRID.forEach((c,i)=>{
+    const cls='cov-cell cov-'+({done:'done',fail:'fail',reassign:'reassign'}[c.st]||'empty');
+    grid.innerHTML+=`<div class="${cls}" title="${c.p} · Attempt ${c.att}">
+      <div class="cid">${c.hop}h · ${c.topo}</div>
+      <div class="cscore">${c.p} · ${c.sc}</div>
+      <div class="cscore">${c.att>1?'Att '+c.att:''}</div>
+    </div>`;
+  });
+
+  const log=document.getElementById('transitionLog');
+  [
+    {t:'14:34:50',m:'cell_001: <span class="in">assigned → in_progress</span> (P-04, attempt 1)'},
+    {t:'14:34:51',m:'cell_002: <span class="in">assigned → in_progress</span> (P-02, attempt 1)'},
+    {t:'14:34:51',m:'cell_003: <span class="in">assigned → in_progress</span> (P-05, attempt 1)'},
+    {t:'14:34:53',m:'cell_001: <span class="ok">in_progress → completed</span> (score: 7.2)'},
+    {t:'14:34:55',m:'cell_004: <span class="in">assigned → in_progress</span> (P-01, attempt 1)'},
+    {t:'14:34:58',m:'cell_002: <span class="ok">in_progress → completed</span> (score: 8.1)'},
+    {t:'14:35:02',m:'cell_005: <span class="in">assigned → in_progress</span> (P-01, attempt 1)'},
+    {t:'14:35:05',m:'cell_005: <span class="wr">in_progress → failed</span> (realism=5.1) → revision attempt 2'},
+    {t:'14:35:12',m:'cell_005: <span class="ok">in_progress → completed</span> (score: 7.8)'},
+    {t:'14:35:30',m:'cell_011: <span class="er">in_progress → failed</span> (score: 5.8) → discarded'},
+    {t:'14:35:31',m:'cell_011: <span class="wr">reassigned</span> → P-03 (auto second-pass)'},
+    {t:'14:36:10',m:'cell_010: <span class="ok">reassigned → completed</span> (score: 8.5)'},
+    {t:'14:36:28',m:'<span class="ok">All cells processed. Coverage: 91.7%</span>'},
+  ].forEach(l=>{log.innerHTML+=`<div class="log-line"><span class="ts">[${l.t}]</span> ${l.m}</div>`});
+}
+
+// ═══════════════════════════════════════════
+// VIEW 3 — CONSTRUCTOR
+// ═══════════════════════════════════════════
+function initConstructor(){
+  const sel=document.getElementById('variantSelect');
+  VARIANTS.forEach(v=>{sel.innerHTML+=`<option value="${v.id}">${v.id} · ${v.hop}-hop ${v.topo} ${v.pass?'':'— FAILED'}</option>`});
+  renderConstructor();
+}
+
+function renderConstructor(){
+  const vid=document.getElementById('variantSelect').value||'V-001';
+  const v=VARIANTS.find(x=>x.id===vid);
+  document.getElementById('variantBadge').innerHTML=v.pass?'<span class="badge badge-pass">PASSED</span>':'<span class="badge badge-fail">FAILED</span>';
+
+  // Storyboard
+  const sb=document.getElementById('storyboard');sb.innerHTML='';
+  const steps=STORIES[vid]||STORIES['V-001'];
+  steps.forEach(s=>{
+    const card=document.createElement('div');card.className='scene';
+    card.innerHTML=`<div class="scene-icon">${s.icon}</div><div class="scene-title">${s.title}</div><div class="scene-text">${s.text}</div><div class="scene-stats"><span><strong>${s.tokens}</strong> tokens</span><span><strong>${s.lat}s</strong></span></div><div class="scene-raw"><pre>${JSON.stringify(s.raw,null,2)}</pre></div>`;
+    card.onclick=()=>card.classList.toggle('expanded');
+    sb.appendChild(card);
+  });
+
+  // Attempt history
+  const tbody=document.getElementById('attemptBody');tbody.innerHTML='';
+  v.att.forEach((a,i)=>{
+    tbody.innerHTML+=`<tr><td>${i+1}</td><td>${a.r}</td><td>${a.d}</td><td>${a.p?'<span class="badge badge-pass">PASS</span>':'<span class="badge badge-fail">FAIL</span>'}</td><td style="color:var(--text2);max-width:220px;font-size:.75rem">${a.fb||'—'}</td></tr>`;
+  });
+
+  renderNetworkGraph(v);
+  renderMoneyTrail(v);
+}
+
+function renderNetworkGraph(v){
+  const svg=d3.select('#network-graph');svg.selectAll('*').remove();
+  const container=svg.node().parentElement;
+  const w=container.clientWidth||800,h=420;
+  svg.attr('width',w).attr('height',h).attr('viewBox',`0 0 ${w} ${h}`);
+  const tip=document.getElementById('net-tooltip');
+
+  // Build full transaction set from story data
+  const steps=STORIES[v.id]||STORIES['V-001'];
+  const txnStep=steps[3]; // Execution step
+  const txns=txnStep?.raw?.txns||[];
+
+  // Build nodes from transactions
+  const nodeMap=new Map();
+  const addAcc=(id,role)=>{if(!nodeMap.has(id))nodeMap.set(id,{id,role,label:id.replace('ACC-',''),txnCount:0})};
+
+  // Derive accounts from variant structure
+  const accounts=[{id:'ACC-SRC',role:'source',label:'Source'},{id:'ACC-DST',role:'destination',label:'Destination'}];
+  for(let i=1;i<=v.hop;i++)accounts.push({id:`ACC-M${i}`,role:'mule',label:`Mule ${i}`});
+  if(v.cover==='high')accounts.push({id:'ACC-COV',role:'cover',label:'Cover Acct'});
+  accounts.forEach(a=>nodeMap.set(a.id,{...a,txnCount:0}));
+
+  // Build edges from variant params
+  const edges=[];
+  const baseAmounts=[9800,8500,9200,8900,8800,9100,7600,6200,4800,3500];
+  let edgeIdx=0;
+  // Main chain/fan-out
+  const mainNodes=accounts.filter(a=>a.role!=='cover');
+  for(let i=0;i<mainNodes.length-1;i++){
+    const amt=baseAmounts[edgeIdx%baseAmounts.length]+Math.round(Math.random()*500-250);
+    const hour=10+Math.floor(edgeIdx*0.8);
+    const min=Math.round(Math.random()*59);
+    edges.push({source:mainNodes[i].id,target:mainNodes[i+1].id,amount:amt,time:`${hour}:${String(min).padStart(2,'0')}`,channel:'wire_domestic',fraudRole:i===0?'placement':i<mainNodes.length-2?'layering':'extraction'});
+    edgeIdx++;
+    // Fan-out: extra edge from source to second mule
+    if(v.topo==='fan_out'&&i===0&&mainNodes.length>3){
+      const amt2=baseAmounts[edgeIdx%baseAmounts.length]+Math.round(Math.random()*400);
+      edges.push({source:mainNodes[0].id,target:mainNodes[2].id,amount:amt2,time:`${hour}:${String(min+8).padStart(2,'0')}`,channel:'wire_domestic',fraudRole:'placement'});
+      edgeIdx++;
+    }
+  }
+  // Cover activity
+  if(v.cover==='high'){
+    edges.push({source:'ACC-SRC',target:'ACC-COV',amount:342,time:'09:15',channel:'card_debit',fraudRole:'cover'});
+    edges.push({source:'ACC-COV',target:'ACC-SRC',amount:128,time:'09:48',channel:'card_debit',fraudRole:'cover'});
+    edges.push({source:'ACC-SRC',target:'ACC-COV',amount:67,time:'11:30',channel:'restaurant',fraudRole:'cover'});
+  }
+  // Hybrid adds a lateral mule-to-mule link
+  if(v.topo==='hybrid'&&v.hop>=3){
+    edges.push({source:'ACC-M1',target:`ACC-M${v.hop}`,amount:Math.round(3000+Math.random()*2000),time:'11:45',channel:'wire_domestic',fraudRole:'layering'});
+  }
+
+  const nodes=Array.from(nodeMap.values());
+  const roleColor={source:'#F87171',mule:'#FB923C',destination:'#B91C1C',cover:'#6B7280'};
+  const fraudRoleColor={placement:'#F87171',layering:'#FB923C',extraction:'#B91C1C',cover:'#4B5563'};
+
+  // Arrow marker
+  const defs=svg.append('defs');
+  defs.append('marker').attr('id','net-arrow').attr('viewBox','0 0 10 10').attr('refX',28).attr('refY',5).attr('markerWidth',6).attr('markerHeight',6).attr('orient','auto')
+    .append('path').attr('d','M0,0 L10,5 L0,10 Z').attr('fill','#8B92A5');
+  // Glow filter
+  const filter=defs.append('filter').attr('id','glow').attr('x','-50%').attr('y','-50%').attr('width','200%').attr('height','200%');
+  filter.append('feGaussianBlur').attr('stdDeviation','3').attr('result','blur');
+  filter.append('feMerge').selectAll('feMergeNode').data(['blur','SourceGraphic']).join('feMergeNode').attr('in',d=>d);
+
+  // Force simulation
+  const simLinks=edges.map(e=>({...e,source:e.source,target:e.target}));
+  const sim=d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(simLinks).id(d=>d.id).distance(120))
+    .force('charge',d3.forceManyBody().strength(-500))
+    .force('center',d3.forceCenter(w/2,h/2))
+    .force('collision',d3.forceCollide(40))
+    .force('x',d3.forceX(d=>{
+      if(d.role==='source')return w*0.15;
+      if(d.role==='destination')return w*0.85;
+      if(d.role==='cover')return w*0.15;
+      return w*0.5;
+    }).strength(.15))
+    .force('y',d3.forceY(d=>{
+      if(d.role==='cover')return h*0.8;
+      return h*0.45;
+    }).strength(.1));
+
+  // Edge lines
+  const link=svg.selectAll('.net-edge').data(simLinks).join('line')
+    .attr('class','edge-animated')
+    .attr('stroke',d=>fraudRoleColor[d.fraudRole]||'#4B5563')
+    .attr('stroke-width',d=>Math.max(2,d.amount/3000))
+    .attr('stroke-opacity',.6)
+    .attr('marker-end','url(#net-arrow)')
+    .on('mouseover',(e,d)=>{
+      tip.style.display='block';
+      tip.innerHTML=`<strong>$${d.amount.toLocaleString()}</strong><br>${typeof d.source==='object'?d.source.label:d.source} → ${typeof d.target==='object'?d.target.label:d.target}<br>Time: ${d.time} · ${d.channel}<br>Role: <span style="color:${fraudRoleColor[d.fraudRole]}">${d.fraudRole}</span>`;
+    })
+    .on('mousemove',e=>{tip.style.left=e.clientX+14+'px';tip.style.top=e.clientY-12+'px'})
+    .on('mouseout',()=>{tip.style.display='none'});
+
+  // Edge amount labels
+  const linkLabel=svg.selectAll('.net-label').data(simLinks).join('text')
+    .attr('fill','var(--text3)').attr('font-size',9).attr('text-anchor','middle')
+    .text(d=>'$'+d.amount.toLocaleString());
+
+  // Node groups
+  const node=svg.selectAll('.net-node').data(nodes).join('g').attr('cursor','grab')
+    .call(d3.drag().on('start',(e,d)=>{if(!e.active)sim.alphaTarget(.3).restart();d.fx=d.x;d.fy=d.y})
+      .on('drag',(e,d)=>{d.fx=e.x;d.fy=e.y})
+      .on('end',(e,d)=>{if(!e.active)sim.alphaTarget(0);d.fx=null;d.fy=null}));
+
+  // Draw shapes per role
+  node.each(function(d){
+    const g=d3.select(this);
+    const c=roleColor[d.role];
+    if(d.role==='mule'){
+      // Diamond
+      g.append('rect').attr('width',24).attr('height',24).attr('x',-12).attr('y',-12).attr('transform','rotate(45)').attr('fill',c).attr('stroke',c).attr('stroke-width',2).attr('fill-opacity',.25).attr('rx',3).attr('filter','url(#glow)');
+      g.append('rect').attr('width',24).attr('height',24).attr('x',-12).attr('y',-12).attr('transform','rotate(45)').attr('fill','none').attr('stroke',c).attr('stroke-width',2).attr('rx',3);
+    } else if(d.role==='destination'){
+      // Square
+      g.append('rect').attr('width',28).attr('height',28).attr('x',-14).attr('y',-14).attr('fill',c).attr('fill-opacity',.25).attr('stroke',c).attr('stroke-width',2).attr('rx',4).attr('filter','url(#glow)');
+      g.append('rect').attr('width',28).attr('height',28).attr('x',-14).attr('y',-14).attr('fill','none').attr('stroke',c).attr('stroke-width',2).attr('rx',4);
+    } else if(d.role==='cover'){
+      // Triangle
+      g.append('polygon').attr('points','0,-16 14,12 -14,12').attr('fill',c).attr('fill-opacity',.2).attr('stroke',c).attr('stroke-width',2);
+    } else {
+      // Circle (source)
+      g.append('circle').attr('r',16).attr('fill',c).attr('fill-opacity',.25).attr('stroke',c).attr('stroke-width',2).attr('filter','url(#glow)');
+      g.append('circle').attr('r',16).attr('fill','none').attr('stroke',c).attr('stroke-width',2);
+    }
+    // Label
+    g.append('text').text(d.label).attr('dy',32).attr('text-anchor','middle').attr('fill','var(--text)').attr('font-size',11).attr('font-weight',500);
+    // Role subtitle
+    g.append('text').text(d.role).attr('dy',44).attr('text-anchor','middle').attr('fill','var(--text3)').attr('font-size',8).attr('text-transform','uppercase').attr('letter-spacing','1px');
+  });
+
+  // Hover on nodes
+  node.on('mouseover',(e,d)=>{
+    const inEdges=simLinks.filter(l=>(l.target.id||l.target)===d.id);
+    const outEdges=simLinks.filter(l=>(l.source.id||l.source)===d.id);
+    const totalIn=inEdges.reduce((s,l)=>s+l.amount,0);
+    const totalOut=outEdges.reduce((s,l)=>s+l.amount,0);
+    tip.style.display='block';
+    tip.innerHTML=`<strong>${d.label}</strong> (${d.role})<br>Inflow: $${totalIn.toLocaleString()} (${inEdges.length} txns)<br>Outflow: $${totalOut.toLocaleString()} (${outEdges.length} txns)`;
+  }).on('mousemove',e=>{tip.style.left=e.clientX+14+'px';tip.style.top=e.clientY-12+'px'})
+  .on('mouseout',()=>{tip.style.display='none'});
+
+  sim.on('tick',()=>{
+    // Clamp to bounds
+    nodes.forEach(d=>{d.x=Math.max(30,Math.min(w-30,d.x));d.y=Math.max(30,Math.min(h-30,d.y))});
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    linkLabel.attr('x',d=>(d.source.x+d.target.x)/2).attr('y',d=>(d.source.y+d.target.y)/2-8);
+    node.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
+
+function renderMoneyTrail(v){
+  const svg=d3.select('#money-trail');svg.selectAll('*').remove();
+  const container=svg.node().parentElement;
+  const w=container.clientWidth||600,h=380;
+  svg.attr('width',w).attr('height',h).attr('viewBox',`0 0 ${w} ${h}`);
+
+  // Build nodes
+  const nodes=[{id:'SRC',role:'source',label:'Source',shape:'circle'}];
+  for(let i=1;i<=v.hop;i++)nodes.push({id:`M${i}`,role:'mule',label:`Mule ${i}`,shape:'diamond',hop:i});
+  nodes.push({id:'DST',role:'destination',label:'Destination',shape:'rect'});
+  if(v.cover==='high'){nodes.push({id:'COV',role:'cover',label:'Cover Acct',shape:'triangle'})}
+
+  const links=[];
+  for(let i=0;i<nodes.length-(v.cover==='high'?1:0)-1;i++){
+    links.push({source:nodes[i].id,target:nodes[i+1].id,amount:Math.round(7000+Math.random()*3000)});
+    if(v.topo==='fan_out'&&i===0)links.push({source:nodes[0].id,target:nodes[Math.min(2,nodes.length-2)].id,amount:Math.round(4000+Math.random()*2000)});
+  }
+  if(v.cover==='high'){
+    links.push({source:'SRC',target:'COV',amount:Math.round(200+Math.random()*600)});
+    links.push({source:'COV',target:'SRC',amount:Math.round(100+Math.random()*300)});
+  }
+
+  const roleColor={source:'#F87171',mule:'#FB923C',destination:'#B91C1C',cover:'#6B7280'};
+  const sim=d3.forceSimulation(nodes)
+    .force('link',d3.forceLink(links).id(d=>d.id).distance(100))
+    .force('charge',d3.forceManyBody().strength(-400))
+    .force('center',d3.forceCenter(w/2,h/2))
+    .force('y',d3.forceY(h/2).strength(.08))
+    .force('x',d3.forceX(w/2).strength(.05));
+
+  // Arrow marker
+  svg.append('defs').append('marker').attr('id','arrow').attr('viewBox','0 0 10 10').attr('refX',22).attr('refY',5).attr('markerWidth',5).attr('markerHeight',5).attr('orient','auto')
+    .append('path').attr('d','M0,0 L10,5 L0,10 Z').attr('fill','#8B92A5');
+
+  const tip=document.getElementById('trail-tooltip');
+
+  // Edges
+  const link=svg.selectAll('.edge').data(links).join('line')
+    .attr('class','edge-animated')
+    .attr('stroke',d=>{const s=nodes.find(n=>n.id===d.source.id||n.id===d.source);return s?.role==='cover'?'#6B728044':'#FF4B4B44'})
+    .attr('stroke-width',d=>Math.max(2,d.amount/2500))
+    .attr('marker-end','url(#arrow)')
+    .on('mouseover',(e,d)=>{tip.style.display='block';tip.innerHTML=`<strong>$${d.amount.toLocaleString()}</strong><br>${typeof d.source==='object'?d.source.label:d.source} → ${typeof d.target==='object'?d.target.label:d.target}`})
+    .on('mousemove',e=>{tip.style.left=e.clientX+12+'px';tip.style.top=e.clientY-10+'px'})
+    .on('mouseout',()=>{tip.style.display='none'});
+
+  // Nodes
+  const node=svg.selectAll('.node').data(nodes).join('g').attr('cursor','default');
+  node.each(function(d){
+    const g=d3.select(this);
+    const c=roleColor[d.role];
+    if(d.shape==='diamond')g.append('rect').attr('width',22).attr('height',22).attr('x',-11).attr('y',-11).attr('transform','rotate(45)').attr('fill',c).attr('rx',3);
+    else if(d.shape==='rect')g.append('rect').attr('width',24).attr('height',24).attr('x',-12).attr('y',-12).attr('fill',c).attr('rx',4);
+    else if(d.shape==='triangle')g.append('polygon').attr('points','0,-14 12,10 -12,10').attr('fill',c);
+    else g.append('circle').attr('r',14).attr('fill',c);
+    g.append('text').text(d.label).attr('dy',28).attr('text-anchor','middle').attr('fill','var(--text2)').attr('font-size',10).attr('font-weight',500);
+  });
+
+  node.append('title').text(d=>`${d.label} (${d.role})`);
+
+  sim.on('tick',()=>{
+    link.attr('x1',d=>d.source.x).attr('y1',d=>d.source.y).attr('x2',d=>d.target.x).attr('y2',d=>d.target.y);
+    node.attr('transform',d=>`translate(${d.x},${d.y})`);
+  });
+}
+
+// ═══════════════════════════════════════════
+// VIEW 4 — QUALITY GATE
+// ═══════════════════════════════════════════
+function initQuality(){
+  // ── Quality Battlefield (D3 scatter with revision trails) ──
+  const svg=d3.select('#quality-battlefield');
+  const container=svg.node().parentElement;
+  const W=container.clientWidth||700,H=420;
+  const margin={top:30,right:30,bottom:50,left:55};
+  const iw=W-margin.left-margin.right,ih=H-margin.top-margin.bottom;
+  svg.attr('width',W).attr('height',H);
+  const g=svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+
+  const x=d3.scaleLinear().domain([3,10]).range([0,iw]);
+  const y=d3.scaleLinear().domain([4,10]).range([ih,0]);
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(7)).selectAll('text').attr('fill','var(--text2)');
+  g.append('g').call(d3.axisLeft(y).ticks(6)).selectAll('text').attr('fill','var(--text2)');
+  g.selectAll('.domain,.tick line').attr('stroke','var(--border)');
+  g.append('text').attr('x',iw/2).attr('y',ih+40).attr('text-anchor','middle').attr('fill','var(--text2)').attr('font-size',11).text('Realism Score');
+  g.append('text').attr('transform','rotate(-90)').attr('x',-ih/2).attr('y',-40).attr('text-anchor','middle').attr('fill','var(--text2)').attr('font-size',11).text('Distinctiveness Score');
+
+  // Pass zone
+  g.append('rect').attr('x',x(7)).attr('y',y(10)).attr('width',x(10)-x(7)).attr('height',y(7)-y(10))
+    .attr('fill','#34D39909').attr('stroke','#34D39944').attr('stroke-width',1.5).attr('stroke-dasharray','6 3').attr('rx',4);
+  g.append('text').attr('x',x(7)+6).attr('y',y(10)+14).attr('fill','#34D39966').attr('font-size',10).attr('font-weight',600).text('PASS ZONE');
+
+  // Critic floor lines
+  g.append('line').attr('x1',x(7)).attr('x2',x(7)).attr('y1',0).attr('y2',ih).attr('stroke','#FBBF2433').attr('stroke-dasharray','4 4');
+  g.append('line').attr('x1',0).attr('x2',iw).attr('y1',y(7)).attr('y2',y(7)).attr('stroke','#FBBF2433').attr('stroke-dasharray','4 4');
+
+  const tip=document.getElementById('qb-tooltip');
+
+  // Revision trails
+  VARIANTS.forEach(v=>{
+    if(v.att.length>1){
+      const pts=v.att.map(a=>({x:a.r,y:a.d}));
+      // Trail line
+      const line=d3.line().x(d=>x(d.x)).y(d=>y(d.y)).curve(d3.curveLinear);
+      g.append('path').datum(pts).attr('d',line).attr('fill','none').attr('stroke',v.pass?'#34D39933':'#F8717133').attr('stroke-width',1.5).attr('stroke-dasharray','3 3');
+      // Ghost dots (previous attempts)
+      pts.slice(0,-1).forEach((p,i)=>{
+        g.append('circle').attr('cx',x(p.x)).attr('cy',y(p.y)).attr('r',5).attr('fill','none').attr('stroke',v.pass?'#34D39955':'#F8717155').attr('stroke-width',1.5).attr('stroke-dasharray','2 2');
+      });
+    }
+  });
+
+  // Final dots
+  VARIANTS.forEach(v=>{
+    const dot=g.append('circle').attr('cx',x(v.r)).attr('cy',y(v.d)).attr('r',7)
+      .attr('fill',v.pass?'#34D399':'#F87171').attr('stroke',v.pass?'#34D399':'#F87171').attr('stroke-width',2).attr('fill-opacity',.7)
+      .attr('cursor','pointer');
+    // Hover
+    dot.on('mouseover',e=>{
+      tip.style.display='block';
+      const fb=v.att.filter(a=>!a.p).map(a=>a.fb).filter(Boolean).join('; ');
+      tip.innerHTML=`<strong>${v.id}</strong> · ${PERSONAS.find(p=>p.id===v.p)?.name}<br>Realism: ${v.r} · Distinct: ${v.d}<br>Attempts: ${v.att.length} · ${v.pass?'<span style="color:var(--green)">PASSED</span>':'<span style="color:var(--red)">FAILED</span>'}${fb?'<br><em style="color:var(--text3)">'+fb+'</em>':''}`;
+    }).on('mousemove',e=>{tip.style.left=e.clientX+12+'px';tip.style.top=e.clientY-10+'px'})
+    .on('mouseout',()=>{tip.style.display='none'});
+
+    // Label
+    g.append('text').attr('x',x(v.r)+10).attr('y',y(v.d)+4).attr('fill','var(--text3)').attr('font-size',9).text(v.id);
+  });
+
+  // ── Pass/Fail/Revised Donut ──
+  const first=VARIANTS.filter(v=>v.pass&&v.att.length===1).length;
+  const revised=VARIANTS.filter(v=>v.pass&&v.att.length>1).length;
+  const failed=VARIANTS.filter(v=>!v.pass).length;
+  new Chart(document.getElementById('pfrDonut'),{
+    type:'doughnut',
+    data:{labels:['1st attempt','After revision','Failed'],datasets:[{data:[first,revised,failed],backgroundColor:['#34D399AA','#FBBF24AA','#F87171AA'],borderWidth:0}]},
+    options:{responsive:true,maintainAspectRatio:false,cutout:'58%',plugins:{legend:{position:'bottom'}}}
+  });
+
+  // ── Quality Issues Table ──
+  const tbody=document.getElementById('qualityIssuesBody');
+  const issues=[
+    {v:'V-002',gate:'Critic',issue:'Unrealistic amounts',detail:'Amounts too round, no cover interleaving',sev:'Warning',res:'Revised — passed attempt 2'},
+    {v:'V-004',gate:'Schema',issue:'transactions[].amount',detail:'Out of range on attempt 1',sev:'Warning',res:'Auto-corrected'},
+    {v:'V-004',gate:'Critic',issue:'Timing uniformity',detail:'Timing too uniform, no cover activity',sev:'Warning',res:'Revised — passed attempt 3'},
+    {v:'V-004',gate:'Critic',issue:'Round amounts',detail:'Amounts are round numbers',sev:'Warning',res:'Revised — passed attempt 3'},
+    {v:'V-012',gate:'Critic',issue:'Missing cover',detail:'Missing cover activity, amounts unrealistic',sev:'Warning',res:'Revised — passed attempt 2'},
+    {v:'V-015',gate:'Critic',issue:'Persona inconsistency',detail:'Inconsistent persona behavior, no layering',sev:'Error',res:'Discarded'},
+    {v:'V-015',gate:'Critic',issue:'Below floor',detail:'Still below critic floor after revision',sev:'Error',res:'Discarded'},
+  ];
+  issues.forEach(q=>{
+    const sc=q.sev==='Error'?'badge-fail':'badge-warn';
+    tbody.innerHTML+=`<tr><td>${q.v}</td><td>${q.gate}</td><td>${q.issue}</td><td style="color:var(--text2);font-size:.75rem;max-width:200px">${q.detail}</td><td><span class="badge ${sc}">${q.sev}</span></td><td style="font-size:.75rem">${q.res}</td></tr>`;
+  });
+}
+
+// ═══════════════════════════════════════════
+// VIEW 5 — OPERATIONS
+// ═══════════════════════════════════════════
+function initOperations(){
+  // ── Metric Cards ──
+  const mc=document.getElementById('metricCards');
+  [{v:'15',l:'Variants'},{v:'7.89',l:'Mean Realism'},{v:'7.76',l:'Mean Distinct.'},{v:'91.7%',l:'Coverage'},{v:'$2.34',l:'Total Cost'},{v:'2m 48s',l:'Duration'}]
+    .forEach(m=>{mc.innerHTML+=`<div class="metric"><div class="val">${m.v}</div><div class="lbl">${m.l}</div></div>`});
+
+  // ── Pipeline Waterfall (D3) ──
+  const svg=d3.select('#waterfall-chart');
+  const container=svg.node().parentElement;
+  const W=container.clientWidth||800,H=440;
+  const margin={top:30,right:20,bottom:40,left:55};
+  const iw=W-margin.left-margin.right,ih=H-margin.top-margin.bottom;
+  svg.attr('width',W).attr('height',H);
+  const g=svg.append('g').attr('transform',`translate(${margin.left},${margin.top})`);
+
+  const maxTime=Math.max(...WF_DATA.flatMap(d=>d.segments.map(s=>s.start+s.dur)))+5;
+  const x=d3.scaleLinear().domain([0,maxTime]).range([0,iw]);
+  const y=d3.scaleBand().domain(WF_DATA.map(d=>d.id)).range([0,ih]).padding(.2);
+
+  // Axes
+  g.append('g').attr('transform',`translate(0,${ih})`).call(d3.axisBottom(x).ticks(10).tickFormat(d=>d+'s')).selectAll('text').attr('fill','var(--text2)');
+  g.append('g').call(d3.axisLeft(y)).selectAll('text').attr('fill','var(--text2)').attr('font-size',9);
+  g.selectAll('.domain,.tick line').attr('stroke','var(--border)');
+
+  const tip=document.getElementById('wf-tooltip');
+
+  // Segments
+  WF_DATA.forEach(vd=>{
+    vd.segments.forEach(s=>{
+      const pi=PHASES.indexOf(s.phase);
+      g.append('rect')
+        .attr('x',x(s.start)).attr('y',y(vd.id)).attr('width',Math.max(1,x(s.start+s.dur)-x(s.start))).attr('height',y.bandwidth())
+        .attr('fill',PHASE_COLORS[pi]).attr('rx',2).attr('opacity',.8).attr('cursor','pointer')
+        .on('mouseover',e=>{tip.style.display='block';tip.innerHTML=`<strong>${vd.id}</strong> · ${s.phase}<br>Start: ${s.start.toFixed(1)}s · Duration: ${s.dur.toFixed(1)}s<br>Attempt ${s.attempt}`})
+        .on('mousemove',e=>{tip.style.left=e.clientX+12+'px';tip.style.top=e.clientY-10+'px'})
+        .on('mouseout',()=>{tip.style.display='none'});
+    });
+    // Failed marker
+    if(vd.failed){
+      const lastSeg=vd.segments[vd.segments.length-1];
+      const ex=x(lastSeg.start+lastSeg.dur)+4;
+      g.append('text').attr('x',ex).attr('y',y(vd.id)+y.bandwidth()/2+4).attr('fill','var(--red)').attr('font-size',12).attr('font-weight',700).text('✕');
+    }
+  });
+
+  // Legend
+  const leg=g.append('g').attr('transform',`translate(0,${ih+25})`);
+  PHASES.forEach((p,i)=>{
+    const lx=i*105;
+    leg.append('rect').attr('x',lx).attr('y',0).attr('width',10).attr('height',10).attr('fill',PHASE_COLORS[i]).attr('rx',2);
+    leg.append('text').attr('x',lx+14).attr('y',9).attr('fill','var(--text3)').attr('font-size',8).text(p);
+  });
+
+  // ── Cost Sparkline ──
+  const times=[0,10,20,30,40,50,60,70,80,90,100,120,140,160,168];
+  const costs=[0,.08,.18,.32,.52,.74,.98,1.22,1.48,1.68,1.88,2.04,2.18,2.30,2.34];
+  new Chart(document.getElementById('costSparkline'),{
+    type:'line',
+    data:{labels:times.map(t=>t+'s'),datasets:[{label:'Cumulative cost ($)',data:costs,borderColor:'#FBBF24',backgroundColor:'#FBBF2411',fill:true,tension:.3,pointRadius:1.5,borderWidth:2}]},
+    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},annotation:{annotations:{cap:{type:'line',yMin:20,yMax:20,borderColor:'#F8717144',borderWidth:1,borderDash:[5,5]}}}},scales:{y:{beginAtZero:true,title:{display:true,text:'$ USD',font:{size:10}}}}}
+  });
+
+  // ── Error Log ──
+  const tbody=document.getElementById('errorLogBody');
+  ERRORS.forEach(e=>{
+    const sc=e.sev==='Error'?'badge-fail':e.sev==='Warning'?'badge-warn':'badge-info';
+    tbody.innerHTML+=`<tr><td style="font-family:monospace;font-size:.72rem">${e.ts}</td><td>${e.stage}</td><td>${e.v}</td><td><span class="badge ${sc}">${e.sev}</span></td><td style="font-size:.75rem;color:var(--text2)">${e.msg}</td><td style="font-size:.75rem">${e.res}</td></tr>`;
+  });
+}
+
+// ═══════════════════════════════════════════
+// VIEW 6 — JOURNEY
+// ═══════════════════════════════════════════
+function initJourney(){
+  const sel=document.getElementById('journeySelect');
+  VARIANTS.forEach(v=>{sel.innerHTML+=`<option value="${v.id}">${v.id} · ${v.hop}-hop ${v.topo} ${v.pass?'':'— FAILED'}</option>`});
+  renderJourney();
+}
+
+function renderJourney(){
+  const vid=document.getElementById('journeySelect').value||'V-001';
+  const v=VARIANTS.find(x=>x.id===vid);
+  const persona=PERSONAS.find(p=>p.id===v.p);
+  const tl=document.getElementById('journeyTimeline');tl.innerHTML='';
+  const steps=STORIES[vid]||STORIES['V-001'];
+
+  let t=0,cumCost=0;
+  const addNode=(cls,text,detail,costDelta)=>{
+    cumCost+=costDelta||0;
+    const node=document.createElement('div');
+    node.className=`tl-node ${cls}`;
+    const ts=`${String(Math.floor(t/60)).padStart(2,'0')}:${String(Math.floor(t%60)).padStart(2,'0')}`;
+    node.innerHTML=`<div class="tl-top"><span class="ts">${ts}</span><span class="tl-text">${text}</span><span class="tl-cost">$${cumCost.toFixed(3)}</span></div>${detail?`<div class="detail">${detail}</div>`:''}`;
+    node.addEventListener('click',()=>node.classList.toggle('expanded'));
+    tl.appendChild(node);
+  };
+
+  addNode('info',`Assigned to cell (hop=${v.hop}, timing=${v.timing}, topology=${v.topo})`,`Cover: ${v.cover} · Extraction: ${v.extract}`);
+  addNode('info',`Persona: ${v.p} ("${persona?.name}")`,`${persona?.spec} · ${persona?.risk} risk · ${persona?.region}`);
+
+  steps.forEach((s,i)=>{
+    t+=s.lat;
+    const costD=(s.tokens/1000)*0.015;
+    addNode('info',`Step ${i+1}: ${s.icon} ${s.title} <span class="badge badge-info" style="font-size:.6rem">${s.tokens} tok · ${s.lat}s</span>`,`<em>"${s.text}"</em><br><pre style="margin-top:6px">${JSON.stringify(s.raw,null,2)}</pre>`,costD);
+  });
+
+  // For each attempt, show schema + critic
+  v.att.forEach((a,i)=>{
+    t+=1;
+    addNode('info','Schema validation: <span class="badge badge-pass">PASS</span>','All required fields present, types validated',0.001);
+    t+=1;
+    if(a.p){
+      addNode('pass',`Critic: realism=${a.r}, distinctiveness=${a.d} <span class="badge badge-pass">PASS</span>`,`Both scores above critic floor (7.0)`,0.02);
+    }else{
+      addNode('fail',`Critic: realism=${a.r}, distinctiveness=${a.d} <span class="badge badge-fail">FAIL</span>`,`Feedback: <em>"${a.fb}"</em>`,0.02);
+      if(i<v.att.length-1){t+=1;addNode('info','Revision attempt '+(i+2),'Re-entering constructor with critic feedback appended to prompt');}
+    }
+  });
+
+  const totalTok=steps.reduce((s,x)=>s+x.tokens,0)*v.att.length;
+  t+=1;
+  addNode(v.pass?'pass':'fail',
+    `Final: $${cumCost.toFixed(3)} · ${totalTok.toLocaleString()} tokens · ${v.att.length} attempt${v.att.length>1?'s':''}`,
+    v.pass?'Variant accepted into output dataset':'Variant discarded — below quality threshold');
+}
+
+// ─── INIT ────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded',initMission);
+</script>
+</body>
+</html>
