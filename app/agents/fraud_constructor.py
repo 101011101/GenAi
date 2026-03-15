@@ -278,18 +278,24 @@ def _repair_constraint_violations(
             if t.get("sender_account_id") in fraud_ids
             or t.get("receiver_account_id") in fraud_ids
         ]
-        fraud_txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
 
-        for i in range(1, len(fraud_txns)):
-            prev_ts = _parse(fraud_txns[i - 1].get("timestamp", ""))
-            curr_ts = _parse(fraud_txns[i].get("timestamp", ""))
-            if prev_ts is None or curr_ts is None:
-                continue
-            if (curr_ts - prev_ts) < min_delta:
-                # Add a small random jitter beyond the minimum so timestamps look organic
-                jitter = timedelta(hours=_random.uniform(0, float(min_interval) * 0.1))
-                new_ts = prev_ts + min_delta + jitter
-                fraud_txns[i]["timestamp"] = new_ts.isoformat()
+        # Re-sort and sweep until no violations remain (handles cascading pushes)
+        for _pass in range(10):
+            fraud_txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
+            fixed_any = False
+            for i in range(1, len(fraud_txns)):
+                prev_ts = _parse(fraud_txns[i - 1].get("timestamp", ""))
+                curr_ts = _parse(fraud_txns[i].get("timestamp", ""))
+                if prev_ts is None or curr_ts is None:
+                    continue
+                if (curr_ts - prev_ts) < min_delta:
+                    # Add a small random jitter beyond the minimum so timestamps look organic
+                    jitter = timedelta(hours=_random.uniform(0, float(min_interval) * 0.1))
+                    new_ts = prev_ts + min_delta + jitter
+                    fraud_txns[i]["timestamp"] = new_ts.isoformat()
+                    fixed_any = True
+            if not fixed_any:
+                break
 
     # 3. ACH settlement floor (1h)
     sorted_all = sorted(
