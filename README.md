@@ -1,7 +1,7 @@
 > [!NOTE]
 > **DRAFT** — This project is a hackathon prototype in active development. Interfaces and output formats are subject to change.
 
-# FraudGen
+# FraudGen [DRAFT]
 
 **Synthetic fraud variant generation via adversarial AI agents — closing the known-unknown gap in ML-based fraud detection.**
 
@@ -13,11 +13,11 @@ FraudGen deploys a Red Team of AI agents that proactively explores fraud variant
 
 1. [The Problem](#1-the-problem)
 2. [The Solution](#2-the-solution)
-3. [How It Works](#3-how-it-works)
-4. [Technical Architecture](#4-technical-architecture)
-5. [Fidelity Levels](#5-fidelity-levels)
-6. [Console Features](#6-console-features)
-7. [Quickstart](#7-quickstart)
+3. [Quickstart](#3-quickstart)
+4. [How It Works](#4-how-it-works)
+5. [Technical Architecture](#5-technical-architecture)
+6. [Fidelity Levels](#6-fidelity-levels)
+7. [Console Features](#7-console-features)
 8. [User Guide](#8-user-guide)
 9. [Output Reference](#9-output-reference)
 10. [Project Status & Roadmap](#10-project-status--roadmap)
@@ -104,7 +104,48 @@ Statistical simulation generates more examples of what you already know. Adversa
 
 ---
 
-## 3. How It Works
+## 3. Quickstart
+
+### Prerequisites
+
+- Python 3.10+
+- An Anthropic API key (for real runs) — or use mock mode (no key needed)
+
+### Setup
+
+```bash
+# Clone and enter the repo
+git clone <this-repo-url>
+cd GenAi
+
+# Create a virtual environment
+python -m venv .venv
+source .venv/bin/activate      # Windows: .venv\Scripts\activate
+
+# Install dependencies
+pip install -r requirements.txt
+
+# Configure your API key
+cp .env.example .env
+# Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
+```
+
+### Run
+
+```bash
+# Real mode (uses API credits)
+streamlit run app.py
+
+# Mock mode (no API key consumed, instant — good for UI dev/testing)
+# In .env, uncomment: FRAUDGEN_MOCK=1
+streamlit run app.py
+```
+
+App opens at `http://localhost:8501`. Demo mode: `http://localhost:8501?demo=true`
+
+---
+
+## 4. How It Works
 
 A fraud analyst enters a natural language fraud description. The system decomposes it, generates a diverse set of criminal personas, and deploys a parallel fleet of AI agents — each exploring a distinct corner of the fraud variant space.
 
@@ -247,7 +288,7 @@ Each node and edge maps directly to rows in `dataset.csv` — the fraud path row
 
 ---
 
-## 4. Technical Architecture
+## 5. Technical Architecture
 
 ### System components
 
@@ -440,7 +481,7 @@ output/runs/                        ← Auto-created per run, gitignored
 
 ---
 
-## 5. Fidelity Levels
+## 6. Fidelity Levels
 
 Controls how deeply sub-agents model fraudster behavior. Cascades through the entire agent hierarchy.
 
@@ -477,7 +518,7 @@ The emergent behavior from these interactions — the mule introducing an unplan
 
 ---
 
-## 6. Console Features
+## 7. Console Features
 
 The Streamlit console is organized around four phases the analyst moves through in a single session.
 
@@ -540,47 +581,6 @@ For live demos with an audience, append `?demo=true` to the URL. Pre-configured 
 - 12 variants, Level 3, Claude Haiku, 5 parallel agents
 - Completes in ~60 seconds
 - Produces: 8+ filled coverage cells, 3 network graphs, full persona gallery
-
----
-
-## 7. Quickstart
-
-### Prerequisites
-
-- Python 3.10+
-- An Anthropic API key (for real runs) — or use mock mode (no key needed)
-
-### Setup
-
-```bash
-# Clone and enter the repo
-git clone <this-repo-url>
-cd GenAi
-
-# Create a virtual environment
-python -m venv .venv
-source .venv/bin/activate      # Windows: .venv\Scripts\activate
-
-# Install dependencies
-pip install -r requirements.txt
-
-# Configure your API key
-cp .env.example .env
-# Edit .env and set: ANTHROPIC_API_KEY=sk-ant-...
-```
-
-### Run
-
-```bash
-# Real mode (uses API credits)
-streamlit run app.py
-
-# Mock mode (no API key consumed, instant — good for UI dev/testing)
-# In .env, uncomment: FRAUDGEN_MOCK=1
-streamlit run app.py
-```
-
-App opens at `http://localhost:8501`. Demo mode: `http://localhost:8501?demo=true`
 
 ---
 
