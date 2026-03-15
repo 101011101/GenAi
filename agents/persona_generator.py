@@ -16,7 +16,12 @@ _PERSONA_GENERATOR_PROMPT_PATH = _PROMPTS_DIR / "persona_generator.txt"
 
 
 def _load_system_prompt() -> str:
-    return _PERSONA_GENERATOR_PROMPT_PATH.read_text(encoding="utf-8")
+    try:
+        return _PERSONA_GENERATOR_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Prompt file not found: {_PERSONA_GENERATOR_PROMPT_PATH}"
+        ) from None
 
 
 # ---------------------------------------------------------------------------
@@ -125,9 +130,7 @@ def _build_response_schema() -> dict:
     """Wrap the Persona JSON schema in an array schema for structured output."""
     persona_schema = Persona.model_json_schema()
 
-    # The LLM client injects the schema into the system prompt and pre-fills
-    # the assistant turn with `{` — this forces a top-level JSON object.
-    # We wrap the array in an object so the pre-fill trick works correctly.
+    # Wrap the array in a top-level object so the LLM returns {"personas": [...]}
     return {
         "type": "object",
         "properties": {

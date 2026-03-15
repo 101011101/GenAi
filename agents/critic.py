@@ -13,8 +13,11 @@ from utils.llm_client import LLMClient
 # ---------------------------------------------------------------------------
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
-with open(_PROMPTS_DIR / "critic.txt", encoding="utf-8") as _f:
-    _CRITIC_SYSTEM_PROMPT = _f.read()
+try:
+    with open(_PROMPTS_DIR / "critic.txt", encoding="utf-8") as _f:
+        _CRITIC_SYSTEM_PROMPT = _f.read()
+except FileNotFoundError:
+    raise RuntimeError(f"Prompt file not found: {_PROMPTS_DIR / 'critic.txt'}") from None
 
 # ---------------------------------------------------------------------------
 # Response schema
@@ -59,7 +62,7 @@ class CriticAgent:
         variant: ValidatedVariant,
         persona: Persona,
         critic_floor: float = 7.0,
-        distinctiveness_floor: float = 6.0,
+        distinctiveness_floor: float | None = None,
     ) -> ScoredVariant:
         """Score the variant and return a ScoredVariant.
 
@@ -72,8 +75,12 @@ class CriticAgent:
         critic_floor:
             Minimum realism score required to pass (default 7.0).
         distinctiveness_floor:
-            Minimum distinctiveness score required to pass (default 6.0).
+            Minimum distinctiveness score required to pass. Defaults to
+            max(5.0, critic_floor - 1.0) to match the critic prompt semantics.
         """
+        if distinctiveness_floor is None:
+            distinctiveness_floor = max(5.0, critic_floor - 1.0)
+
         user_message = (
             f"Critic floor (minimum realism score to pass): {critic_floor}\n"
             f"Distinctiveness floor (minimum distinctiveness score to pass): {distinctiveness_floor}\n\n"

@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import time
 from pathlib import Path
 from typing import Callable
 from uuid import uuid4
@@ -17,8 +18,14 @@ _DATA_DIR = Path(__file__).parent.parent / "data"
 
 
 def _load_json(filename: str) -> dict:
-    with open(_DATA_DIR / filename, encoding="utf-8") as f:
-        return json.load(f)
+    path = _DATA_DIR / filename
+    try:
+        with open(path, encoding="utf-8") as f:
+            return json.load(f)
+    except FileNotFoundError:
+        raise RuntimeError(f"Required data file not found: {path}") from None
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"Malformed JSON in data file {path}: {e}") from e
 
 
 _MCC_STATS = _load_json("mcc_stats.json")
@@ -31,8 +38,13 @@ _REG_THRESHOLDS = _load_json("regulatory_thresholds.json")
 # ---------------------------------------------------------------------------
 _PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
 
-with open(_PROMPTS_DIR / "fraud_constructor.txt", encoding="utf-8") as _f:
-    _BASE_SYSTEM_PROMPT = _f.read()
+try:
+    with open(_PROMPTS_DIR / "fraud_constructor.txt", encoding="utf-8") as _f:
+        _BASE_SYSTEM_PROMPT = _f.read()
+except FileNotFoundError:
+    raise RuntimeError(
+        f"Prompt file not found: {_PROMPTS_DIR / 'fraud_constructor.txt'}"
+    ) from None
 
 # Inject all four grounding data files into the system prompt as reference context
 _GROUNDING_BLOCK = f"""
@@ -97,14 +109,14 @@ _NETWORK_PLAN_SCHEMA = {
         "topology": {"type": "string"},
         "timing_interval_hrs": {"type": "number"},
         "amount_logic": {"type": "string"},
-        "cover_activity_level": {"type": "string"},
+        "cover_activity": {"type": "string"},
         "extraction_method": {"type": "string"},
         "geographic_spread": {"type": "string"},
         "rationale": {"type": "string"},
     },
     "required": [
         "hop_count", "topology", "timing_interval_hrs", "amount_logic",
-        "cover_activity_level", "extraction_method", "geographic_spread", "rationale",
+        "cover_activity", "extraction_method", "geographic_spread", "rationale",
     ],
 }
 
@@ -216,6 +228,7 @@ class FraudConstructorAgent:
         cell_assignment: dict,
         critic_feedback: str = "",
         on_strategy_text: Callable[[str], None] | None = None,
+        on_step: Callable[[str], None] | None = None,
     ) -> RawVariant:
         """Execute the five-step reasoning chain and return a RawVariant.
 
@@ -240,6 +253,8 @@ class FraudConstructorAgent:
         # ------------------------------------------------------------------
         # Step 1 — Persona analysis
         # ------------------------------------------------------------------
+        if on_step:
+            on_step("Step 1/5: Persona analysis — running…")
         step1_messages = [
             {
                 "role": "user",
@@ -253,43 +268,69 @@ class FraudConstructorAgent:
                 ),
             }
         ]
+        _t0 = time.perf_counter()
         persona_analysis: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=step1_messages,
             model=self._MODEL,
             response_schema=_PERSONA_ANALYSIS_SCHEMA,
-            timeout=30.0,
+            timeout=None,
         )
+        if on_step:
+            on_step(f"Step 1/5: Persona analysis — done ({time.perf_counter() - _t0:.1f}s)")
 
         # ------------------------------------------------------------------
         # Step 2 — Network planning
         # ------------------------------------------------------------------
+        if on_step:
+            on_step(
+                f"Step 2/5: Network planning — running… "
+                f"(evasion targets: {', '.join(persona_analysis.get('evasion_targets', [])[:2])})"
+            )
         step2_messages = step1_messages + [
             {"role": "assistant", "content": json.dumps(persona_analysis)},
             {
                 "role": "user",
                 "content": (
                     "STEP 2: NETWORK PLANNING\n\n"
+                    "CONFLICT RESOLUTION RULE: The cell assignment defines MANDATORY structural "
+                    "parameters (hop_count, topology, extraction_method, etc.). The persona defines "
+                    "BEHAVIORAL constraints (risk tolerance, resources, timeline). When they conflict:\n"
+                    "- For HARD persona constraints (persona has no crypto access, no international reach, "
+                    "limited mule count): the PERSONA wins. Override the cell parameter and note the "
+                    "conflict in the rationale field.\n"
+                    "- For SOFT quantitative choices (cell says hop_count=5, persona prefers 3): "
+                    "use the CELL value and adapt the persona's behavior to make it plausible.\n"
+                    "Never silently ignore either constraint — always document any conflict in rationale.\n\n"
                     "Using the persona analysis above and the cell assignment, decide the "
                     "specific operational parameters for this fraud network. Every decision "
                     "must follow logically from the persona's constraints and fears — not be "
                     "arbitrary. Return a JSON object with hop_count, topology, "
-                    "timing_interval_hrs, amount_logic, cover_activity_level, "
+                    "timing_interval_hrs, amount_logic, cover_activity, "
                     "extraction_method, geographic_spread, and rationale."
                 ),
             },
         ]
+        _t0 = time.perf_counter()
         network_plan: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=step2_messages,
             model=self._MODEL,
             response_schema=_NETWORK_PLAN_SCHEMA,
-            timeout=30.0,
+            timeout=None,
         )
+        if on_step:
+            on_step(f"Step 2/5: Network planning — done ({time.perf_counter() - _t0:.1f}s)")
 
         # ------------------------------------------------------------------
         # Step 3 — Participant profiles
         # ------------------------------------------------------------------
+        if on_step:
+            on_step(
+                f"Step 3/5: Participant profiles — running… "
+                f"({network_plan.get('hop_count', '?')}-hop {network_plan.get('topology', '?')}, "
+                f"{network_plan.get('extraction_method', '?')} extraction)"
+            )
         step3_messages = step2_messages + [
             {"role": "assistant", "content": json.dumps(network_plan)},
             {
@@ -306,13 +347,16 @@ class FraudConstructorAgent:
                 ),
             },
         ]
+        _t0 = time.perf_counter()
         participant_profiles: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=step3_messages,
             model=self._MODEL,
             response_schema=_PARTICIPANT_PROFILES_SCHEMA,
-            timeout=30.0,
+            timeout=None,
         )
+        if on_step:
+            on_step(f"Step 3/5: Participant profiles — done ({time.perf_counter() - _t0:.1f}s)")
 
         # ------------------------------------------------------------------
         # Step 4 — Transaction generation (streaming)
@@ -364,31 +408,28 @@ class FraudConstructorAgent:
             {"role": "user", "content": step4_prompt},
         ]
 
-        # Stream step 4 so the console can surface live text
-        raw_step4_text: str = await self._client.call_streaming(
+        if on_step:
+            acct_count = len(participant_profiles.get("accounts", []))
+            on_step(f"Step 4/5: Transaction generation — running… ({acct_count} accounts)")
+        _t0 = time.perf_counter()
+        step4_data: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=step4_messages,
             model=self._MODEL,
-            on_text=on_strategy_text,
+            response_schema=_SELF_REVIEW_SCHEMA,
+            timeout=None,
         )
-
-        # Parse the streamed JSON — extract from text in case of preamble
-        try:
-            step4_data: dict = json.loads(raw_step4_text)
-        except json.JSONDecodeError:
-            # Best-effort extraction if model added prose around the JSON
-            start = raw_step4_text.find("{")
-            end = raw_step4_text.rfind("}")
-            if start != -1 and end != -1 and end > start:
-                step4_data = json.loads(raw_step4_text[start : end + 1])
-            else:
-                raise ValueError(
-                    f"Step 4 returned non-JSON output: {raw_step4_text[:300]}"
-                )
+        if on_strategy_text:
+            on_strategy_text(step4_data.get("strategy_description", ""))
+        if on_step:
+            on_step(f"Step 4/5: Transaction generation — done ({time.perf_counter() - _t0:.1f}s)")
 
         # ------------------------------------------------------------------
         # Step 5 — Self-review
         # ------------------------------------------------------------------
+        if on_step:
+            txn_count = len(step4_data.get("transactions", []))
+            on_step(f"Step 5/5: Self-review — running… ({txn_count} transactions)")
         step5_messages = step4_messages + [
             {"role": "assistant", "content": json.dumps(step4_data)},
             {
@@ -402,9 +443,16 @@ class FraudConstructorAgent:
                     "3. Are all fraud_role labels accurate for each transaction's position?\n"
                     "4. Does the topology (chain/fan_out/hybrid) match the "
                     "sender→receiver flow in the transactions?\n"
-                    "5. Does the overall behavior match the persona's constraints? "
-                    "(time-pressured persona should not have 7-day intervals; "
-                    "risk-averse persona should not skip cover activity)\n"
+                    "5. STRUCTURED PERSONA AUDIT — check each constraint individually:\n"
+                    "   a. risk_tolerance=low → timing_interval_hrs must be >= 12, "
+                    "cover_activity must be 'low' or 'high', no same-day multi-hop.\n"
+                    "   b. risk_tolerance=high → timing_interval_hrs < 6 is acceptable.\n"
+                    "   c. timeline_pressure urgent/days → timing_interval_hrs must be <= 24.\n"
+                    "   d. resources states no crypto → extraction_method must NOT be crypto "
+                    "and no transaction channel may be crypto.\n"
+                    "   e. resources states no international reach → geographic_spread must be domestic only.\n"
+                    "   f. operational_scale=small → hop_count must be <= 4.\n"
+                    "   Fix any violation before returning.\n"
                     "6. Are there any payment rail violations? "
                     "(ACH cannot settle in <1 hour; Zelle >$2,500/transaction is over limit)\n\n"
                     "Fix any inconsistencies and return the corrected full JSON object "
@@ -412,13 +460,16 @@ class FraudConstructorAgent:
                 ),
             },
         ]
+        _t0 = time.perf_counter()
         final_data: dict = await self._client.call(
             system_prompt=system_prompt,
             messages=step5_messages,
             model=self._MODEL,
             response_schema=_SELF_REVIEW_SCHEMA,
-            timeout=60.0,
+            timeout=None,
         )
+        if on_step:
+            on_step(f"Step 5/5: Self-review — done ({time.perf_counter() - _t0:.1f}s)")
 
         # Ensure the variant_id is the one we generated (model may have changed it)
         final_data["variant_id"] = variant_id

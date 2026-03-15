@@ -41,11 +41,28 @@ _ORCHESTRATOR_PROMPT_PATH = _PROMPTS_DIR / "orchestrator.txt"
 
 
 def _load_system_prompt() -> str:
-    base_prompt = _ORCHESTRATOR_PROMPT_PATH.read_text(encoding="utf-8")
+    try:
+        base_prompt = _ORCHESTRATOR_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Prompt file not found: {_ORCHESTRATOR_PROMPT_PATH}"
+        ) from None
 
     # Load grounding data and inject as reference context
-    regulatory_thresholds = json.load(open(_REGULATORY_THRESHOLDS_PATH))
-    payment_rail_constraints = json.load(open(_PAYMENT_RAIL_CONSTRAINTS_PATH))
+    try:
+        with open(_REGULATORY_THRESHOLDS_PATH, encoding="utf-8") as _f:
+            regulatory_thresholds = json.load(_f)
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Required data file not found: {_REGULATORY_THRESHOLDS_PATH}"
+        ) from None
+    try:
+        with open(_PAYMENT_RAIL_CONSTRAINTS_PATH, encoding="utf-8") as _f:
+            payment_rail_constraints = json.load(_f)
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Required data file not found: {_PAYMENT_RAIL_CONSTRAINTS_PATH}"
+        ) from None
 
     grounding_block = (
         "\n\n--- REGULATORY THRESHOLDS REFERENCE ---\n"
@@ -89,7 +106,7 @@ class OrchestratorAgent:
         raw: dict = await self._client.call_with_thinking(
             system_prompt=system_prompt,
             messages=[{"role": "user", "content": user_message}],
-            model="claude-opus-4-6",
+            model="claude-sonnet-4-6",
             budget_tokens=5000,
         )
 
@@ -155,7 +172,7 @@ def _parse_output(raw: dict, config: RunConfig) -> OrchestratorOutput:
 
         # Clamp to [0, suggested_persona_count - 1] so indices stay valid
         max_idx = max(suggested_persona_count - 1, 0)
-        normalised_slot = min(normalised_slot % max(suggested_persona_count, 1), max_idx)
+        normalised_slot = max(0, min(normalised_slot, max_idx))
 
         coverage_cells.append(
             {
