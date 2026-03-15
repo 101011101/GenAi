@@ -35,8 +35,9 @@ from fastapi.responses import FileResponse, JSONResponse, StreamingResponse
 from pydantic import BaseModel
 
 from models.run_config import RunConfig
-from pipeline.run_state import RunState
+from pipeline.run_state import AgentStatus, RunState, TraceEvent
 from pipeline.runner import PipelineRunner
+from .demo_runner import run_demo
 
 # ------------------------------------------------------------------
 # App setup
@@ -72,6 +73,10 @@ def _get_run(run_id: str) -> dict[str, Any]:
 class StartRunRequest(BaseModel):
     fraud_description: str
     variant_count: int = 7
+    demo: bool = False
+    instant: bool = False  # skip delays and write output files immediately
+    max_parallel: int = 3
+    critic_floor: float = 7.0
 
 
 class ControlRequest(BaseModel):
@@ -79,32 +84,68 @@ class ControlRequest(BaseModel):
 
 
 # ------------------------------------------------------------------
+# GET /api/runs — list all runs
+# ------------------------------------------------------------------
+@app.get("/api/runs")
+def list_runs() -> list:
+    result = []
+    for run_id, entry in _runs.items():
+        rs: RunState = entry["run_state"]
+        config = entry["config"]
+        snap = rs.snapshot()
+        result.append({
+            "run_id": run_id,
+            "fraud_description": config.fraud_description,
+            "status": "complete" if snap["is_complete"] else snap["current_phase"],
+            "variants_total": snap["variants_total"],
+            "variants_completed": snap["variants_completed"],
+            "is_complete": snap["is_complete"],
+            "total_cost_usd": snap["total_cost_usd"],
+            "elapsed_s": snap["elapsed_s"],
+        })
+    return result
+
+
+# ------------------------------------------------------------------
 # POST /api/runs — start a new pipeline run
 # ------------------------------------------------------------------
 @app.post("/api/runs")
 def start_run(req: StartRunRequest) -> dict:
+    run_state = RunState()
+    approved_variants: list = []
+    folder_path: list[str] = [""]
+
     config = RunConfig(
         fraud_description=req.fraud_description,
         variant_count=max(1, min(req.variant_count, 20)),
-        demo_mode=True,
-        max_parallel=3,
+        demo_mode=req.demo,
+        max_parallel=req.max_parallel,
+        critic_floor=req.critic_floor,
     )
-    run_state = RunState()
-    approved_variants: list = []
-    folder_path: list[str] = [""]  # mutable container so thread can write back
 
-    def _run_thread() -> None:
-        async def _run() -> None:
-            fp = await PipelineRunner().run(
-                config=config,
-                run_state=run_state,
-                approved_variants_out=approved_variants,
-            )
-            folder_path[0] = fp
+    if req.demo:
+        # Demo mode: stream synthetic data without hitting the Claude API.
+        # instant=True also writes all output files so dataset/export endpoints work.
+        thread = threading.Thread(
+            target=run_demo,
+            args=(run_state, config.variant_count),
+            kwargs={"instant": req.instant, "folder_path_out": folder_path},
+            daemon=True,
+        )
+    else:
+        def _run_thread() -> None:
+            async def _run() -> None:
+                fp = await PipelineRunner().run(
+                    config=config,
+                    run_state=run_state,
+                    approved_variants_out=approved_variants,
+                )
+                folder_path[0] = fp
 
-        asyncio.run(_run())
+            asyncio.run(_run())
 
-    thread = threading.Thread(target=_run_thread, daemon=True)
+        thread = threading.Thread(target=_run_thread, daemon=True)
+
     thread.start()
 
     _runs[run_state.run_id] = {
@@ -134,7 +175,43 @@ def get_status(run_id: str) -> dict:
     snap["variant_log"] = variant_log
     snap["coverage_cells"] = coverage_cells
     snap["cost_cap_usd"] = entry["config"].cost_cap_usd
+    # Issue 1: avoid "0/0" flash during startup — emit None until the pipeline
+    # has set variants_total after the orchestration step.
+    if snap["variants_total"] == 0 and not snap["is_complete"]:
+        snap["variants_total"] = None
     return snap
+
+
+# ------------------------------------------------------------------
+# GET /api/runs/{id}/agents
+# ------------------------------------------------------------------
+@app.get("/api/runs/{run_id}/agents")
+def get_agents(run_id: str) -> dict:
+    entry = _get_run(run_id)
+    rs: RunState = entry["run_state"]
+    with rs._lock:
+        agents = [asdict(a) for a in rs.agent_slots.values()]
+    return {"agents": agents}
+
+
+# ------------------------------------------------------------------
+# GET /api/runs/{id}/trace
+# ------------------------------------------------------------------
+@app.get("/api/runs/{run_id}/trace")
+def get_trace_events(
+    run_id: str,
+    variant_id: str | None = None,
+    agent_id: str | None = None,
+) -> dict:
+    entry = _get_run(run_id)
+    rs: RunState = entry["run_state"]
+    with rs._lock:
+        events = list(rs.trace_events)
+    if variant_id is not None:
+        events = [e for e in events if e.variant_id == variant_id]
+    if agent_id is not None:
+        events = [e for e in events if e.agent_id == agent_id]
+    return {"events": [asdict(e) for e in events]}
 
 
 # ------------------------------------------------------------------
@@ -167,7 +244,15 @@ def get_matrix(run_id: str) -> dict:
             dimensions = orch.variation_dimensions
         except AttributeError:
             pass
-    return {"dimensions": dimensions, "cells": cells}
+    normalized_dims = []
+    for dim in dimensions:
+        if isinstance(dim, dict):
+            d = dict(dim)
+            d["values"] = d.get("example_values", [])
+            normalized_dims.append(d)
+        else:
+            normalized_dims.append(dim)
+    return {"dimensions": normalized_dims, "cells": cells}
 
 
 # ------------------------------------------------------------------
@@ -198,6 +283,13 @@ def get_results(run_id: str) -> dict:
     with rs._lock:
         scored = list(rs.scored_variants)
         cells = list(rs.coverage_cells.values())
+        persona_map: dict[str, str] = {}
+        for p in rs.personas:
+            try:
+                pd = p.model_dump()
+            except AttributeError:
+                pd = vars(p) if hasattr(p, "__dict__") else {}
+            persona_map[pd.get("persona_id", "")] = pd.get("name", "")
 
     variants_out = []
     total_transactions = 0
@@ -209,6 +301,29 @@ def get_results(run_id: str) -> dict:
             d = sv.model_dump()
         except AttributeError:
             d = vars(sv) if hasattr(sv, "__dict__") else {}
+
+        # Inject persona_name from lookup
+        d["persona_name"] = persona_map.get(d.get("persona_id", ""), d.get("persona_id", ""))
+
+        # Derive accounts list from transactions
+        seen: dict[str, str] = {}
+        for txn in d.get("transactions", []):
+            role = txn.get("fraud_role", "") if isinstance(txn, dict) else getattr(txn, "fraud_role", "")
+            sender = txn.get("sender_account_id", "") if isinstance(txn, dict) else getattr(txn, "sender_account_id", "")
+            receiver = txn.get("receiver_account_id", "") if isinstance(txn, dict) else getattr(txn, "receiver_account_id", "")
+            if role == "placement":
+                if sender: seen[sender] = "placement"
+                if receiver: seen.setdefault(receiver, "mule")
+            elif role == "extraction":
+                if sender: seen.setdefault(sender, "mule")
+                if receiver: seen[receiver] = "extraction"
+            elif role.startswith("hop_"):
+                if sender: seen.setdefault(sender, "mule")
+                if receiver: seen.setdefault(receiver, "mule")
+            elif role == "cover_activity":
+                if sender: seen.setdefault(sender, "cover")
+        d["accounts"] = [{"account_id": k, "role": v} for k, v in seen.items()]
+
         variants_out.append(d)
         txns = d.get("transactions", [])
         total_transactions += len(txns)
@@ -250,24 +365,58 @@ def get_trace(run_id: str, variant_id: str) -> dict:
 # GET /api/runs/{id}/dataset
 # ------------------------------------------------------------------
 @app.get("/api/runs/{run_id}/dataset")
-def get_dataset(run_id: str, page: int = 1, page_size: int = 100) -> dict:
+def get_dataset(
+    run_id: str,
+    page: int = 1,
+    page_size: int = 100,
+    persona: str | None = None,
+    role: str | None = None,
+    is_fraud: bool | None = None,
+    min_score: float | None = None,
+    variant_id: str | None = None,
+) -> dict:
     entry = _get_run(run_id)
     folder_path = entry["folder_path"][0]
+    # Issue 3: signal to the frontend that data will arrive after completion.
     if not folder_path:
-        return {"rows": [], "total": 0, "page": page, "page_size": page_size}
+        return {"rows": [], "total": 0, "page": page, "page_size": page_size, "available": False}
 
     csv_path = Path(folder_path) / "dataset.csv"
     if not csv_path.exists():
-        return {"rows": [], "total": 0, "page": page, "page_size": page_size}
+        return {"rows": [], "total": 0, "page": page, "page_size": page_size, "available": False}
 
-    with open(csv_path, newline="", encoding="utf-8") as f:
-        reader = csv.DictReader(f)
-        all_rows = list(reader)
+    import pandas as pd
 
-    total = len(all_rows)
+    # Issue 2: cache parsed CSV rows on the run entry so repeated paginated
+    # requests do not re-read and re-parse the file from disk each time.
+    # Invalidate the cache when folder_path changes (run just completed).
+    cached_folder = entry.get("dataset_cache_folder", None)
+    if cached_folder != folder_path or "dataset_cache" not in entry:
+        raw_df = pd.read_csv(csv_path, dtype=str)
+        entry["dataset_cache"] = raw_df.to_dict(orient="records")
+        entry["dataset_cache_folder"] = folder_path
+
+    all_rows = entry["dataset_cache"]
+    df = pd.DataFrame(all_rows)
+
+    if persona is not None:
+        df = df[df["persona_name"] == persona]
+    if role is not None:
+        df = df[df["fraud_role"] == role]
+    if is_fraud is not None:
+        target = "True" if is_fraud else "False"
+        df = df[df["is_fraud"] == target]
+    if min_score is not None:
+        df = df[pd.to_numeric(df["critic_score"], errors="coerce").fillna(0) >= min_score]
+    if variant_id is not None:
+        df = df[df["variant_id"] == variant_id]
+
+    total = len(df)
     start = (page - 1) * page_size
-    end = start + page_size
-    return {"rows": all_rows[start:end], "total": total, "page": page, "page_size": page_size}
+    page_df = df.iloc[start : start + page_size]
+    rows = page_df.to_dict(orient="records")
+
+    return {"rows": rows, "total": total, "page": page, "page_size": page_size, "available": True}
 
 
 # ------------------------------------------------------------------
@@ -280,6 +429,51 @@ def get_operations(run_id: str) -> dict:
 
 
 # ------------------------------------------------------------------
+# GET /api/runs/{id}/export — manifest
+# ------------------------------------------------------------------
+_EXPORT_MANIFEST = [
+    {"filename": "config.json",      "format": "config",   "description": "Run configuration snapshot",                "count_key": None},
+    {"filename": "personas.json",    "format": "personas", "description": "Full persona profiles",                     "count_key": "personas"},
+    {"filename": "variants.json",    "format": "variants", "description": "Complete variant data with metadata",        "count_key": "variants"},
+    {"filename": "dataset.csv",      "format": "csv",      "description": "Flat tabular dataset for ML training",       "count_key": "csv"},
+    {"filename": "dataset.json",     "format": "json",     "description": "Nested dataset with variant metadata",       "count_key": None},
+    {"filename": "run_summary.json", "format": "summary",  "description": "Aggregate stats and quality metrics",        "count_key": None},
+]
+
+@app.get("/api/runs/{run_id}/export")
+def get_export_manifest(run_id: str) -> list:
+    entry = _get_run(run_id)
+    folder_path = entry["folder_path"][0]
+    result = []
+    for item in _EXPORT_MANIFEST:
+        file_path = Path(folder_path) / item["filename"] if folder_path else None
+        size_bytes = file_path.stat().st_size if file_path and file_path.exists() else None
+        record_count = None
+        if file_path and file_path.exists():
+            if item["count_key"] == "csv":
+                # count lines minus header
+                with open(file_path) as f:
+                    record_count = max(0, sum(1 for _ in f) - 1)
+            elif item["count_key"] in ("personas", "variants"):
+                import json as _json
+                try:
+                    with open(file_path) as f:
+                        data = _json.load(f)
+                    record_count = len(data) if isinstance(data, list) else None
+                except Exception:
+                    pass
+        result.append({
+            "filename": item["filename"],
+            "format": item["format"],
+            "description": item["description"],
+            "size_bytes": size_bytes,
+            "record_count": record_count,
+            "available": file_path.exists() if file_path else False,
+        })
+    return result
+
+
+# ------------------------------------------------------------------
 # GET /api/runs/{id}/export/{format}
 # ------------------------------------------------------------------
 _EXPORT_FILES = {
@@ -287,6 +481,9 @@ _EXPORT_FILES = {
     "json": "dataset.json",
     "graph": "graph_adjacency.json",
     "summary": "run_summary.json",
+    "config": "config.json",
+    "personas": "personas.json",
+    "variants": "variants.json",
 }
 
 
@@ -310,6 +507,9 @@ def export_file(run_id: str, format: str) -> FileResponse:
         "json": "application/json",
         "graph": "application/json",
         "summary": "application/json",
+        "config": "application/json",
+        "personas": "application/json",
+        "variants": "application/json",
     }
     return FileResponse(
         path=str(file_path),
