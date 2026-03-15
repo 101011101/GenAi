@@ -1,90 +1,94 @@
-FraudGen — Synthetic Fraud Variant Generator
-Bridging the Gap in Machine Learning Fraud Detection via Agentic Simulation
+# FraudGen — Synthetic Fraud Variant Generator
 
-FraudGen is a high-fidelity simulation framework designed for the TD Best AI Hack — Detect Financial Fraud. It addresses the "cold start" problem in financial security: the difficulty of training machine learning models to detect novel fraud patterns that have not yet occurred in historical datasets.
+## Project Inspiration
 
-By utilizing a coordinated Red Team of autonomous AI agents, FraudGen generates structured, labeled synthetic datasets that mirror the complexity of modern financial crimes, allowing institutions to strengthen their defenses against "known unknown" threats.
+Fraud detection at financial institutions relies on machine learning models trained on historical transaction data. These models work well against patterns they've seen before — but break down against new variants. This is the **"known unknown" gap**: institutions know fraud types like mule networks exist, but each criminal organization structures them differently, and a model trained on three observed variants will miss the fourth.
 
-High-Level Workflow and Agent Logic
-FraudGen employs an agentic architecture to ensure that synthetic data is not just random noise, but a collection of logical, adversarial transaction sequences.
+The data scarcity problem makes this worse. Fraud is rare by design (< 0.1% of transactions), and emerging variants produce only dozens of labeled examples — far too few for any ML model to generalize from. The standard response is to wait, accumulate more data, retrain, and redeploy. Meanwhile, the fraud continues undetected.
 
-Natural Language Specification: Users define a fraud hypothesis in plain English (e.g., "A sophisticated account takeover followed by rapid layering through multiple internal accounts and a final external wire transfer to a high-risk jurisdiction").
+Institutions can't simply share fraud data across organizations due to regulatory constraints, competitive concerns, and privacy obligations. Each institution trains on its own siloed dataset.
 
-The Orchestrator Agent: This lead agent acts as the system architect. it parses the natural language input into a structured simulation plan, identifying key dimensions such as network topology, transaction velocity, obfuscation techniques, and "noise" injection.
+**FraudGen flips the dynamic.** Instead of waiting for fraud to happen and then reacting, FraudGen deploys a Red Team of AI agents that proactively explores the fraud variant space *ahead of real attackers*. The insight is that fraudsters are fast but fundamentally limited — they're individuals with finite time. An institution has compute at scale. FraudGen converts that compute advantage into a detection advantage by generating structurally diverse synthetic fraud data before the attacker gets there.
 
-The Generation Fleet: A specialized swarm of sub-agents executes the plan. Each agent is responsible for simulating a specific "entity" or "actor" within the fraud network, ensuring that transaction timestamps, amounts, and metadata (IP addresses, device IDs) remain consistent and realistic.
+This is inspired by the adversarial security concept of red teaming and builds on industry precedent like IBM's AMLSim — but uses adversarial LLM agents instead of statistical simulation, enabling reasoning-based exploration of novel execution strategies rather than just statistical variation around known patterns.
 
-The Command Center: A unified Console UI built in Streamlit provides real-time visibility into the generation process, allowing users to inspect the logic behind specific variants before they are finalized.
+## Technology Stack
 
-Technical Requirements
-Python: Version 3.10 or higher.
+### Languages
+- **Python 3.10+** — Primary language for the entire stack
 
-Core Libraries:
+### Frameworks and Libraries
+- **Anthropic SDK** (`anthropic`) — Claude API for all LLM-powered agent reasoning
+- **Streamlit** — Interactive web console for the analyst-facing UI
+- **Pydantic** — Data validation and schema enforcement across the pipeline
+- **Pandas** — Dataset compilation and CSV/JSON export
+- **NetworkX** — Graph theory for fraud network topology visualization
+- **Matplotlib** — Network graph rendering
+- **PyArrow** — High-performance data serialization
 
-Generation: anthropic (Claude 3/3.5 models), pydantic (Data validation).
+### Platforms
+- **Anthropic Claude API** — Powers all four AI agents (Orchestrator, Persona Generator, Fraud Constructor, Critic) using Claude Haiku for fast inference
 
-Processing: pandas (Data manipulation), numpy (Statistical modeling).
+### Tools
+- **asyncio** — Concurrent variant generation with semaphore-based flow control
+- **Git/GitHub** — Version control and collaboration
+- **Claude Code** — AI-assisted development
 
-Visualization: networkx (Graph theory/Topology), plotly (Interactive charting).
+## Product Summary
 
-Interface: streamlit (Web-based console).
+FraudGen is a synthetic fraud data generation pipeline that takes a natural language description of a known fraud type and produces a diverse, labeled synthetic transaction dataset ready for ML training.
 
-API Configuration:
+### How It Works
 
-Live Mode: Requires an ANTHROPIC_API_KEY for high-reasoning synthetic generation.
+1. **Natural Language Input** — A fraud analyst describes a fraud hypothesis in plain English (e.g., "layered mule account network used to launder funds across multiple banks")
 
-Mock Mode: Enable FRAUDGEN_MOCK=1 to run the system locally for testing, UI development, or demonstrations without external API costs.
+2. **Orchestrator Agent** — Decomposes the fraud type into structural variation dimensions (network topology, transaction velocity, evasion techniques, extraction methods) and generates a coverage matrix of cells to explore
 
-Setup and Configuration
-Bash
-# Clone the repository and enter the directory
+3. **Persona Generator** — Creates distinct criminal personas with different risk tolerances, resources, and operational constraints — because a cautious solo operator structures fraud fundamentally differently than an aggressive organized crime network
+
+4. **Fraud Constructor Fleet** — A parallel fleet of sub-agents each executes a 5-step reasoning chain (persona analysis → network planning → participant profiles → transaction generation → self-review) to produce complete synthetic transaction sequences. Each agent explores a different point in the variant space
+
+5. **Critic Agent** — An independent quality gate scores each variant on realism, distinctiveness, persona consistency, and label correctness. Variants below threshold are sent back for revision with specific feedback
+
+6. **Export** — Approved variants are compiled into labeled CSV and JSON datasets with per-record variant metadata, ready for ingestion by existing fraud detection ML pipelines
+
+### Key Features
+
+- **Live Monitoring Console** — Real-time visibility into agent activity, variant completion, critic scores, and coverage matrix saturation via Streamlit
+- **Coverage Matrix** — Ensures the generated data covers the full variant space (different hop counts, topologies, extraction methods, timing patterns) rather than clustering around common patterns
+- **Pause/Stop Controls** — Analysts can pause or stop generation mid-run
+- **Cost Tracking** — Real-time cost accumulation with configurable cost caps
+- **Demo Mode** — Pre-configured quick-start that completes in ~60 seconds for demonstrations
+- **Mock Mode** — Full offline pipeline testing without API costs (`FRAUDGEN_MOCK=1`)
+
+### What Makes It Different
+
+Unlike statistical synthesis tools (like IBM AMLSim) that generate more examples of what you already know, FraudGen's agents *reason about how a fraudster would behave*. They explore structurally different variants — different network topologies, different evasion logic, different timing strategies — producing coverage of unexplored territory rather than noise around existing data.
+
+## Setup
+
+```bash
+# Clone and enter the repository
 git clone <this-repo-url>
 cd GenAi
 
-# Initialize a virtual environment for dependency isolation
+# Create virtual environment
 python -m venv .venv
 source .venv/bin/activate  # Windows: .venv\Scripts\activate
 
-# Install the required software stack
+# Install dependencies
 pip install -r requirements.txt
-Environment Variables:
 
-Bash
-# Option A: Real-world generation (Requires Anthropic credits)
+# Set API key for live generation
 export ANTHROPIC_API_KEY="sk-ant-..."
 
-# Option B: Development/Demo mode (No cost, local data generation)
+# Or use mock mode for offline testing
 export FRAUDGEN_MOCK=1
-The Interactive Console
-Launch the FraudGen Command Center to manage the simulation lifecycle:
 
-Bash
+# Launch the console
 streamlit run app.py
-1. Configuration Phase
-Users can tune the "Fidelity vs. Variety" slider. Higher fidelity results in more computationally expensive reasoning to ensure transactions bypass basic heuristic filters, while higher variety explores a wider range of edge cases and topologies.
+```
 
-2. Live Monitoring Phase
-The console displays a real-time log of agent activity. You can witness the "thought process" of the Orchestrator as it adjusts parameters to meet the user's fraud description. Users can pause the fleet at any time to inspect a specific transaction sequence.
+## AI Use
 
-3. Intelligence and Export Phase
-Network Graphs: Visualize the flow of funds through mule accounts and shell companies using interactive 2D/3D plots.
-
-Coverage Matrix: See how well the generated data covers different "risk dimensions" (e.g., geography, time-of-day, amount ranges).
-
-Data Synthesis: Export the final results into standardized CSV or JSON formats, ready for ingestion by Scikit-Learn, PyTorch, or existing enterprise fraud engines.
-
-Internal Architecture and Documentation
-For developers looking to extend the agentic logic or integrate new LLM providers, refer to the following internal documentation:
-
-CLAUDE.md: Contains specific system prompts and formatting instructions for the AI agents to ensure consistent data output.
-
-PRD/05_architecture_draft.md: Breaks down the state management and communication protocols between the Orchestrator and the Generation Fleet.
-
-PRD/06_api_and_console_draft.md: Technical specifications for the Streamlit components and API endpoints.
-
-Notes and Safety
-Prototype Status: This tool is a hackathon-stage prototype. While the generation logic is robust, the internal interfaces are subject to breaking changes as the project evolves.
-
-Synthetic Nature: All data produced by FraudGen is mathematically generated. It contains no PII (Personally Identifiable Information) and is intended for model training and stress-testing only.
-
-Integration: This system is designed to complement existing fraud detection pipelines by providing "Adversarial Data Augmentation." It is not a replacement for real-time monitoring systems.
+Yes — more than 70% of the code was generated by AI (Claude Code).
