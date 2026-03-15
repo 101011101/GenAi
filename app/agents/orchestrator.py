@@ -1,0 +1,193 @@
+from __future__ import annotations
+
+import json
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from models.run_config import RunConfig
+from utils.llm_client import LLMClient
+
+# ---------------------------------------------------------------------------
+# Output dataclass
+# ---------------------------------------------------------------------------
+
+@dataclass
+class OrchestratorOutput:
+    """Plan returned by the Orchestrator. Does NOT spawn agents — that is the runner's job.
+
+    coverage_cells are no longer generated here — pipeline/cell_generator.py
+    produces them deterministically from variation_dimensions.
+    """
+
+    variation_dimensions: list[dict] = field(default_factory=list)
+    """Each dict: name, description, range_low, range_high, example_values."""
+
+    suggested_persona_count: int = 5
+
+
+# ---------------------------------------------------------------------------
+# Grounding data paths
+# ---------------------------------------------------------------------------
+
+_DATA_DIR = Path(__file__).parent.parent / "data"
+_REGULATORY_THRESHOLDS_PATH = _DATA_DIR / "regulatory_thresholds.json"
+_PAYMENT_RAIL_CONSTRAINTS_PATH = _DATA_DIR / "payment_rail_constraints.json"
+
+# ---------------------------------------------------------------------------
+# Prompt loading
+# ---------------------------------------------------------------------------
+
+_PROMPTS_DIR = Path(__file__).parent.parent / "prompts"
+_ORCHESTRATOR_PROMPT_PATH = _PROMPTS_DIR / "orchestrator.txt"
+
+
+def _load_system_prompt() -> str:
+    try:
+        base_prompt = _ORCHESTRATOR_PROMPT_PATH.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Prompt file not found: {_ORCHESTRATOR_PROMPT_PATH}"
+        ) from None
+
+    # Load grounding data and inject as reference context
+    try:
+        with open(_REGULATORY_THRESHOLDS_PATH, encoding="utf-8") as _f:
+            regulatory_thresholds = json.load(_f)
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Required data file not found: {_REGULATORY_THRESHOLDS_PATH}"
+        ) from None
+    try:
+        with open(_PAYMENT_RAIL_CONSTRAINTS_PATH, encoding="utf-8") as _f:
+            payment_rail_constraints = json.load(_f)
+    except FileNotFoundError:
+        raise RuntimeError(
+            f"Required data file not found: {_PAYMENT_RAIL_CONSTRAINTS_PATH}"
+        ) from None
+
+    grounding_block = (
+        "\n\n--- REGULATORY THRESHOLDS REFERENCE ---\n"
+        "Use this data to ensure coverage cells reflect real jurisdictional reporting thresholds "
+        "when assigning amount-structuring dimension values.\n"
+        f"{json.dumps(regulatory_thresholds, indent=2)}"
+        "\n\n--- PAYMENT RAIL CONSTRAINTS REFERENCE ---\n"
+        "Use this data to ensure coverage cells assign only payment rails that exist and have "
+        "realistic processing windows and per-transaction limits.\n"
+        f"{json.dumps(payment_rail_constraints, indent=2)}"
+    )
+
+    return base_prompt + grounding_block
+
+
+# ---------------------------------------------------------------------------
+# Agent class
+# ---------------------------------------------------------------------------
+
+_ORCHESTRATOR_RESPONSE_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "variation_dimensions": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {"type": "string"},
+                    "description": {"type": "string"},
+                    "values": {"type": "array", "items": {}},
+                },
+                "required": ["name", "description", "values"],
+            },
+            "description": "Axes along which this fraud type varies structurally.",
+        },
+        "coverage_cells": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "cell_id": {"type": "string"},
+                    "dimension_values": {"type": "object"},
+                    "persona_slot": {"type": "integer"},
+                },
+                "required": ["cell_id", "dimension_values", "persona_slot"],
+            },
+            "description": "One sub-agent assignment per planned variant.",
+        },
+        "suggested_persona_count": {
+            "type": "integer",
+            "description": "How many distinct criminal profiles to generate.",
+        },
+    },
+    "required": ["variation_dimensions", "coverage_cells", "suggested_persona_count"],
+}
+
+
+class OrchestratorAgent:
+    """Decomposes a fraud description into a structured variation plan.
+
+    Returns an OrchestratorOutput containing:
+    - variation_dimensions    — axes along which this fraud type varies
+    - suggested_persona_count — how many distinct criminal profiles to generate
+
+    Coverage cells are generated by pipeline/cell_generator.generate_cells()
+    from the returned dimensions. Does NOT spawn sub-agents.
+    """
+
+    def __init__(self) -> None:
+        self._client = LLMClient()
+
+    async def run(self, config: RunConfig) -> OrchestratorOutput:
+        """Run the orchestrator against the given RunConfig and return a plan."""
+
+        system_prompt = _load_system_prompt()
+
+        user_message = _build_user_message(config)
+
+        raw: dict = await self._client.call(
+            system_prompt=system_prompt,
+            messages=[{"role": "user", "content": user_message}],
+            model="claude-sonnet-4-6",
+            budget_tokens=5000,
+        )
+
+        return _parse_output(raw, config)
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+def _build_user_message(config: RunConfig) -> str:
+    geo_scope_str = ", ".join(config.geographic_scope)
+    risk_dist = config.risk_distribution
+    risk_str = (
+        f"{risk_dist['high']}% high risk / "
+        f"{risk_dist['mid']}% mid risk / "
+        f"{risk_dist['low']}% low risk"
+    )
+
+    return (
+        f"FRAUD DESCRIPTION:\n{config.fraud_description}\n\n"
+        f"RUN SETTINGS:\n"
+        f"- Target variant count: {config.variant_count}\n"
+        f"- Fidelity level: {config.fidelity_level}\n"
+        f"- Geographic scope: {geo_scope_str}\n"
+        f"- Risk distribution for personas: {risk_str}\n"
+        f"- Persona count: {config.persona_count}\n"
+        f"- Mule context depth: {config.mule_context_depth}\n\n"
+        f"Generate the variation dimensions and suggested persona count. "
+        f"Identify {config.variant_count} distinct points in the variation space to guide "
+        f"coverage — express these as example_values on each dimension, not as cells. "
+        f"Distribute example_values to include extremes, not just midpoints."
+    )
+
+
+def _parse_output(raw: dict, config: RunConfig) -> OrchestratorOutput:
+    """Parse the raw JSON dict returned by the LLM into an OrchestratorOutput."""
+
+    variation_dimensions: list[dict] = raw.get("variation_dimensions", [])
+    suggested_persona_count: int = int(raw.get("suggested_persona_count", config.persona_count))
+
+    return OrchestratorOutput(
+        variation_dimensions=variation_dimensions,
+        suggested_persona_count=suggested_persona_count,
+    )

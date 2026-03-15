@@ -5,3 +5,7 @@ __pycache__/
 *.egg-info/
 .venv/
 venv/
+.debug_cache/
+.edp_intent/
+.DS_Store
+**/.DS_Store

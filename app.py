@@ -6,8 +6,12 @@ No business logic, no LLM calls — only coordination.
 """
 from __future__ import annotations
 
+import atexit
 import asyncio
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 import os
 import threading
 import time
@@ -28,8 +32,9 @@ st.set_page_config(
 # Project root on sys.path so all imports resolve regardless of cwd
 # ---------------------------------------------------------------------------
 _ROOT = os.path.dirname(os.path.abspath(__file__))
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
+_APP_DIR = os.path.join(_ROOT, "app")
+if _APP_DIR not in sys.path:
+    sys.path.insert(0, _APP_DIR)
 
 # ---------------------------------------------------------------------------
 # Console components
@@ -106,11 +111,20 @@ def _start_run(config: RunConfig) -> None:
     thread = threading.Thread(
         target=asyncio.run,
         args=(_run_and_capture(),),
-        daemon=True,
+        daemon=False,
     )
     st.session_state._matrix_out = matrix_out
     thread.start()
     st.session_state.run_thread = thread
+
+    # On process exit, signal the pipeline to stop and wait up to 10s for a
+    # clean shutdown so in-flight file writes can complete.
+    def _shutdown() -> None:
+        run_state.set_control("stop")
+        thread.join(timeout=10)
+
+    atexit.register(_shutdown)
+
     st.rerun()
 
 
