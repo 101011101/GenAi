@@ -151,6 +151,100 @@ flowchart TD
     Coverage matrix · Network graphs · Dataset browser · Export panel"]
 ```
 
+### Inside the simulation — how agents model a fraud network
+
+Each FraudConstructorAgent spins up a miniature multi-agent simulation. The Criminal Mastermind knows the full plan but gives each mule only the information a real mule would have. The Bank System Agent actively tries to flag suspicious transactions — forcing the Mastermind to adapt in real time.
+
+```mermaid
+graph TD
+    subgraph SIM["Inside FraudConstructorAgent — Level 4 Simulation"]
+        CM["CriminalMastermindAgent
+        Knows the full plan
+        Issues compartmentalized instructions to each mule"]
+
+        CM -->|Recruit + instruct| M1["MuleAgent — Viktor K.   Placement
+        Knows only: receive stolen funds, forward 92%, keep 8%"]
+        CM -->|Recruit + instruct| M2["MuleAgent — Sarah M.   Hop 1
+        Knows only: receive a transfer, forward to next account"]
+        CM -->|Recruit + instruct| M3["MuleAgent — James R.   Extraction
+        Knows only: receive funds, withdraw via crypto exchange"]
+
+        BS["BankSystemAgent
+        Monitors transactions, flags suspicious patterns"]
+
+        M1 & M2 & M3 -->|transaction attempt| BS
+        BS -->|"⚠ flag — unusual same-day pattern"| CM
+        CM -->|adapt — split transfers, stagger timing| M1
+    end
+```
+
+The emergent evasion — the Mastermind splitting a flagged transfer, a mule adding an unplanned delay — is behaviour no single agent would produce alone. It mirrors the actual information structure of real fraud organisations.
+
+**How the evasion plays out step by step:**
+
+```mermaid
+sequenceDiagram
+    participant CM as CriminalMastermindAgent
+    participant M1 as MuleAgent 1 · Viktor K.
+    participant M2 as MuleAgent 2 · Sarah M.
+    participant BS as BankSystemAgent
+
+    CM->>M1: Receive $8,450. Forward 92% to account ending 4421. Keep rest.
+    note over M1: Knows only: receive & forward. Unaware of the full network.
+    M1->>BS: Transfer $7,780 to Sarah M. — same day
+    BS-->>CM: ⚠ Flagged — unusual same-day large transfer
+    CM->>M1: Split into 3 transfers staggered 4 hrs apart instead
+    M1->>BS: Transfer $2,600 (×3, staggered)
+    BS-->>CM: ✓ Cleared
+    CM->>M2: Receive funds. Forward to crypto exchange within 24 hrs.
+    M2->>BS: Wire $7,150 to exchange
+    BS-->>CM: ✓ Cleared
+```
+
+### Example output — a generated fraud network
+
+This is what a single approved variant looks like as a transaction network. Red nodes are fraud accounts, grey nodes are cover transactions, green are external endpoints.
+
+```mermaid
+graph LR
+    classDef fraud fill:#e74c3c,stroke:#c0392b,color:#fff
+    classDef cover fill:#7f8c8d,stroke:#636e72,color:#fff
+    classDef ext   fill:#27ae60,stroke:#1e8449,color:#fff
+
+    SRC([Stolen funds\nsource]):::ext
+
+    A1["mule_001 · Viktor K.
+    Placement
+    $8,450 received"]:::fraud
+
+    A2["mule_002 · Sarah M.
+    Hop 1 of 2
+    $7,780 received"]:::fraud
+
+    A3["mule_003 · James R.
+    Extraction
+    $7,150 received"]:::fraud
+
+    DEST([Crypto exchange\nfinal destination]):::ext
+
+    COV1["cover_txn_001
+    Grocery · $67
+    is_fraud = False"]:::cover
+
+    COV2["cover_txn_002
+    Utility bill · $120
+    is_fraud = False"]:::cover
+
+    SRC        -->|"placement · $8,450\nACH · 09:14"| A1
+    A1         -->|"hop 1 of 2 · $7,780\nZelle · 13:22"| A2
+    A2         -->|"hop 2 of 2 · $7,150\nWire · next day 10:05"| A3
+    A3         -->|"extraction · $6,900\ncrypto · 10:47"| DEST
+    A1         -.->|cover| COV1
+    A2         -.->|cover| COV2
+```
+
+Each node and edge maps directly to rows in `dataset.csv` — the fraud path rows have `is_fraud = True` and `fraud_role` set to `placement`, `hop_N_of_M`, or `extraction`. Cover activity rows have `is_fraud = False`.
+
 ---
 
 ## 4. Technical Architecture
