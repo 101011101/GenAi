@@ -108,63 +108,47 @@ Statistical simulation generates more examples of what you already know. Adversa
 
 A fraud analyst enters a natural language fraud description. The system decomposes it, generates a diverse set of criminal personas, and deploys a parallel fleet of AI agents — each exploring a distinct corner of the fraud variant space.
 
-```
-Analyst input: "Mule account network fraud — criminal organizations recruit
-individuals to receive stolen funds and forward them through a chain of
-accounts before extraction via wire or cash."
-          │
-          ▼
-1.  OrchestratorAgent (Claude Opus + extended thinking)
-    └── Decomposes fraud type into variation dimensions:
-        hop count, timing, topology, cover activity,
-        extraction method, geographic scope, ...
-          │
-          ▼
-2.  cell_generator.py (deterministic, no LLM)
-    └── Cartesian product of dimension values → Coverage Matrix
-        (e.g., 3-hop × same-day × chain = one cell)
-          │
-          ▼
-3.  PersonaGeneratorAgent
-    └── Generates N distinct criminal personas:
-        Viktor (high-risk, international), James (low-risk, domestic), ...
-          │
-          ▼
-4.  FraudConstructorAgent × N (parallel, asyncio)
-    ├── Step 1: Persona analysis — what does this criminal need?
-    ├── Step 2: Network planning — hop count, topology, timing, amounts
-    ├── Step 3: Participant profiles — who are the mule accounts?
-    ├── Step 4: Transaction generation — full sequence, real-world grounded
-    ├── Step 5: Constraint repair + validation (Python, deterministic)
-    └── Step 6: BFS graph labeling → stamps fraud_role + is_fraud
-          │
-          ▼
-5.  SchemaValidator → hard fail (malformed JSON, no retry)
-          │
-          ▼
-6.  CriticAgent
-    ├── Scores: Realism (1–10), Distinctiveness (1–10)
-    ├── Checks: persona_consistency (deterministic boolean from Step 5)
-    ├── Pass → approved_variants[]
-    └── Fail → feedback → FraudConstructor (max 2–3 retries)
-          │
-          ▼
-7.  CoverageMatrix.check_saturation()
-    └── Below threshold + auto_second_pass=True → targeted second pass
-          │
-          ▼
-8.  OutputHandler → 6 files per run
-    ├── config.json, personas.json, variants.json
-    ├── dataset.csv (one row per transaction)
-    ├── dataset.json (nested, with variant + persona metadata)
-    └── run_summary.json
-          │
-          ▼
-9.  Console transitions → Data Display Module
-    ├── Coverage matrix (final state)
-    ├── Network graphs (accounts as nodes, transactions as edges)
-    ├── Dataset browser (filterable)
-    └── Export panel (CSV / JSON / Graph adjacency list)
+```mermaid
+flowchart TD
+    Input([Analyst Input]) --> Orch
+
+    Orch["1 · OrchestratorAgent
+    claude-sonnet-4-6 + extended thinking
+    Decomposes into variation dimensions
+    hop count · timing · topology · extraction · evasion"]
+
+    Orch --> CellGen["2 · cell_generator.py   ⟨deterministic, no LLM⟩
+    Cartesian product of dimension values → Coverage Matrix
+    e.g. 3-hop × same-day × chain = one cell"]
+
+    CellGen --> PG["3 · PersonaGeneratorAgent
+    Generates N distinct criminal personas
+    Viktor ⟨high-risk, international⟩ · James ⟨low-risk, domestic⟩ · ..."]
+
+    PG --> FC["4 · FraudConstructorAgent × N   ⟨parallel asyncio⟩
+    Step 1 · Persona analysis — what does this criminal need?
+    Step 2 · Network planning — hop count, topology, timing, amounts
+    Step 3 · Participant profiles — who are the mule accounts?
+    Step 4 · Transaction generation — full sequence, real-world grounded
+    Step 5 · Constraint repair + validation — Python, deterministic
+    Step 6 · BFS graph labeling — stamps fraud_role + is_fraud"]
+
+    FC --> SV["5 · SchemaValidator
+    Hard fail — malformed JSON, no retry"]
+
+    SV --> Critic["6 · CriticAgent
+    Realism 1–10 · Distinctiveness 1–10 · Persona consistency"]
+
+    Critic -->|Pass| Cov["7 · CoverageMatrix.check_saturation"]
+    Critic -->|"Fail + feedback · max 2–3 retries"| FC
+
+    Cov -->|"Below threshold + auto_second_pass=True"| FC
+    Cov --> OH["8 · OutputHandler
+    config.json · personas.json · variants.json
+    dataset.csv · dataset.json · run_summary.json"]
+
+    OH --> Display["9 · Console → Data Display Module
+    Coverage matrix · Network graphs · Dataset browser · Export panel"]
 ```
 
 ---
@@ -175,54 +159,54 @@ accounts before extraction via wire or cash."
 
 The system has three layers. The backend pipeline does all the real work; the console and data display are thin layers on top.
 
-```
-┌──────────────────────────────────────────────────────┐
-│                       CONSOLE                        │
-│  Input Panel  │  Orchestrator Controls               │
-│                        ↓                             │
-│              Live Monitoring Panel                   │
-└──────────────────────────┬───────────────────────────┘
-                           │ RunConfig
-                           ▼
-┌──────────────────────────────────────────────────────┐
-│                  BACKEND PIPELINE                    │
-│                                                      │
-│  runner.py                                           │
-│    ├── orchestrator       →  variation_dimensions    │
-│    ├── cell_generator     →  coverage cells          │
-│    ├── persona_generator  →  List[Persona]           │
-│    ├── fraud_constructor  →  RawVariant (per agent)  │
-│    ├── schema_validator   →  ValidatedVariant        │
-│    ├── critic             →  ScoredVariant           │
-│    └── output_handler     →  6 files on disk         │
-│                                                      │
-│  run_state.py  ← pipeline writes, console reads      │
-└──────────────────────────┬───────────────────────────┘
-                           │ completed run folder
-                           ▼
-┌──────────────────────────────────────────────────────┐
-│               DATA DISPLAY MODULE                    │
-│  Coverage Matrix │ Network Graphs │ Dataset Browser  │
-│  Stats Panel     │ Export Panel                      │
-└──────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    subgraph CONSOLE["CONSOLE"]
+        IP[Input Panel] & OC[Orchestrator Controls]
+        LM[Live Monitoring Panel]
+        IP & OC --> LM
+    end
+
+    subgraph PIPELINE["BACKEND PIPELINE"]
+        Runner["runner.py"]
+        Runner -->|variation_dimensions| A1[orchestrator]
+        Runner -->|coverage cells| A2[cell_generator]
+        Runner -->|"List[Persona]"| A3[persona_generator]
+        Runner -->|RawVariant| A4[fraud_constructor]
+        A4 --> B1[schema_validator]
+        B1 -->|ValidatedVariant| B2[critic]
+        B2 -->|ScoredVariant| B3[output_handler]
+        RS["run_state.py — pipeline writes · console reads"]
+    end
+
+    subgraph DISPLAY["DATA DISPLAY MODULE"]
+        CM[Coverage Matrix] & NG[Network Graphs] & DB[Dataset Browser]
+        SP[Stats Panel] & EP[Export Panel]
+    end
+
+    CONSOLE -->|RunConfig| PIPELINE
+    PIPELINE -->|completed run folder| DISPLAY
 ```
 
 ### Agent hierarchy
 
-```
-Orchestrator
-    ├── PersonaGeneratorAgent
-    └── FraudConstructorAgent (one per variant, parallel)
-            ├── [Level 4] CriminalMastermindAgent
-            │       └── [Level 4] CoverStoryAgent
-            ├── [Level 4] MuleAgent (one per hop)
-            └── [Level 4] BankSystemAgent
-    ├── SchemaValidator (synchronous Python, not LLM)
-    ├── CriticAgent
-    └── OutputHandler
-            ├── Flat formatter → CSV (XGBoost / Random Forest)
-            ├── Nested formatter → JSON (general purpose)
-            └── Graph formatter → adjacency list (GNN training)
+```mermaid
+graph TD
+    R["runner.py"] --> Orch[OrchestratorAgent]
+    R --> PG[PersonaGeneratorAgent]
+    R --> FC["FraudConstructorAgent\none per variant · parallel"]
+    R --> SV["SchemaValidator\nPython · not LLM"]
+    R --> CA[CriticAgent]
+    R --> OH[OutputHandler]
+
+    FC -. "Level 4" .-> CMA[CriminalMastermindAgent]
+    CMA -. "Level 4" .-> CSA[CoverStoryAgent]
+    FC -. "Level 4" .-> MA["MuleAgent × N\none per hop"]
+    FC -. "Level 4" .-> BSA[BankSystemAgent]
+
+    OH --> F1["Flat CSV\nXGBoost · Random Forest"]
+    OH --> F2["Nested JSON\nGeneral purpose"]
+    OH --> F3["Graph adjacency list\nGNN training"]
 ```
 
 **Key design rule:** Agents never call other agents. `runner.py` is always the intermediary — it calls agent A, takes the output, and passes it to agent B. Agents only import from `models/` and `utils/`.
@@ -231,7 +215,7 @@ Orchestrator
 
 | Agent | Model | Reason |
 |---|---|---|
-| Orchestrator | `claude-opus-4-6` + extended thinking (5,000 tokens) | Dimension decomposition determines entire run quality |
+| Orchestrator | `claude-sonnet-4-6` + extended thinking (5,000 tokens) | Dimension decomposition determines entire run quality |
 | Persona Generator | `claude-sonnet-4-6` | Creative generation, moderate complexity |
 | Fraud Constructor | `claude-sonnet-4-6` | Core generation agent — 4 sequential LLM calls per variant |
 | Critic | `claude-sonnet-4-6` | Evaluation reasoning |
