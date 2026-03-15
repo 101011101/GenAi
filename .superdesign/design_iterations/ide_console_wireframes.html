@@ -1,0 +1,1176 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Console</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --surface2: #f1f5f9;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --text: #0f172a;
+    --muted: #64748b;
+    --faint: #94a3b8;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #f1f5f9; font-family: var(--sans); color: var(--text); padding: 0; overflow: hidden; }
+
+  /* SCREEN ROUTING */
+  .screen { display: none; }
+  .screen.active { display: block; }
+
+  /* TAB PANELS */
+  .tab-panel { display: none; }
+  .tab-panel.active { display: block; }
+
+  /* ANIMATION PAUSE */
+  .animation-paused .pulse { animation-play-state: paused; }
+
+  /* BROWSER CHROME */
+  .browser {
+    background: var(--bg); overflow: hidden;
+    width: 100vw; height: 100vh; border-radius: 0;
+    display: flex; flex-direction: column;
+  }
+  .browser-bar {
+    background: var(--surface); border-bottom: 1px solid var(--border);
+    padding: 0.65rem 1rem; display: flex; align-items: center; gap: 0.75rem;
+    flex-shrink: 0;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .dr { background: #ff5f57; } .dy { background: #febc2e; } .dg { background: #28c840; }
+  .url-bar {
+    background: var(--bg); border: 1px solid var(--border); border-radius: 6px;
+    padding: 0.3rem 0.75rem; font-size: 0.7rem; color: var(--muted); font-family: var(--mono);
+    flex: 1; max-width: 340px;
+  }
+
+  /* APP SHELL */
+  .app { display: flex; flex: 1; overflow: hidden; }
+
+  /* SIDEBAR */
+  .sidebar {
+    width: 200px; flex-shrink: 0; background: var(--surface); border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; padding: 1.25rem 0.75rem; overflow-y: auto;
+  }
+  .logo { font-weight: 800; font-size: 1rem; color: var(--accent); letter-spacing: -0.02em; margin-bottom: 1.75rem; padding: 0 0.5rem; }
+  .nav-item {
+    display: flex; align-items: center; gap: 0.6rem;
+    padding: 0.5rem 0.65rem; border-radius: 6px; font-size: 0.78rem; color: var(--muted);
+    margin-bottom: 0.15rem; cursor: pointer; user-select: none;
+  }
+  .nav-item:hover { background: var(--surface2); }
+  .nav-item.active { background: var(--accent-light); color: var(--accent); font-weight: 600; }
+  .nav-icon { width: 14px; height: 14px; border-radius: 3px; background: currentColor; opacity: 0.35; flex-shrink: 0; }
+  .sidebar-section { font-size: 0.62rem; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--faint); padding: 0.5rem 0.65rem; margin-top: 0.75rem; }
+  .sidebar-footer { margin-top: auto; padding-top: 1rem; border-top: 1px solid var(--border); }
+  .sidebar-stat { font-size: 0.7rem; color: var(--muted); padding: 0.25rem 0.65rem; }
+  .sidebar-stat strong { color: var(--text); }
+
+  /* MAIN AREA */
+  .main { flex: 1; overflow-y: auto; background: var(--bg); display: flex; flex-direction: column; }
+
+  /* TOP BAR */
+  .topbar {
+    border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem;
+    display: flex; align-items: center; justify-content: space-between; background: var(--bg);
+    position: sticky; top: 0; z-index: 10; flex-shrink: 0;
+  }
+  .topbar-title { font-size: 0.9rem; font-weight: 700; color: var(--text); }
+  .topbar-sub { font-size: 0.72rem; color: var(--muted); margin-top: 0.1rem; }
+
+  /* TABS */
+  .tabs { display: flex; border-bottom: 1px solid var(--border); background: var(--bg); padding: 0 1.5rem; flex-shrink: 0; }
+  .tab {
+    padding: 0.65rem 1rem; font-size: 0.78rem; color: var(--muted);
+    border-bottom: 2px solid transparent; cursor: pointer; margin-right: 0.25rem; user-select: none;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+  /* CONTENT */
+  .content { padding: 1.5rem; flex: 1; }
+
+  /* FORM ELEMENTS */
+  .field-label { font-size: 0.72rem; font-weight: 600; color: var(--text); margin-bottom: 0.35rem; }
+  .field-hint { font-size: 0.65rem; color: var(--muted); margin-top: 0.25rem; }
+  .input {
+    width: 100%; border: 1.5px solid var(--border); border-radius: 8px;
+    padding: 0.6rem 0.75rem; font-size: 0.82rem; color: var(--text); background: var(--bg);
+    font-family: var(--sans);
+  }
+  .input:focus { border-color: var(--accent); outline: none; }
+  .textarea { height: 88px; resize: none; line-height: 1.5; }
+  .select { appearance: none; cursor: pointer; }
+
+  /* SLIDER */
+  .slider-wrap { margin: 0.25rem 0; }
+  .slider-labels { display: flex; justify-content: space-between; font-size: 0.62rem; color: var(--faint); margin-top: 0.3rem; }
+  .slider-value { font-size: 0.78rem; font-weight: 700; color: var(--accent); font-family: var(--mono); }
+  .estimate-tag { font-size: 0.72rem; color: var(--muted); }
+  .estimate-tag span { color: var(--green); font-weight: 600; }
+  input[type="range"] {
+    width: 100%; accent-color: var(--accent); cursor: pointer; height: 4px;
+    margin: 0.5rem 0 0;
+  }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 0.4rem; border-radius: 8px; font-weight: 600; font-size: 0.82rem; padding: 0.6rem 1.25rem; cursor: pointer; border: none; font-family: var(--sans); }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #0d4070; }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover { background: var(--surface); }
+  .btn-ghost { background: var(--surface); color: var(--muted); }
+  .btn-ghost:hover { background: var(--surface2); }
+  .btn-danger { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+  .btn-sm { font-size: 0.72rem; padding: 0.4rem 0.85rem; }
+  #run-btn:disabled { opacity: 0.45; pointer-events: none; cursor: default; }
+
+  /* BADGES */
+  .badge { display: inline-flex; align-items: center; gap: 0.25rem; padding: 0.18rem 0.55rem; border-radius: 999px; font-size: 0.68rem; font-weight: 700; }
+  .badge-green { background: var(--green-light); color: var(--green); }
+  .badge-red { background: var(--red-light); color: var(--red); }
+  .badge-yellow { background: var(--yellow-light); color: var(--yellow); }
+  .badge-blue { background: var(--accent-light); color: var(--accent); }
+  .badge-gray { background: var(--surface2); color: var(--muted); }
+  .badge-purple { background: var(--purple-light); color: var(--purple); }
+
+  /* GRID */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1rem; }
+  .row { display: flex; gap: 1rem; }
+  .col { flex: 1; }
+
+  /* CARDS */
+  .card { background: var(--bg); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .card-surface { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1rem; }
+  .card-accent { background: var(--accent-light); border: 1px solid #bdd4ef; border-radius: 10px; padding: 1rem; }
+
+  /* STAT BOXES */
+  .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 0.75rem; margin-bottom: 1.25rem; }
+  .stat-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.75rem 1rem; }
+  .stat-val { font-size: 1.4rem; font-weight: 800; color: var(--accent); font-family: var(--mono); line-height: 1; }
+  .stat-lbl { font-size: 0.62rem; color: var(--muted); margin-top: 0.3rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* PROGRESS */
+  .progress-wrap { background: var(--surface2); border-radius: 999px; height: 5px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: var(--accent); }
+
+  /* COVERAGE MATRIX */
+  .matrix { display: grid; gap: 5px; }
+  .matrix-6 { grid-template-columns: repeat(6, 1fr); }
+  .matrix-8 { grid-template-columns: repeat(8, 1fr); }
+  .mx-cell {
+    height: 38px; border-radius: 6px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.58rem; font-weight: 600; font-family: var(--mono);
+  }
+  .mx-green { background: var(--green-light); color: var(--green); border: 1px solid #a7f3d0; }
+  .mx-blue { background: var(--accent-light); color: var(--accent); border: 1px solid #bdd4ef; }
+  .mx-yellow { background: var(--yellow-light); color: var(--yellow); border: 1px solid #fde68a; }
+  .mx-red { background: var(--red-light); color: var(--red); border: 1px solid #fecaca; }
+  .mx-gray { background: var(--surface2); color: var(--faint); border: 1px solid var(--border); }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
+  .pulse { animation: pulse 1.8s ease-in-out infinite; }
+
+  /* PERSONA CARD */
+  .persona-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 0.85rem; }
+  .persona-avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--accent-light); border: 2px solid #bdd4ef; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 0.65rem; font-weight: 800; color: var(--accent); }
+  .persona-name { font-size: 0.78rem; font-weight: 700; color: var(--text); }
+
+  /* VARIANT CARD */
+  .variant-card { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 0.65rem 0.85rem; display: flex; align-items: center; gap: 0.75rem; }
+  .variant-card:hover { border-color: var(--accent); background: var(--accent-light); }
+  .variant-card .vname { font-size: 0.72rem; font-weight: 700; color: var(--text); font-family: var(--mono); }
+  .variant-card .vmeta { font-size: 0.68rem; color: var(--muted); margin-top: 0.1rem; }
+  .variant-score { margin-left: auto; font-family: var(--mono); font-size: 0.75rem; font-weight: 800; }
+  .score-good { color: var(--green); }
+  .score-warn { color: var(--yellow); }
+  .score-bad { color: var(--red); }
+
+  /* AGENT STRIP */
+  .agent-strip { display: flex; gap: 0.4rem; align-items: center; }
+  .agent-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .ad-done { background: var(--green); }
+  .ad-run { background: var(--accent); }
+  .ad-retry { background: var(--yellow); }
+  .ad-idle { background: var(--border); }
+
+  /* NETWORK GRAPH */
+  .graph-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; height: 190px; position: relative; overflow: hidden; }
+  .g-node { position: absolute; width: 38px; height: 38px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 0.55rem; font-weight: 800; font-family: var(--mono); }
+  .g-fraud { background: var(--red-light); border: 2px solid var(--red); color: var(--red); }
+  .g-cover { background: var(--surface2); border: 1px solid var(--border); color: var(--faint); }
+  .g-extract { background: var(--purple-light); border: 2px solid var(--purple); color: var(--purple); }
+
+  /* DATASET TABLE */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 0.74rem; }
+  thead th {
+    background: var(--surface); padding: 0.55rem 0.85rem; text-align: left;
+    font-size: 0.65rem; font-weight: 700; color: var(--muted); text-transform: uppercase;
+    letter-spacing: 0.06em; border-bottom: 2px solid var(--border); white-space: nowrap;
+  }
+  tbody td { padding: 0.55rem 0.85rem; border-bottom: 1px solid var(--border); color: var(--text); white-space: nowrap; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover td { background: var(--surface); }
+  .role-place { color: var(--purple); font-weight: 600; font-family: var(--mono); font-size: 0.68rem; }
+  .role-hop { color: var(--accent); font-weight: 600; font-family: var(--mono); font-size: 0.68rem; }
+  .role-ext { color: var(--red); font-weight: 600; font-family: var(--mono); font-size: 0.68rem; }
+  .role-cov { color: var(--faint); font-family: var(--mono); font-size: 0.68rem; }
+  .bool-true { color: var(--red); font-weight: 700; }
+  .bool-false { color: var(--faint); }
+  .vid-cell { font-family: var(--mono); font-size: 0.68rem; color: var(--accent); }
+  .amount-cell { font-family: var(--mono); font-weight: 600; }
+
+  /* FILTER BAR */
+  .filter-bar { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; margin-bottom: 1rem; }
+  .filter-chip { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 0.3rem 0.65rem; font-size: 0.7rem; color: var(--muted); cursor: pointer; user-select: none; }
+  .filter-chip:hover { background: var(--surface2); }
+  .filter-chip.active { background: var(--accent-light); border-color: #bdd4ef; color: var(--accent); font-weight: 600; }
+  .filter-count { margin-left: auto; font-size: 0.7rem; color: var(--muted); }
+
+  /* EXPORT CARD */
+  .export-row { display: flex; align-items: center; justify-content: space-between; padding: 1rem; border: 1px solid var(--border); border-radius: 8px; margin-bottom: 0.75rem; background: var(--bg); }
+  .export-row:hover { background: var(--surface); }
+  .export-name { font-size: 0.82rem; font-weight: 700; color: var(--text); }
+  .export-meta { font-size: 0.68rem; color: var(--muted); margin-top: 0.2rem; }
+  .export-size { font-size: 0.68rem; color: var(--faint); font-family: var(--mono); margin-top: 0.15rem; }
+
+  /* MATRIX LEGEND */
+  .legend { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 0.75rem; }
+  .legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.68rem; color: var(--muted); }
+  .legend-swatch { width: 10px; height: 10px; border-radius: 3px; }
+
+  /* ADVANCED CONTROLS BOX */
+  .adv-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; }
+  .adv-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.85rem; margin-bottom: 0.85rem; }
+  .adv-row:last-child { margin-bottom: 0; }
+
+  /* FIDELITY TOGGLE */
+  .fidelity-group { display: flex; gap: 0.35rem; }
+  .fidelity-btn { padding: 0.3rem 0.65rem; border-radius: 6px; font-size: 0.7rem; font-weight: 600; border: 1.5px solid var(--border); color: var(--muted); background: var(--bg); cursor: pointer; }
+  .fidelity-btn.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .fidelity-btn.disabled { opacity: 0.4; pointer-events: none; }
+
+  /* DIVIDER */
+  hr { border: none; border-top: 1px solid var(--border); margin: 1.25rem 0; }
+
+  /* SUMMARY BANNER */
+  .summary-banner { background: var(--green-light); border: 1px solid #a7f3d0; border-radius: 8px; padding: 0.75rem 1rem; display: flex; gap: 2rem; align-items: center; flex-wrap: wrap; margin-bottom: 1.25rem; }
+  .summary-banner span { font-size: 0.75rem; color: var(--text); }
+  .summary-banner strong { color: var(--green); }
+
+  /* JSON PREVIEW */
+  .json-box { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1rem; font-family: var(--mono); font-size: 0.7rem; line-height: 1.8; color: var(--muted); }
+  .j-key { color: var(--accent); }
+  .j-num { color: var(--green); }
+  .j-str { color: var(--yellow); }
+
+  /* ADV TOGGLE HEADER */
+  .adv-toggle-header {
+    display: flex; align-items: center; justify-content: space-between;
+    cursor: pointer; margin-bottom: 0.85rem; user-select: none;
+  }
+  .adv-toggle-header:hover .adv-toggle-label { color: var(--accent); }
+</style>
+</head>
+<body>
+
+
+<!-- ======================================================= -->
+<!-- SCREEN 1 — INPUT PANEL -->
+<!-- ======================================================= -->
+<div class="screen active" id="screen-input">
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <div class="url-bar">localhost:8501</div>
+    </div>
+    <div class="app">
+      <!-- SIDEBAR -->
+      <div class="sidebar">
+        <div class="logo">FraudGen</div>
+        <div class="nav-item active" data-nav="input" onclick="showScreen('screen-input')"><div class="nav-icon"></div> New Run</div>
+        <div class="nav-item" data-nav="monitor" onclick="showScreen('screen-monitor')"><div class="nav-icon"></div> Monitor</div>
+        <div class="nav-item" data-nav="results" onclick="showScreen('screen-results')"><div class="nav-icon"></div> Results</div>
+        <div class="sidebar-section">History</div>
+        <div class="nav-item" style="font-size:0.7rem;opacity:0.5;cursor:default;">No runs yet</div>
+        <div class="sidebar-footer">
+          <div class="sidebar-stat">Mode: <strong>Live</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Model: <strong style="color:var(--accent)">Sonnet</strong></div>
+        </div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="main">
+        <div class="topbar">
+          <div>
+            <div class="topbar-title">Configure Run</div>
+            <div class="topbar-sub">Describe a fraud type to generate synthetic variants across the full attack space</div>
+          </div>
+        </div>
+        <div class="content">
+
+          <!-- FRAUD TYPE + DESCRIPTION -->
+          <div class="grid-2" style="margin-bottom:1.1rem;">
+            <div>
+              <div class="field-label">Fraud type</div>
+              <select class="input select">
+                <option>Mule Account Network</option>
+                <option>Card Skimming Ring</option>
+                <option>Business Email Compromise</option>
+                <option>Account Takeover</option>
+              </select>
+            </div>
+            <div style="display:flex;align-items:flex-end;">
+              <button id="prefill-btn" class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;">Pre-fill template</button>
+            </div>
+          </div>
+
+          <div style="margin-bottom:1.1rem;">
+            <div class="field-label">Fraud description <span style="color:var(--accent);font-weight:400;font-size:0.68rem;">required · min 20 chars</span></div>
+            <textarea id="fraud-description" class="input textarea" placeholder="Mule account network fraud — criminal organizations recruit individuals to receive stolen funds into their accounts and forward them through a chain of additional accounts before final extraction via wire or cash..."></textarea>
+            <div class="field-hint">The richer and more specific this description, the more targeted the variant space the system will explore.</div>
+          </div>
+
+          <!-- VARIANT SLIDER -->
+          <div style="margin-bottom:1.25rem;">
+            <div style="display:flex;align-items:baseline;gap:0.75rem;margin-bottom:0.35rem;">
+              <div class="field-label" style="margin:0;">Variant count</div>
+              <div class="slider-value" id="variant-count">25</div>
+              <div class="estimate-tag">· Est. <span id="variant-cost">$5.00</span> · Est. <span id="variant-time">4 min</span></div>
+            </div>
+            <div class="slider-wrap">
+              <input type="range" id="variant-slider" min="10" max="100" value="25">
+              <div class="slider-labels"><span>10</span><span>100</span></div>
+            </div>
+          </div>
+
+          <hr>
+
+          <!-- ADVANCED CONTROLS -->
+          <div style="margin-bottom:1.25rem;">
+            <div class="adv-toggle-header" id="adv-toggle">
+              <div class="field-label adv-toggle-label" style="margin:0;">Advanced controls</div>
+              <span id="adv-icon" style="font-size:0.72rem;color:var(--muted);">▸ expand</span>
+            </div>
+            <div class="adv-box" id="adv-box" style="display:none;">
+              <div class="adv-row">
+                <div>
+                  <div class="field-label" style="margin-bottom:0.5rem;">Fidelity level</div>
+                  <div class="fidelity-group">
+                    <div class="fidelity-btn">L2</div>
+                    <div class="fidelity-btn active">L3</div>
+                    <div class="fidelity-btn disabled">L4</div>
+                  </div>
+                </div>
+                <div>
+                  <div class="field-label">Max parallel agents</div>
+                  <input class="input" value="5" style="margin-top:0.35rem;" />
+                </div>
+                <div>
+                  <div class="field-label">Critic score floor</div>
+                  <input class="input" value="7.0" style="margin-top:0.35rem;" />
+                </div>
+              </div>
+              <div class="adv-row">
+                <div>
+                  <div class="field-label">Persona count</div>
+                  <input class="input" value="5" style="margin-top:0.35rem;" />
+                </div>
+                <div>
+                  <div class="field-label">Risk distribution</div>
+                  <select class="input select" style="margin-top:0.35rem;"><option>Balanced</option><option>High-skew</option><option>Low-skew</option></select>
+                </div>
+                <div>
+                  <div class="field-label">Geographic scope</div>
+                  <select class="input select" style="margin-top:0.35rem;"><option>Domestic</option><option>International</option><option>Mixed</option></select>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div style="display:flex;gap:0.75rem;align-items:center;">
+            <button id="run-btn" class="btn btn-primary" disabled>&#9654;&nbsp; Run</button>
+            <button class="btn btn-outline">Save config</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- SCREEN 2 — LIVE MONITORING -->
+<!-- ======================================================= -->
+<div class="screen" id="screen-monitor">
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <div class="url-bar">localhost:8501 · run_20260315_142201</div>
+    </div>
+    <div class="app">
+      <div class="sidebar">
+        <div class="logo">FraudGen</div>
+        <div class="nav-item" data-nav="input" onclick="showScreen('screen-input')"><div class="nav-icon"></div> New Run</div>
+        <div class="nav-item active" data-nav="monitor" onclick="showScreen('screen-monitor')"><div class="nav-icon"></div> Monitor</div>
+        <div class="nav-item" data-nav="results" onclick="showScreen('screen-results')"><div class="nav-icon"></div> Results</div>
+        <div class="sidebar-section">Live stats</div>
+        <div class="sidebar-stat">Approved: <strong style="color:var(--green);">18</strong></div>
+        <div class="sidebar-stat" style="margin-top:0.25rem;">Rejected: <strong style="color:var(--red);">1</strong></div>
+        <div class="sidebar-stat" style="margin-top:0.25rem;">Revising: <strong style="color:var(--yellow);">1</strong></div>
+        <div class="sidebar-section" style="margin-top:0.75rem;">Agents (5)</div>
+        <div class="agent-strip" style="padding:0 0.65rem;flex-wrap:wrap;gap:0.4rem;">
+          <div class="agent-dot ad-done"></div>
+          <div class="agent-dot ad-done"></div>
+          <div class="agent-dot ad-run pulse"></div>
+          <div class="agent-dot ad-retry"></div>
+          <div class="agent-dot ad-run pulse"></div>
+        </div>
+        <div class="sidebar-footer">
+          <div class="sidebar-stat">Cost: <strong style="color:var(--yellow);">$2.14</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.25rem;">Time: <strong>3m 22s</strong></div>
+          <div style="display:flex;gap:0.4rem;padding:0.65rem 0.65rem 0;">
+            <button id="pause-btn" class="btn btn-ghost btn-sm" style="flex:1;justify-content:center;font-size:0.65rem;" title="Pause / Resume">&#9208;</button>
+            <button id="stop-btn" class="btn btn-danger btn-sm" style="flex:1;justify-content:center;font-size:0.65rem;" title="Stop run">&#9209;</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="main">
+        <div class="topbar">
+          <div>
+            <div class="topbar-title">Generating variants <span class="pulse" style="color:var(--accent);">&#9679;</span></div>
+            <div class="topbar-sub">Mule Account Network &middot; 25 variants &middot; Level 3</div>
+          </div>
+          <div style="text-align:right;">
+            <div style="font-size:0.72rem;font-weight:700;color:var(--text);">18 / 25</div>
+            <div class="progress-wrap" style="width:140px;margin-top:0.35rem;"><div class="progress-fill" style="width:72%;"></div></div>
+          </div>
+        </div>
+
+        <div class="content">
+          <div class="row" style="gap:1.25rem;align-items:flex-start;">
+
+            <!-- LEFT: MATRIX + VARIANT FEED -->
+            <div class="col" style="flex:1.6;">
+
+              <!-- COVERAGE MATRIX -->
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Coverage Matrix</div>
+              <div class="matrix matrix-6">
+                <div class="mx-cell mx-green">3h·ch·sd</div>
+                <div class="mx-cell mx-green">3h·ch·dl</div>
+                <div class="mx-cell mx-green">3h·fan·sd</div>
+                <div class="mx-cell mx-blue pulse">3h·fan·dl</div>
+                <div class="mx-cell mx-green">5h·ch·sd</div>
+                <div class="mx-cell mx-green">5h·ch·dl</div>
+                <div class="mx-cell mx-yellow">5h·fan·sd</div>
+                <div class="mx-cell mx-green">5h·fan·dl</div>
+                <div class="mx-cell mx-green">2h·ch·sd</div>
+                <div class="mx-cell mx-blue pulse">2h·ch·dl</div>
+                <div class="mx-cell mx-green">2h·fan·sd</div>
+                <div class="mx-cell mx-red">2h·fan·dl</div>
+                <div class="mx-cell mx-green">3h·ch·sd</div>
+                <div class="mx-cell mx-green">3h·ch·dl</div>
+                <div class="mx-cell mx-gray">3h·fan·sd</div>
+                <div class="mx-cell mx-gray">3h·fan·dl</div>
+                <div class="mx-cell mx-gray">5h·ch·sd</div>
+                <div class="mx-cell mx-gray">5h·ch·dl</div>
+              </div>
+              <div class="legend">
+                <div class="legend-item"><div class="legend-swatch" style="background:var(--green-light);border:1px solid #a7f3d0;"></div>Approved</div>
+                <div class="legend-item"><div class="legend-swatch" style="background:var(--accent-light);border:1px solid #bdd4ef;"></div>In progress</div>
+                <div class="legend-item"><div class="legend-swatch" style="background:var(--yellow-light);border:1px solid #fde68a;"></div>Revised</div>
+                <div class="legend-item"><div class="legend-swatch" style="background:var(--red-light);border:1px solid #fecaca;"></div>Failed</div>
+                <div class="legend-item"><div class="legend-swatch" style="background:var(--surface2);border:1px solid var(--border);"></div>Pending</div>
+              </div>
+
+              <hr style="margin:1rem 0;">
+
+              <!-- VARIANT FEED -->
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Variant feed</div>
+              <div style="display:flex;flex-direction:column;gap:0.4rem;">
+                <div class="variant-card">
+                  <span class="badge badge-green">&#10003;</span>
+                  <div><div class="vname">V-001</div><div class="vmeta">3-hop chain &middot; same-day &middot; Viktor Sokolov</div></div>
+                  <div class="variant-score score-good">8.4</div>
+                </div>
+                <div class="variant-card">
+                  <span class="badge badge-green">&#10003;</span>
+                  <div><div class="vname">V-002</div><div class="vmeta">5-hop fan-out &middot; delayed &middot; James Harlow</div></div>
+                  <div class="variant-score score-good">7.9</div>
+                </div>
+                <div class="variant-card">
+                  <span class="badge badge-yellow">&#8635;</span>
+                  <div><div class="vname">V-003 <span style="color:var(--muted);font-weight:400;">retry 1/2</span></div><div class="vmeta">2-hop chain &middot; burst &middot; Maria Chen</div></div>
+                  <div class="variant-score score-warn">5.1 &rarr;</div>
+                </div>
+                <div class="variant-card">
+                  <span class="badge badge-green">&#10003;</span>
+                  <div><div class="vname">V-004</div><div class="vmeta">3-hop fan-out &middot; delayed &middot; Viktor Sokolov</div></div>
+                  <div class="variant-score score-good">8.0</div>
+                </div>
+                <div class="variant-card" style="opacity:0.45;">
+                  <span class="badge badge-blue pulse">&hellip;</span>
+                  <div><div class="vname">V-005</div><div class="vmeta">generating &middot; step 3 of 4 &middot; persona analysis done</div></div>
+                  <div class="variant-score" style="color:var(--faint);">&mdash;</div>
+                </div>
+              </div>
+            </div>
+
+            <!-- RIGHT: PERSONAS -->
+            <div class="col" style="min-width:190px;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Criminal personas</div>
+              <div style="display:flex;flex-direction:column;gap:0.5rem;">
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.5rem;">
+                    <div class="persona-avatar">VS</div>
+                    <div>
+                      <div class="persona-name">Viktor Sokolov</div>
+                      <span class="badge badge-red" style="font-size:0.6rem;margin-top:0.2rem;">High risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.5;">International routing &middot; crypto-capable &middot; speed-first</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.5rem;">
+                    <div class="persona-avatar" style="background:var(--green-light);border-color:#a7f3d0;color:var(--green);">JH</div>
+                    <div>
+                      <div class="persona-name">James Harlow</div>
+                      <span class="badge badge-green" style="font-size:0.6rem;margin-top:0.2rem;">Low risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.5;">Domestic only &middot; slow ACH &middot; heavy cover</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.5rem;">
+                    <div class="persona-avatar" style="background:var(--yellow-light);border-color:#fde68a;color:var(--yellow);">MC</div>
+                    <div>
+                      <div class="persona-name">Maria Chen</div>
+                      <span class="badge badge-yellow" style="font-size:0.6rem;margin-top:0.2rem;">Mid risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.5;">Crypto extraction &middot; mid amounts &middot; cautious</div>
+                </div>
+
+                <div class="persona-card" style="opacity:0.35;border-style:dashed;">
+                  <div style="display:flex;gap:0.65rem;align-items:center;">
+                    <div class="persona-avatar" style="background:var(--surface2);border-color:var(--border);color:var(--faint);">&middot;&middot;&middot;</div>
+                    <div><div class="persona-name" style="color:var(--faint);">Generating...</div></div>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ======================================================= -->
+<!-- SCREEN 3 — RESULTS (tabs: Coverage / Network / Dataset / Personas / Export) -->
+<!-- ======================================================= -->
+<div class="screen" id="screen-results">
+  <div class="browser">
+    <div class="browser-bar">
+      <div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div>
+      <div class="url-bar" id="results-url-bar">localhost:8501 &middot; run_20260315_142201 &middot; complete</div>
+    </div>
+    <div class="app">
+
+      <!-- UNIFIED SIDEBAR -->
+      <div class="sidebar">
+        <div class="logo">FraudGen</div>
+        <div class="nav-item" data-nav="input" onclick="showScreen('screen-input')"><div class="nav-icon"></div> New Run</div>
+        <div class="nav-item" data-nav="monitor" onclick="showScreen('screen-monitor')"><div class="nav-icon"></div> Monitor</div>
+        <div class="nav-item active" data-nav="results" onclick="showScreen('screen-results')"><div class="nav-icon"></div> Results</div>
+
+        <!-- Run summary: shown for most tabs -->
+        <div id="sidebar-run-summary">
+          <div class="sidebar-section">Run summary</div>
+          <div class="sidebar-stat">Variants: <strong style="color:var(--green);">23 / 25</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Score: <strong style="color:var(--green);">8.1 / 10</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Coverage: <strong style="color:var(--green);">82%</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Transactions: <strong>2,140</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Cost: <strong style="color:var(--yellow);">$4.21</strong></div>
+          <div class="sidebar-stat" style="margin-top:0.2rem;">Runtime: <strong>6m 12s</strong></div>
+        </div>
+
+        <!-- Dataset quick filter: shown only on Dataset tab -->
+        <div id="sidebar-dataset-filter" style="display:none;">
+          <div class="sidebar-section">Quick filter</div>
+          <div class="nav-item" style="font-size:0.7rem;" onclick="setSidebarRole(this)">All roles</div>
+          <div class="nav-item active" style="font-size:0.7rem;background:var(--purple-light);color:var(--purple);" onclick="setSidebarRole(this)">placement</div>
+          <div class="nav-item" style="font-size:0.7rem;" onclick="setSidebarRole(this)">hop_N_of_M</div>
+          <div class="nav-item" style="font-size:0.7rem;" onclick="setSidebarRole(this)">extraction</div>
+          <div class="nav-item" style="font-size:0.7rem;" onclick="setSidebarRole(this)">cover_activity</div>
+        </div>
+
+        <div class="sidebar-footer">
+          <div id="sidebar-dataset-stats" style="display:none;">
+            <div class="sidebar-stat">2,140 total rows</div>
+            <div class="sidebar-stat" style="margin-top:0.2rem;color:var(--red);">312 fraud txns</div>
+            <div class="sidebar-stat" style="margin-top:0.2rem;">1,828 cover txns</div>
+          </div>
+          <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="showScreen('screen-input')">+ New run</button>
+        </div>
+      </div>
+
+      <!-- MAIN with tab bar + panels -->
+      <div class="main">
+        <div class="tabs">
+          <div class="tab active" data-tab="coverage" onclick="showTab('coverage')">Coverage</div>
+          <div class="tab" data-tab="network" onclick="showTab('network')">Network Graphs</div>
+          <div class="tab" data-tab="dataset" onclick="showTab('dataset')">Dataset</div>
+          <div class="tab" data-tab="personas" onclick="showTab('personas')">Personas</div>
+          <div class="tab" data-tab="export" onclick="showTab('export')">Export</div>
+        </div>
+
+        <!-- TAB: COVERAGE -->
+        <div class="tab-panel active" id="tab-coverage">
+          <div class="content">
+
+            <div class="summary-banner">
+              <span>Run complete &middot;</span>
+              <span><strong>23</strong> variants approved</span>
+              <span>Mean score <strong>8.1 / 10</strong></span>
+              <span>Coverage <strong>82%</strong></span>
+              <span><strong>5</strong> personas</span>
+              <span><strong>2,140</strong> transactions</span>
+            </div>
+
+            <div class="stat-row" style="margin-bottom:1.25rem;">
+              <div class="stat-box"><div class="stat-val">23</div><div class="stat-lbl">Approved</div></div>
+              <div class="stat-box"><div class="stat-val">82%</div><div class="stat-lbl">Coverage</div></div>
+              <div class="stat-box"><div class="stat-val">8.1</div><div class="stat-lbl">Avg score</div></div>
+              <div class="stat-box"><div class="stat-val">2,140</div><div class="stat-lbl">Transactions</div></div>
+              <div class="stat-box"><div class="stat-val">$4.21</div><div class="stat-lbl">API cost</div></div>
+            </div>
+
+            <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.5rem;">Fraud variant space &mdash; hover any cell to see covering variants</div>
+            <div class="matrix matrix-8">
+              <div class="mx-cell mx-green">3h·ch·sd</div><div class="mx-cell mx-green">3h·ch·dl</div>
+              <div class="mx-cell mx-yellow">3h·fan·sd</div><div class="mx-cell mx-green">3h·fan·dl</div>
+              <div class="mx-cell mx-green">5h·ch·sd</div><div class="mx-cell mx-green">5h·ch·dl</div>
+              <div class="mx-cell mx-green">5h·fan·sd</div><div class="mx-cell mx-gray">5h·fan·dl</div>
+
+              <div class="mx-cell mx-green">2h·ch·sd</div><div class="mx-cell mx-green">2h·ch·dl</div>
+              <div class="mx-cell mx-green">2h·fan·sd</div><div class="mx-cell mx-red">2h·fan·dl</div>
+              <div class="mx-cell mx-green">3h·ch·sd</div><div class="mx-cell mx-green">3h·ch·dl</div>
+              <div class="mx-cell mx-yellow">3h·fan·sd</div><div class="mx-cell mx-green">3h·fan·dl</div>
+
+              <div class="mx-cell mx-green">5h·ch·sd</div><div class="mx-cell mx-green">5h·ch·dl</div>
+              <div class="mx-cell mx-green">5h·fan·sd</div><div class="mx-cell mx-gray">5h·fan·dl</div>
+              <div class="mx-cell mx-green">2h·ch·sd</div><div class="mx-cell mx-green">2h·ch·dl</div>
+              <div class="mx-cell mx-green">2h·fan·sd</div><div class="mx-cell mx-green">2h·fan·dl</div>
+
+              <div class="mx-cell mx-green">3h·ch·sd</div><div class="mx-cell mx-gray">3h·ch·dl</div>
+              <div class="mx-cell mx-green">3h·fan·sd</div><div class="mx-cell mx-green">3h·fan·dl</div>
+              <div class="mx-cell mx-green">5h·ch·sd</div><div class="mx-cell mx-green">5h·ch·dl</div>
+              <div class="mx-cell mx-yellow">5h·fan·sd</div><div class="mx-cell mx-green">5h·fan·dl</div>
+            </div>
+            <div class="legend" style="margin-top:0.75rem;">
+              <div class="legend-item"><div class="legend-swatch" style="background:var(--green-light);border:1px solid #a7f3d0;"></div>Approved</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:var(--yellow-light);border:1px solid #fde68a;"></div>Revised &amp; approved</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:var(--red-light);border:1px solid #fecaca;"></div>Failed all attempts</div>
+              <div class="legend-item"><div class="legend-swatch" style="background:var(--surface2);border:1px solid var(--border);"></div>Uncovered</div>
+            </div>
+            <div class="field-hint" style="margin-top:0.5rem;">Axes: hop count &times; topology &times; timing &middot; click any cell to see which variants cover it</div>
+          </div>
+        </div>
+
+        <!-- TAB: NETWORK GRAPHS -->
+        <div class="tab-panel" id="tab-network">
+          <div class="content">
+            <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text);">Showing 3 variants</div>
+              <select class="input" style="width:auto;font-size:0.72rem;padding:0.3rem 0.6rem;">
+                <option>Compare any two...</option>
+                <option>V-001 vs V-002</option>
+                <option>V-001 vs V-008</option>
+              </select>
+            </div>
+
+            <div class="grid-3" style="gap:1rem;">
+
+              <!-- GRAPH 1: CHAIN -->
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.35rem;">V-001 &middot; 3-hop chain</div>
+                <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem;">Viktor &middot; same-day &middot; ACH&rarr;Zelle&rarr;wire</div>
+                <div class="graph-box">
+                  <svg style="position:absolute;inset:0;width:100%;height:100%;">
+                    <defs><marker id="a1" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#dc2626"/></marker></defs>
+                    <line x1="15%" y1="50%" x2="35%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a1)"/>
+                    <line x1="41%" y1="50%" x2="58%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a1)"/>
+                    <line x1="64%" y1="50%" x2="80%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a1)"/>
+                    <line x1="15%" y1="48%" x2="15%" y2="22%" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+                    <line x1="41%" y1="48%" x2="48%" y2="22%" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+                  </svg>
+                  <div class="g-node g-fraud" style="left:4%;top:36%;">SRC</div>
+                  <div class="g-node g-fraud" style="left:30%;top:36%;font-size:0.5rem;">M1</div>
+                  <div class="g-node g-fraud" style="left:53%;top:36%;font-size:0.5rem;">M2</div>
+                  <div class="g-node g-extract" style="left:74%;top:36%;font-size:0.5rem;">DST</div>
+                  <div class="g-node g-cover" style="left:4%;top:4%;width:30px;height:30px;font-size:0.48rem;">shop</div>
+                  <div class="g-node g-cover" style="left:36%;top:4%;width:30px;height:30px;font-size:0.48rem;">gas</div>
+                  <div style="position:absolute;bottom:0.5rem;left:0.75rem;font-size:0.58rem;color:var(--muted);">&mdash; fraud &nbsp; &ctdot; cover</div>
+                </div>
+                <div style="font-size:0.62rem;color:var(--muted);margin-top:0.4rem;">4 txns &middot; $4,800 &rarr; $4,070 &middot; critic 8.4</div>
+              </div>
+
+              <!-- GRAPH 2: 5-HOP -->
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.35rem;">V-002 &middot; 5-hop chain</div>
+                <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem;">James &middot; delayed 24h &middot; all ACH</div>
+                <div class="graph-box">
+                  <svg style="position:absolute;inset:0;width:100%;height:100%;">
+                    <defs><marker id="a2" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#dc2626"/></marker></defs>
+                    <line x1="8%" y1="50%" x2="22%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a2)"/>
+                    <line x1="28%" y1="50%" x2="40%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a2)"/>
+                    <line x1="46%" y1="50%" x2="57%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a2)"/>
+                    <line x1="63%" y1="50%" x2="73%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a2)"/>
+                    <line x1="79%" y1="50%" x2="89%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a2)"/>
+                    <line x1="8%" y1="48%" x2="8%" y2="22%" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+                    <line x1="28%" y1="48%" x2="28%" y2="22%" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+                    <line x1="46%" y1="48%" x2="46%" y2="22%" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,2"/>
+                  </svg>
+                  <div class="g-node g-fraud" style="left:0%;top:36%;font-size:0.45rem;width:30px;height:30px;">SRC</div>
+                  <div class="g-node g-fraud" style="left:17%;top:36%;font-size:0.45rem;width:28px;height:28px;">M1</div>
+                  <div class="g-node g-fraud" style="left:34%;top:36%;font-size:0.45rem;width:28px;height:28px;">M2</div>
+                  <div class="g-node g-fraud" style="left:51%;top:36%;font-size:0.45rem;width:28px;height:28px;">M3</div>
+                  <div class="g-node g-fraud" style="left:67%;top:36%;font-size:0.45rem;width:28px;height:28px;">M4</div>
+                  <div class="g-node g-extract" style="left:83%;top:36%;font-size:0.45rem;width:28px;height:28px;">DST</div>
+                  <div class="g-node g-cover" style="left:0%;top:3%;width:26px;height:26px;font-size:0.42rem;">groc</div>
+                  <div class="g-node g-cover" style="left:22%;top:3%;width:26px;height:26px;font-size:0.42rem;">gas</div>
+                  <div class="g-node g-cover" style="left:40%;top:3%;width:26px;height:26px;font-size:0.42rem;">bill</div>
+                </div>
+                <div style="font-size:0.62rem;color:var(--muted);margin-top:0.4rem;">8 txns &middot; $1,200 &rarr; $1,010 &middot; slow drip &middot; critic 7.9</div>
+              </div>
+
+              <!-- GRAPH 3: FAN-OUT -->
+              <div>
+                <div style="font-size:0.72rem;font-weight:700;color:var(--text);margin-bottom:0.35rem;">V-008 &middot; 3-hop fan-out</div>
+                <div style="font-size:0.65rem;color:var(--muted);margin-bottom:0.5rem;">Maria &middot; burst &middot; crypto extraction</div>
+                <div class="graph-box">
+                  <svg style="position:absolute;inset:0;width:100%;height:100%;">
+                    <defs><marker id="a3" markerWidth="5" markerHeight="5" refX="4" refY="2.5" orient="auto"><path d="M0,0 L5,2.5 L0,5 Z" fill="#dc2626"/></marker></defs>
+                    <line x1="18%" y1="50%" x2="52%" y2="18%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a3)"/>
+                    <line x1="18%" y1="50%" x2="52%" y2="50%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a3)"/>
+                    <line x1="18%" y1="50%" x2="52%" y2="82%" stroke="#dc2626" stroke-width="1.5" marker-end="url(#a3)"/>
+                    <line x1="58%" y1="18%" x2="80%" y2="50%" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#a3)"/>
+                    <line x1="58%" y1="50%" x2="80%" y2="50%" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#a3)"/>
+                    <line x1="58%" y1="82%" x2="80%" y2="50%" stroke="#7c3aed" stroke-width="1.5" marker-end="url(#a3)"/>
+                  </svg>
+                  <div class="g-node g-fraud" style="left:4%;top:36%;">SRC</div>
+                  <div class="g-node g-fraud" style="left:47%;top:3%;width:28px;height:28px;font-size:0.5rem;">M1</div>
+                  <div class="g-node g-fraud" style="left:47%;top:36%;width:28px;height:28px;font-size:0.5rem;">M2</div>
+                  <div class="g-node g-fraud" style="left:47%;top:67%;width:28px;height:28px;font-size:0.5rem;">M3</div>
+                  <div class="g-node g-extract" style="left:75%;top:36%;width:30px;height:30px;font-size:0.48rem;">CRPT</div>
+                </div>
+                <div style="font-size:0.62rem;color:var(--muted);margin-top:0.4rem;">6 txns &middot; fan-out &rarr; crypto aggregate &middot; critic 8.1</div>
+              </div>
+
+            </div>
+
+            <div style="font-size:0.65rem;color:var(--muted);margin-top:0.85rem;display:flex;gap:1.5rem;">
+              <span><span style="color:var(--red);">&#9679;</span> Fraud path</span>
+              <span><span style="color:var(--purple);">&#9679;</span> Crypto extraction</span>
+              <span><span style="color:var(--faint);">&#9679;</span> Cover activity</span>
+              <span style="margin-left:auto;color:var(--faint);">Structurally diverse &mdash; not statistical noise around the same pattern</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: DATASET -->
+        <div class="tab-panel" id="tab-dataset">
+          <div class="content">
+            <div class="filter-bar">
+              <div class="filter-chip active">Persona: All &#9660;</div>
+              <div class="filter-chip active" style="background:var(--purple-light);border-color:#ddd6fe;color:var(--purple);">Role: placement</div>
+              <div class="filter-chip">is_fraud: All &#9660;</div>
+              <div class="filter-chip">Score &ge; 7 &#9660;</div>
+              <div class="filter-chip">Variant &#9660;</div>
+              <div class="filter-count">Showing 312 of 2,140 rows</div>
+            </div>
+            <div class="table-wrap">
+              <table>
+                <thead>
+                  <tr>
+                    <th>transaction_id</th>
+                    <th>timestamp</th>
+                    <th>amount</th>
+                    <th>channel</th>
+                    <th>is_fraud</th>
+                    <th>fraud_role</th>
+                    <th>variant_id</th>
+                    <th>persona</th>
+                    <th>hop_count</th>
+                    <th>critic_score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>TXN-0041</td><td>2026-03-10 09:14</td>
+                    <td class="amount-cell">$4,800.00</td><td>ACH</td>
+                    <td class="bool-true">True</td><td class="role-place">placement</td>
+                    <td class="vid-cell">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:var(--green);font-weight:600;">8.4</td>
+                  </tr>
+                  <tr style="background:var(--surface);">
+                    <td>TXN-0071</td><td>2026-03-12 08:55</td>
+                    <td class="amount-cell">$1,200.00</td><td>ACH</td>
+                    <td class="bool-true">True</td><td class="role-place">placement</td>
+                    <td class="vid-cell">V-B9C2D1</td><td>James H.</td><td>5</td><td style="color:var(--green);font-weight:600;">7.9</td>
+                  </tr>
+                  <tr>
+                    <td>TXN-0042</td><td>2026-03-10 11:32</td>
+                    <td class="amount-cell">$4,560.00</td><td>Zelle</td>
+                    <td class="bool-true">True</td><td class="role-hop">hop_1_of_3</td>
+                    <td class="vid-cell">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:var(--green);font-weight:600;">8.4</td>
+                  </tr>
+                  <tr style="background:var(--surface);">
+                    <td>TXN-0043</td><td>2026-03-10 11:48</td>
+                    <td class="amount-cell">$4,300.00</td><td>Zelle</td>
+                    <td class="bool-true">True</td><td class="role-hop">hop_2_of_3</td>
+                    <td class="vid-cell">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:var(--green);font-weight:600;">8.4</td>
+                  </tr>
+                  <tr>
+                    <td>TXN-0044</td><td>2026-03-10 14:05</td>
+                    <td class="amount-cell">$4,070.00</td><td>wire</td>
+                    <td class="bool-true">True</td><td class="role-ext">extraction</td>
+                    <td class="vid-cell">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:var(--green);font-weight:600;">8.4</td>
+                  </tr>
+                  <tr style="background:var(--surface);">
+                    <td>TXN-0045</td><td>2026-03-10 10:22</td>
+                    <td class="amount-cell">$63.40</td><td>card</td>
+                    <td class="bool-false">False</td><td class="role-cov">cover_activity</td>
+                    <td class="vid-cell">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:var(--green);font-weight:600;">8.4</td>
+                  </tr>
+                  <tr>
+                    <td colspan="10" style="text-align:center;color:var(--faint);font-size:0.65rem;padding:0.75rem;">&middot; &middot; &middot; 2,134 more rows &middot; &middot; &middot;</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:1.5rem;margin-top:0.75rem;flex-wrap:wrap;">
+              <span style="font-size:0.65rem;"><span class="role-place">&#9632;</span> placement &mdash; first account receives funds</span>
+              <span style="font-size:0.65rem;"><span class="role-hop">&#9632;</span> hop_N_of_M &mdash; layering</span>
+              <span style="font-size:0.65rem;"><span class="role-ext">&#9632;</span> extraction &mdash; final cashout</span>
+              <span style="font-size:0.65rem;"><span class="role-cov">&#9632;</span> cover_activity &mdash; is_fraud = False</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: PERSONAS -->
+        <div class="tab-panel" id="tab-personas">
+          <div class="content">
+            <div style="margin-bottom:1.25rem;">
+              <div style="font-size:0.75rem;font-weight:700;color:var(--text);margin-bottom:0.75rem;">Criminal personas &mdash; 5 generated</div>
+              <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;">
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.65rem;">
+                    <div class="persona-avatar">VS</div>
+                    <div>
+                      <div class="persona-name">Viktor Sokolov</div>
+                      <span class="badge badge-red" style="font-size:0.6rem;margin-top:0.2rem;">High risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.6;">International routing &middot; crypto-capable &middot; speed-first &middot; Eastern European network</div>
+                  <div style="margin-top:0.5rem;font-size:0.62rem;color:var(--faint);">Assigned: 8 variants</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.65rem;">
+                    <div class="persona-avatar" style="background:var(--green-light);border-color:#a7f3d0;color:var(--green);">JH</div>
+                    <div>
+                      <div class="persona-name">James Harlow</div>
+                      <span class="badge badge-green" style="font-size:0.6rem;margin-top:0.2rem;">Low risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.6;">Domestic only &middot; slow ACH &middot; heavy cover &middot; avoids velocity triggers</div>
+                  <div style="margin-top:0.5rem;font-size:0.62rem;color:var(--faint);">Assigned: 6 variants</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.65rem;">
+                    <div class="persona-avatar" style="background:var(--yellow-light);border-color:#fde68a;color:var(--yellow);">MC</div>
+                    <div>
+                      <div class="persona-name">Maria Chen</div>
+                      <span class="badge badge-yellow" style="font-size:0.6rem;margin-top:0.2rem;">Mid risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.6;">Crypto extraction &middot; mid amounts &middot; cautious &middot; burst timing</div>
+                  <div style="margin-top:0.5rem;font-size:0.62rem;color:var(--faint);">Assigned: 5 variants</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.65rem;">
+                    <div class="persona-avatar" style="background:var(--purple-light);border-color:#ddd6fe;color:var(--purple);">DK</div>
+                    <div>
+                      <div class="persona-name">Dmitri Karev</div>
+                      <span class="badge badge-red" style="font-size:0.6rem;margin-top:0.2rem;">High risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.6;">Fan-out specialist &middot; recruits multiple mules &middot; wire extraction</div>
+                  <div style="margin-top:0.5rem;font-size:0.62rem;color:var(--faint);">Assigned: 3 variants</div>
+                </div>
+
+                <div class="persona-card">
+                  <div style="display:flex;gap:0.65rem;align-items:center;margin-bottom:0.65rem;">
+                    <div class="persona-avatar" style="background:var(--surface2);border-color:var(--border);color:var(--muted);">AL</div>
+                    <div>
+                      <div class="persona-name">Ana Lima</div>
+                      <span class="badge badge-yellow" style="font-size:0.6rem;margin-top:0.2rem;">Mid risk</span>
+                    </div>
+                  </div>
+                  <div style="font-size:0.65rem;color:var(--muted);line-height:1.6;">P2P channels &middot; small amounts &middot; high frequency &middot; smurfing</div>
+                  <div style="margin-top:0.5rem;font-size:0.62rem;color:var(--faint);">Assigned: 1 variant</div>
+                </div>
+
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- TAB: EXPORT -->
+        <div class="tab-panel" id="tab-export">
+          <div class="content" style="max-width:620px;">
+            <div style="font-size:0.78rem;color:var(--muted);margin-bottom:1.25rem;">
+              All files from <code style="background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:0.1rem 0.4rem;font-size:0.7rem;">output/runs/run_20260315_142201/</code>
+            </div>
+
+            <div class="export-row">
+              <div>
+                <div class="export-name">dataset.csv</div>
+                <div class="export-meta">One row per transaction &middot; flat tabular &middot; XGBoost / Random Forest</div>
+                <div class="export-size">~1.8 MB &middot; 2,140 rows &middot; 15 columns</div>
+              </div>
+              <button class="btn btn-primary btn-sm">&#8595; Download</button>
+            </div>
+
+            <div class="export-row">
+              <div>
+                <div class="export-name">dataset.json</div>
+                <div class="export-meta">Nested &mdash; variant + persona metadata + transactions &middot; GNN / LSTM</div>
+                <div class="export-size">~3.2 MB &middot; full context preserved per variant</div>
+              </div>
+              <button class="btn btn-primary btn-sm">&#8595; Download</button>
+            </div>
+
+            <div class="export-row">
+              <div>
+                <div class="export-name">graph_adjacency.json</div>
+                <div class="export-meta">NetworkX-compatible &middot; nodes = accounts, edges = transactions &middot; GNN training</div>
+                <div class="export-size">~0.9 MB &middot; adjacency list format</div>
+              </div>
+              <button class="btn btn-primary btn-sm">&#8595; Download</button>
+            </div>
+
+            <div class="export-row" style="background:var(--surface);">
+              <div>
+                <div class="export-name" style="color:var(--muted);">run_summary.json</div>
+                <div class="export-meta">Aggregate stats &mdash; counts, scores, coverage %, cost, timing</div>
+                <div class="export-size">~2 KB</div>
+              </div>
+              <button class="btn btn-ghost btn-sm">&#8595; Download</button>
+            </div>
+
+            <hr>
+
+            <div style="font-size:0.75rem;font-weight:600;color:var(--text);margin-bottom:0.5rem;">run_summary.json preview</div>
+            <div class="json-box">
+              <span style="color:var(--faint)">{</span><br>
+              &nbsp; <span class="j-key">"variant_count"</span>: <span class="j-num">23</span>,<br>
+              &nbsp; <span class="j-key">"mean_critic_score"</span>: <span class="j-num">8.1</span>,<br>
+              &nbsp; <span class="j-key">"coverage_saturation_pct"</span>: <span class="j-num">82.0</span>,<br>
+              &nbsp; <span class="j-key">"total_transactions"</span>: <span class="j-num">2140</span>,<br>
+              &nbsp; <span class="j-key">"total_cost_usd"</span>: <span class="j-num">4.21</span>,<br>
+              &nbsp; <span class="j-key">"run_duration_seconds"</span>: <span class="j-num">372</span>,<br>
+              &nbsp; <span class="j-key">"persona_count"</span>: <span class="j-num">5</span>,<br>
+              &nbsp; <span class="j-key">"timestamp"</span>: <span class="j-str">"2026-03-15T14:22:01"</span><br>
+              <span style="color:var(--faint)">}</span>
+            </div>
+          </div>
+        </div>
+
+      </div><!-- .main -->
+    </div><!-- .app -->
+  </div><!-- .browser -->
+</div><!-- #screen-results -->
+
+
+<script>
+// ─── SCREEN ROUTING ───────────────────────────────────────────
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+
+  // Sync nav items in all sidebars
+  const screenKey = id.replace('screen-', '');
+  document.querySelectorAll('.nav-item[data-nav]').forEach(item => {
+    item.classList.toggle('active', item.dataset.nav === screenKey);
+  });
+}
+
+// ─── TAB ROUTING ──────────────────────────────────────────────
+function showTab(tabName) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.getElementById('tab-' + tabName).classList.add('active');
+
+  // Sync tab bar
+  document.querySelectorAll('#screen-results .tab').forEach(t => {
+    t.classList.toggle('active', t.dataset.tab === tabName);
+  });
+
+  // Toggle dataset sidebar sections
+  const isDataset = tabName === 'dataset';
+  document.getElementById('sidebar-dataset-filter').style.display = isDataset ? 'block' : 'none';
+  document.getElementById('sidebar-dataset-stats').style.display = isDataset ? 'block' : 'none';
+  document.getElementById('sidebar-run-summary').style.display = isDataset ? 'none' : 'block';
+}
+
+// ─── SLIDER ───────────────────────────────────────────────────
+function initSlider() {
+  const slider = document.getElementById('variant-slider');
+  const countEl = document.getElementById('variant-count');
+  const costEl = document.getElementById('variant-cost');
+  const timeEl = document.getElementById('variant-time');
+
+  function update() {
+    const n = parseInt(slider.value);
+    countEl.textContent = n;
+    costEl.textContent = '$' + (n * 0.20).toFixed(2);
+    const secs = n * 10;
+    const mins = Math.round(secs / 60);
+    timeEl.textContent = mins < 1 ? secs + ' sec' : mins + ' min';
+  }
+
+  slider.addEventListener('input', update);
+  update();
+}
+
+// ─── RUN BUTTON ───────────────────────────────────────────────
+function initRunButton() {
+  const textarea = document.getElementById('fraud-description');
+  const runBtn = document.getElementById('run-btn');
+
+  function checkLength() {
+    runBtn.disabled = textarea.value.length < 20;
+  }
+
+  textarea.addEventListener('input', checkLength);
+  checkLength();
+
+  runBtn.addEventListener('click', () => showScreen('screen-monitor'));
+}
+
+// ─── PRE-FILL TEMPLATE ────────────────────────────────────────
+function initPrefill() {
+  const btn = document.getElementById('prefill-btn');
+  const textarea = document.getElementById('fraud-description');
+
+  btn.addEventListener('click', () => {
+    textarea.value = textarea.getAttribute('placeholder');
+    textarea.dispatchEvent(new Event('input'));
+    textarea.focus();
+  });
+}
+
+// ─── ADVANCED CONTROLS TOGGLE ─────────────────────────────────
+function initAdvanced() {
+  const toggle = document.getElementById('adv-toggle');
+  const box = document.getElementById('adv-box');
+  const icon = document.getElementById('adv-icon');
+
+  toggle.addEventListener('click', () => {
+    const isOpen = box.style.display !== 'none';
+    box.style.display = isOpen ? 'none' : 'block';
+    icon.textContent = isOpen ? '▸ expand' : '▾ collapse';
+  });
+}
+
+// ─── FIDELITY BUTTONS ─────────────────────────────────────────
+function initFidelity() {
+  document.querySelectorAll('.fidelity-btn:not(.disabled)').forEach(btn => {
+    btn.addEventListener('click', () => {
+      btn.closest('.fidelity-group').querySelectorAll('.fidelity-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    });
+  });
+}
+
+// ─── MONITOR CONTROLS ─────────────────────────────────────────
+function initMonitor() {
+  const pauseBtn = document.getElementById('pause-btn');
+  const stopBtn = document.getElementById('stop-btn');
+
+  pauseBtn.addEventListener('click', () => {
+    const paused = document.getElementById('screen-monitor').classList.toggle('animation-paused');
+    pauseBtn.innerHTML = paused ? '&#9654;' : '&#9208;';
+    pauseBtn.title = paused ? 'Resume' : 'Pause';
+  });
+
+  stopBtn.addEventListener('click', () => {
+    if (confirm('Stop the current run and return to Input?')) {
+      document.getElementById('screen-monitor').classList.remove('animation-paused');
+      showScreen('screen-input');
+    }
+  });
+}
+
+// ─── DATASET FILTER CHIPS ─────────────────────────────────────
+function initFilters() {
+  document.querySelectorAll('#tab-dataset .filter-chip').forEach(chip => {
+    chip.addEventListener('click', () => chip.classList.toggle('active'));
+  });
+}
+
+// ─── SIDEBAR ROLE FILTER ──────────────────────────────────────
+function setSidebarRole(item) {
+  document.querySelectorAll('#sidebar-dataset-filter .nav-item').forEach(i => {
+    i.classList.remove('active');
+    i.style.background = '';
+    i.style.color = '';
+  });
+  item.classList.add('active');
+  // Purple highlight for role items
+  item.style.background = 'var(--purple-light)';
+  item.style.color = 'var(--purple)';
+}
+
+// ─── INIT ──────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', () => {
+  showScreen('screen-input');
+  showTab('coverage');
+  initSlider();
+  initRunButton();
+  initPrefill();
+  initAdvanced();
+  initFidelity();
+  initMonitor();
+  initFilters();
+});
+</script>
+</body>
+</html>

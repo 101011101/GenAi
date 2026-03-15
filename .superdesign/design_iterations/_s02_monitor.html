@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 02: Live Monitor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: #dde4ed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 24px 48px;
+  }
+
+  /* Screen Label */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    align-self: flex-start;
+    margin-left: calc(50% - 520px);
+  }
+  .screen-label .pill-number {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .screen-label .screen-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .screen-label .screen-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* Browser Chrome */
+  .browser {
+    width: 1040px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+  }
+  .browser-chrome {
+    background: #e5e7eb;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 1px solid #d1d5db;
+  }
+  .chrome-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .chrome-dot {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+  }
+  .chrome-dot.red { background: #ef4444; }
+  .chrome-dot.yellow { background: #f59e0b; }
+  .chrome-dot.green { background: #22c55e; }
+  .chrome-url {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #374151;
+    font-family: var(--mono);
+    margin-left: 8px;
+  }
+  .chrome-url .lock { margin-right: 5px; color: #6b7280; }
+
+  /* App Shell */
+  .app {
+    height: 720px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* Global Header */
+  .global-header {
+    background: var(--accent);
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 14px;
+    flex-shrink: 0;
+  }
+  .header-logo {
+    color: #fff;
+    font-weight: 700;
+    font-size: 15px;
+    letter-spacing: -0.01em;
+    white-space: nowrap;
+  }
+  .header-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255,255,255,0.25);
+    flex-shrink: 0;
+  }
+  .header-run-id {
+    color: rgba(255,255,255,0.75);
+    font-size: 11px;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .header-health-badge {
+    background: rgba(96,165,250,0.25);
+    color: #93c5fd;
+    font-size: 10px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 99px;
+    white-space: nowrap;
+    letter-spacing: 0.02em;
+  }
+  .header-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+  }
+  .progress-track {
+    width: 120px;
+    height: 6px;
+    background: rgba(255,255,255,0.20);
+    border-radius: 99px;
+    overflow: hidden;
+  }
+  .progress-fill {
+    width: 64%;
+    height: 100%;
+    background: #60a5fa;
+    border-radius: 99px;
+  }
+  .header-pct {
+    color: rgba(255,255,255,0.85);
+    font-size: 11px;
+    font-weight: 600;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .header-spacer { flex: 1; }
+  .header-stats {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    color: rgba(255,255,255,0.70);
+    font-size: 11px;
+    white-space: nowrap;
+  }
+  .header-stats .sep { margin: 0 4px; opacity: 0.4; }
+  .header-actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-left: 10px;
+  }
+  .btn-pause {
+    background: transparent;
+    border: 1.5px solid rgba(255,255,255,0.55);
+    color: rgba(255,255,255,0.90);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--sans);
+    white-space: nowrap;
+  }
+  .btn-stop {
+    background: var(--red);
+    border: 1.5px solid var(--red);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 4px 12px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-family: var(--sans);
+    white-space: nowrap;
+  }
+
+  /* Body layout */
+  .app-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-logo-row {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .sidebar-logo {
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.01em;
+  }
+  .nav-list {
+    padding: 10px 0;
+  }
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 16px;
+    font-size: 12px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 0;
+    transition: background 0.15s;
+    font-weight: 500;
+  }
+  .nav-item:hover { background: var(--border); }
+  .nav-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 600;
+    border-right: 2.5px solid var(--accent);
+  }
+  .nav-icon { font-size: 12px; flex-shrink: 0; }
+  .nav-sub {
+    padding-left: 28px;
+  }
+  .nav-sub-item {
+    display: flex;
+    align-items: center;
+    padding: 5px 16px 5px 0;
+    font-size: 11px;
+    color: var(--faint);
+    cursor: pointer;
+    font-weight: 400;
+  }
+  .nav-sub-item::before {
+    content: '└';
+    margin-right: 6px;
+    opacity: 0.5;
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+  .run-config {
+    padding: 12px 16px;
+  }
+  .run-config-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .run-config-fraud {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 10px;
+    line-height: 1.3;
+  }
+  .run-config-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .run-config-key {
+    font-size: 10px;
+    color: var(--muted);
+  }
+  .run-config-val {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: var(--mono);
+  }
+
+  /* Main content */
+  .main-content {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Column 1 — Personas */
+  .col-personas {
+    width: 180px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+  }
+  .col-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 12px 12px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .persona-card {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-height: 90px;
+    justify-content: center;
+  }
+  .persona-top {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #fff;
+    flex-shrink: 0;
+  }
+  .avatar.red-av { background: #dc2626; }
+  .avatar.green-av { background: #059669; }
+  .avatar.yellow-av { background: #d97706; }
+  .avatar.blue-av { background: #0f4c8a; }
+  .persona-info { flex: 1; min-width: 0; }
+  .persona-name {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .persona-id {
+    font-size: 9px;
+    color: var(--faint);
+    font-family: var(--mono);
+  }
+  .risk-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 99px;
+    white-space: nowrap;
+    align-self: flex-start;
+  }
+  .risk-high { background: var(--red-light); color: var(--red); }
+  .risk-low { background: var(--green-light); color: var(--green); }
+  .risk-mid { background: var(--yellow-light); color: var(--yellow); }
+  .persona-sub {
+    font-size: 9px;
+    color: var(--muted);
+    line-height: 1.3;
+  }
+  .persona-tag {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    font-size: 9px;
+    color: var(--faint);
+    padding: 1px 6px;
+    font-family: var(--mono);
+    align-self: flex-start;
+  }
+
+  /* Column 2 — Coverage Matrix */
+  .col-matrix {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 14px 16px;
+    gap: 14px;
+  }
+  .matrix-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+  .matrix-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .matrix-stat {
+    background: var(--green-light);
+    color: var(--green);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 99px;
+    border: 1px solid var(--green);
+  }
+  .live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 10px;
+    color: var(--green);
+    font-weight: 600;
+    margin-left: auto;
+  }
+  .live-dot {
+    width: 8px;
+    height: 8px;
+    background: var(--green);
+    border-radius: 50%;
+    animation: pulse-dot 1.4s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(0.85); }
+  }
+
+  /* Grid */
+  .cell-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+  }
+  .cell {
+    height: 70px;
+    border-radius: 6px;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    border-width: 1.5px;
+    border-style: solid;
+  }
+  .cell.cell-green {
+    background: var(--green-light);
+    border-color: var(--green);
+  }
+  .cell.cell-yellow {
+    background: var(--yellow-light);
+    border-color: var(--yellow);
+    animation: pulse-cell 1.8s ease-in-out infinite;
+  }
+  .cell.cell-blue {
+    background: var(--accent-light);
+    border-color: var(--accent);
+  }
+  .cell.cell-red {
+    background: var(--red-light);
+    border-color: var(--red);
+  }
+  .cell.cell-gray {
+    background: var(--surface2);
+    border-color: var(--border);
+  }
+  @keyframes pulse-cell {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+  }
+  .cell-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cell-persona {
+    font-size: 9px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+  .cell-green .cell-persona { color: var(--green); }
+  .cell-yellow .cell-persona { color: var(--yellow); }
+  .cell-blue .cell-persona { color: var(--accent); }
+  .cell-red .cell-persona { color: var(--red); }
+  .cell-gray .cell-persona { color: var(--faint); }
+  .cell-score {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+  .cell-green .cell-score { color: var(--green); }
+  .cell-red .cell-score { color: var(--red); }
+  .cell-bottom {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+  .cell-yellow .cell-bottom { color: var(--yellow); }
+  .cell-blue .cell-bottom { color: var(--accent); }
+  .cell-gray .cell-bottom { color: var(--faint); }
+  .cell-status-label {
+    font-size: 9px;
+    font-weight: 600;
+  }
+
+  /* Variant feed */
+  .feed-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 6px;
+  }
+  .feed-list {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .feed-card {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    background: var(--bg);
+    font-size: 10px;
+  }
+  .feed-id {
+    font-family: var(--mono);
+    font-weight: 700;
+    font-size: 10px;
+    color: var(--accent);
+    white-space: nowrap;
+    min-width: 40px;
+  }
+  .feed-persona {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    white-space: nowrap;
+  }
+  .feed-params {
+    flex: 1;
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--faint);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .feed-score {
+    font-size: 10px;
+    font-weight: 700;
+    font-family: var(--mono);
+    white-space: nowrap;
+  }
+  .feed-score.ok { color: var(--green); }
+  .feed-score.fail { color: var(--red); }
+
+  /* Column 3 — Activity Log */
+  .col-log {
+    width: 260px;
+    background: var(--surface);
+    border-left: 1px solid var(--border);
+    flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+  .col-log-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.09em;
+    color: var(--muted);
+    font-weight: 700;
+    padding: 12px 14px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .log-box {
+    margin: 12px 12px 0;
+    background: #0f172a;
+    border-radius: 6px;
+    padding: 12px;
+    font-size: 10px;
+    font-family: var(--mono);
+    line-height: 1.8;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .log-line { display: flex; gap: 4px; flex-wrap: wrap; }
+  .log-ts { color: #475569; white-space: nowrap; }
+  .log-cell { color: #60a5fa; white-space: nowrap; }
+  .log-normal { color: #94a3b8; }
+  .log-success { color: #4ade80; }
+  .log-fail { color: #f87171; }
+  .log-score { color: #fbbf24; }
+
+  /* Agent dots */
+  .agents-section {
+    padding: 12px 14px;
+    flex: 1;
+  }
+  .agents-title {
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    font-weight: 700;
+    margin-bottom: 10px;
+  }
+  .agent-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+  }
+  .agent-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+  }
+  .agent-dot.green { background: var(--green); }
+  .agent-dot.blue { background: #60a5fa; }
+  .agent-dot.yellow { background: var(--yellow); animation: pulse-dot 1.4s ease-in-out infinite; }
+  .agent-dot.gray { background: var(--faint); }
+  .agent-label {
+    font-size: 10px;
+    color: var(--text);
+    font-weight: 500;
+  }
+  .agent-task {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+  .agent-info { display: flex; flex-direction: column; gap: 1px; }
+</style>
+</head>
+<body>
+
+<!-- Screen Label -->
+<div class="screen-label">
+  <span class="pill-number">02</span>
+  <span class="screen-name">Live Monitor</span>
+  <span class="screen-desc">Real-time pipeline execution</span>
+</div>
+
+<!-- Browser Wrapper -->
+<div class="browser">
+  <!-- Browser Chrome -->
+  <div class="browser-chrome">
+    <div class="chrome-dots">
+      <div class="chrome-dot red"></div>
+      <div class="chrome-dot yellow"></div>
+      <div class="chrome-dot green"></div>
+    </div>
+    <div class="chrome-url">
+      <span class="lock">🔒</span>fraudgen.app/run/live
+    </div>
+  </div>
+
+  <!-- App Shell -->
+  <div class="app">
+
+    <!-- Global Header -->
+    <div class="global-header">
+      <div class="header-logo">FraudGen</div>
+      <div class="header-divider"></div>
+      <div class="header-run-id">run_20260315_143022</div>
+      <div class="header-health-badge">● Running</div>
+      <div class="header-progress-wrap">
+        <div class="progress-track">
+          <div class="progress-fill"></div>
+        </div>
+        <div class="header-pct">64%</div>
+      </div>
+      <div class="header-spacer"></div>
+      <div class="header-stats">
+        <span>Variants: 8/12</span>
+        <span class="sep">·</span>
+        <span>Elapsed: 2m 14s</span>
+        <span class="sep">·</span>
+        <span>Cost: $0.84</span>
+      </div>
+      <div class="header-actions">
+        <button class="btn-pause">‖ Pause</button>
+        <button class="btn-stop">◼ Stop</button>
+      </div>
+    </div>
+
+    <!-- App Body -->
+    <div class="app-body">
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-logo-row">
+          <div class="sidebar-logo">FraudGen</div>
+        </div>
+        <div class="nav-list">
+          <div class="nav-item">
+            <span class="nav-icon">→</span>
+            Input
+          </div>
+          <div class="nav-item active">
+            <span class="nav-icon">◉</span>
+            Live Monitor
+          </div>
+          <div class="nav-item" style="padding-bottom: 3px;">
+            <span class="nav-icon">⊞</span>
+            Results ▾
+          </div>
+          <div class="nav-sub">
+            <div class="nav-sub-item">Variants</div>
+            <div class="nav-sub-item">Dataset Export</div>
+            <div class="nav-sub-item">Critic Report</div>
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="run-config">
+          <div class="run-config-title">Run Config</div>
+          <div class="run-config-fraud">Layered Mule Network</div>
+          <div class="run-config-row">
+            <span class="run-config-key">Variants</span>
+            <span class="run-config-val">12</span>
+          </div>
+          <div class="run-config-row">
+            <span class="run-config-key">Fidelity</span>
+            <span class="run-config-val">L3</span>
+          </div>
+          <div class="run-config-row">
+            <span class="run-config-key">Agents</span>
+            <span class="run-config-val">5</span>
+          </div>
+          <div class="run-config-row">
+            <span class="run-config-key">Critic</span>
+            <span class="run-config-val">7.0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Content -->
+      <div class="main-content">
+
+        <!-- Column 1: Personas -->
+        <div class="col-personas">
+          <div class="col-title">Personas</div>
+
+          <!-- P01 Viktor S. -->
+          <div class="persona-card">
+            <div class="persona-top">
+              <div class="avatar red-av">VS</div>
+              <div class="persona-info">
+                <div class="persona-name">Viktor S.</div>
+                <div class="persona-id">P01</div>
+              </div>
+            </div>
+            <div class="risk-badge risk-high">High Risk</div>
+            <div class="persona-sub">International routing</div>
+            <div class="persona-tag">3 cells</div>
+          </div>
+
+          <!-- P02 James M. -->
+          <div class="persona-card">
+            <div class="persona-top">
+              <div class="avatar green-av">JM</div>
+              <div class="persona-info">
+                <div class="persona-name">James M.</div>
+                <div class="persona-id">P02</div>
+              </div>
+            </div>
+            <div class="risk-badge risk-low">Low Risk</div>
+            <div class="persona-sub">Domestic only</div>
+            <div class="persona-tag">2 cells</div>
+          </div>
+
+          <!-- P03 Maria C. -->
+          <div class="persona-card">
+            <div class="persona-top">
+              <div class="avatar yellow-av">MC</div>
+              <div class="persona-info">
+                <div class="persona-name">Maria C.</div>
+                <div class="persona-id">P03</div>
+              </div>
+            </div>
+            <div class="risk-badge risk-mid">Mid Risk</div>
+            <div class="persona-sub">Crypto extraction</div>
+            <div class="persona-tag">4 cells</div>
+          </div>
+
+          <!-- P04 David L. -->
+          <div class="persona-card">
+            <div class="persona-top">
+              <div class="avatar blue-av">DL</div>
+              <div class="persona-info">
+                <div class="persona-name">David L.</div>
+                <div class="persona-id">P04</div>
+              </div>
+            </div>
+            <div class="risk-badge risk-mid">Mid Risk</div>
+            <div class="persona-sub">Shell companies</div>
+            <div class="persona-tag">3 cells</div>
+          </div>
+        </div>
+
+        <!-- Column 2: Coverage Matrix -->
+        <div class="col-matrix">
+
+          <!-- Matrix Header -->
+          <div class="matrix-header">
+            <div class="matrix-title">Coverage Matrix</div>
+            <div class="matrix-stat">8 / 12 cells — 66.7%</div>
+            <div class="live-indicator">
+              <div class="live-dot"></div>
+              Live
+            </div>
+          </div>
+
+          <!-- 4×3 Grid -->
+          <div class="cell-grid">
+
+            <!-- Row 1 -->
+            <div class="cell cell-green">
+              <div class="cell-top">
+                <span class="cell-persona">P02</span>
+                <span class="cell-score">8.1 ✓</span>
+              </div>
+              <div class="cell-bottom">att.1 · complete</div>
+            </div>
+            <div class="cell cell-green">
+              <div class="cell-top">
+                <span class="cell-persona">P01</span>
+                <span class="cell-score">7.8 ✓</span>
+              </div>
+              <div class="cell-bottom">att.1 · complete</div>
+            </div>
+            <div class="cell cell-green">
+              <div class="cell-top">
+                <span class="cell-persona">P03</span>
+                <span class="cell-score">8.4 ✓</span>
+              </div>
+              <div class="cell-bottom">att.1 · complete</div>
+            </div>
+
+            <!-- Row 2 -->
+            <div class="cell cell-green">
+              <div class="cell-top">
+                <span class="cell-persona">P04</span>
+                <span class="cell-score">7.2 ✓</span>
+              </div>
+              <div class="cell-bottom">att.1 · complete</div>
+            </div>
+            <div class="cell cell-yellow">
+              <div class="cell-top">
+                <span class="cell-persona">P01</span>
+              </div>
+              <div class="cell-bottom">att.2 · running...</div>
+            </div>
+            <div class="cell cell-blue">
+              <div class="cell-top">
+                <span class="cell-persona">P03</span>
+              </div>
+              <div class="cell-bottom">att.1 · assigned</div>
+            </div>
+
+            <!-- Row 3 -->
+            <div class="cell cell-yellow">
+              <div class="cell-top">
+                <span class="cell-persona">P02</span>
+              </div>
+              <div class="cell-bottom">att.1 · running...</div>
+            </div>
+            <div class="cell cell-green">
+              <div class="cell-top">
+                <span class="cell-persona">P01</span>
+                <span class="cell-score">7.9 ✓</span>
+              </div>
+              <div class="cell-bottom">att.1 · complete</div>
+            </div>
+            <div class="cell cell-red">
+              <div class="cell-top">
+                <span class="cell-persona">P04</span>
+                <span class="cell-score" style="color:var(--red)">5.2 ✗</span>
+              </div>
+              <div class="cell-bottom" style="color:var(--red)">att.1 · failed</div>
+            </div>
+
+            <!-- Row 4 -->
+            <div class="cell cell-blue">
+              <div class="cell-top">
+                <span class="cell-persona">P03</span>
+              </div>
+              <div class="cell-bottom">att.1 · queued</div>
+            </div>
+            <div class="cell cell-gray">
+              <div class="cell-top">
+                <span class="cell-persona" style="color:var(--faint)">—</span>
+              </div>
+              <div class="cell-bottom">empty</div>
+            </div>
+            <div class="cell cell-gray">
+              <div class="cell-top">
+                <span class="cell-persona" style="color:var(--faint)">—</span>
+              </div>
+              <div class="cell-bottom">empty</div>
+            </div>
+
+          </div><!-- /cell-grid -->
+
+          <!-- Variant Feed -->
+          <div>
+            <div class="feed-title">Recent Completed Variants</div>
+            <div class="feed-list">
+              <div class="feed-card">
+                <span class="feed-id">V-001</span>
+                <span class="feed-persona">P02</span>
+                <span class="feed-params">hop_count=2, timing=burst</span>
+                <span class="feed-score ok">✓ 8.1</span>
+              </div>
+              <div class="feed-card">
+                <span class="feed-id">V-002</span>
+                <span class="feed-persona">P01</span>
+                <span class="feed-params">hop_count=3, timing=staggered</span>
+                <span class="feed-score ok">✓ 7.8</span>
+              </div>
+              <div class="feed-card">
+                <span class="feed-id">V-003</span>
+                <span class="feed-persona">P03</span>
+                <span class="feed-params">hop_count=3, timing=burst</span>
+                <span class="feed-score ok">✓ 8.4</span>
+              </div>
+              <div class="feed-card">
+                <span class="feed-id">V-008</span>
+                <span class="feed-persona">P04</span>
+                <span class="feed-params">hop_count=5, timing=delayed</span>
+                <span class="feed-score fail">✗ 5.2</span>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /col-matrix -->
+
+        <!-- Column 3: Activity Log -->
+        <div class="col-log">
+          <div class="col-log-title">Agent Activity</div>
+
+          <div class="log-box">
+            <div class="log-line">
+              <span class="log-ts">[14:32:01]</span>
+              <span class="log-cell">cell_001:</span>
+              <span class="log-normal">assigned →</span>
+              <span class="log-cell">P02</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:32:04]</span>
+              <span class="log-cell">cell_001:</span>
+              <span class="log-normal">in_progress (att.1)</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:32:18]</span>
+              <span class="log-cell">cell_001:</span>
+              <span class="log-success">completed ✓</span>
+              <span class="log-score">score=8.1</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:32:19]</span>
+              <span class="log-cell">cell_002:</span>
+              <span class="log-normal">assigned →</span>
+              <span class="log-cell">P01</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:32:23]</span>
+              <span class="log-cell">cell_002:</span>
+              <span class="log-normal">in_progress (att.1)</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:33:01]</span>
+              <span class="log-cell">cell_002:</span>
+              <span class="log-success">completed ✓</span>
+              <span class="log-score">score=7.8</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:33:45]</span>
+              <span class="log-cell">cell_006:</span>
+              <span class="log-normal">in_progress (att.2)</span>
+            </div>
+            <div class="log-line">
+              <span class="log-ts">[14:34:02]</span>
+              <span class="log-cell">cell_009:</span>
+              <span class="log-fail">failed ✗</span>
+              <span class="log-score">score=5.2</span>
+            </div>
+          </div>
+
+          <div class="agents-section">
+            <div class="agents-title">Agent Status</div>
+
+            <div class="agent-row">
+              <div class="agent-dot green"></div>
+              <div class="agent-info">
+                <div class="agent-label">Agent 1</div>
+                <div class="agent-task">Completing V-003</div>
+              </div>
+            </div>
+            <div class="agent-row">
+              <div class="agent-dot blue"></div>
+              <div class="agent-info">
+                <div class="agent-label">Agent 2</div>
+                <div class="agent-task">Generating V-005</div>
+              </div>
+            </div>
+            <div class="agent-row">
+              <div class="agent-dot blue"></div>
+              <div class="agent-info">
+                <div class="agent-label">Agent 3</div>
+                <div class="agent-task">Planning V-006</div>
+              </div>
+            </div>
+            <div class="agent-row">
+              <div class="agent-dot yellow"></div>
+              <div class="agent-info">
+                <div class="agent-label">Agent 4</div>
+                <div class="agent-task">Revising V-007</div>
+              </div>
+            </div>
+            <div class="agent-row">
+              <div class="agent-dot gray"></div>
+              <div class="agent-info">
+                <div class="agent-label">Agent 5</div>
+                <div class="agent-task">Idle</div>
+              </div>
+            </div>
+          </div>
+
+        </div><!-- /col-log -->
+
+      </div><!-- /main-content -->
+    </div><!-- /app-body -->
+  </div><!-- /app -->
+</div><!-- /browser -->
+
+</body>
+</html>

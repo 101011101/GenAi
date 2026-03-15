@@ -1,0 +1,959 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 03: Results Summary</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #dde4ed;
+    font-family: var(--sans);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    padding: 32px 24px 48px;
+    color: var(--text);
+  }
+
+  /* Screen label */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 16px;
+    align-self: flex-start;
+    max-width: 1080px;
+    width: 100%;
+  }
+
+  .screen-pill {
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 9px;
+    border-radius: 20px;
+    letter-spacing: 0.03em;
+  }
+
+  .screen-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .screen-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* Browser chrome */
+  .browser {
+    width: 100%;
+    max-width: 1080px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.08);
+  }
+
+  .browser-bar {
+    background: #e8eaed;
+    padding: 9px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #d1d5db;
+  }
+
+  .browser-dots {
+    display: flex;
+    gap: 5px;
+  }
+  .browser-dots span {
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    display: block;
+  }
+  .dot-red   { background: #ef4444; }
+  .dot-yellow { background: #f59e0b; }
+  .dot-green  { background: #22c55e; }
+
+  .browser-url {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    padding: 4px 10px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .browser-url .lock { color: #059669; font-size: 10px; }
+
+  /* App shell */
+  .app-shell {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 760px;
+    overflow: hidden;
+  }
+
+  /* Global header */
+  .global-header {
+    background: var(--accent);
+    color: #fff;
+    height: 52px;
+    min-height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 18px;
+    flex-shrink: 0;
+  }
+
+  .header-logo {
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+    margin-right: 6px;
+  }
+
+  .header-run-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    opacity: 0.85;
+    white-space: nowrap;
+  }
+
+  .header-badge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 20px;
+    padding: 2px 8px;
+    font-size: 10px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .badge-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #4ade80;
+    flex-shrink: 0;
+  }
+
+  .header-progress-wrap {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    flex-shrink: 0;
+  }
+  .header-progress-bar {
+    width: 80px;
+    height: 6px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .header-progress-fill {
+    height: 100%;
+    background: #4ade80;
+    border-radius: 3px;
+    width: 100%;
+  }
+  .header-progress-pct {
+    font-size: 11px;
+    font-weight: 600;
+    opacity: 0.9;
+    white-space: nowrap;
+  }
+
+  .header-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255,255,255,0.2);
+    flex-shrink: 0;
+  }
+
+  .header-stat {
+    font-size: 11px;
+    opacity: 0.85;
+    white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .header-stat strong {
+    opacity: 1;
+    font-weight: 600;
+  }
+
+  .header-spacer { flex: 1; }
+
+  /* Body: sidebar + main */
+  .app-body {
+    flex: 1;
+    display: flex;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px;
+    min-width: 200px;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+
+  .sidebar-logo {
+    padding: 16px 16px 12px;
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-nav {
+    padding: 8px 0;
+    flex: 1;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    padding: 7px 16px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    gap: 7px;
+    border-left: 2px solid transparent;
+    transition: background 0.1s;
+  }
+  .nav-item:hover:not(.nav-active) { background: rgba(0,0,0,0.03); }
+
+  .nav-item.nav-section {
+    font-weight: 600;
+    color: var(--text);
+    justify-content: space-between;
+  }
+
+  .nav-sub {
+    padding-left: 0;
+  }
+
+  .nav-sub-item {
+    display: flex;
+    align-items: center;
+    padding: 6px 16px 6px 28px;
+    font-size: 11.5px;
+    font-weight: 500;
+    color: var(--muted);
+    cursor: pointer;
+    border-left: 2px solid transparent;
+    gap: 6px;
+  }
+  .nav-sub-item:hover:not(.nav-active) { background: rgba(0,0,0,0.03); }
+
+  .nav-sub-item.nav-active {
+    background: var(--accent-light);
+    border-left: 2px solid var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+  }
+
+  .nav-icon {
+    font-size: 12px;
+    opacity: 0.7;
+  }
+
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 0;
+  }
+
+  .sidebar-config {
+    padding: 10px 16px 16px;
+  }
+  .config-heading {
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: var(--faint);
+    margin-bottom: 8px;
+  }
+  .config-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 5px;
+    gap: 4px;
+  }
+  .config-key {
+    font-size: 10px;
+    color: var(--muted);
+    flex-shrink: 0;
+  }
+  .config-val {
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text);
+    font-family: var(--mono);
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 100px;
+  }
+
+  /* Main content */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 24px;
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    gap: 22px;
+  }
+
+  /* Stat cards row */
+  .stat-cards-grid {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    gap: 12px;
+  }
+
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 12px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1;
+    letter-spacing: -0.02em;
+  }
+  .stat-label {
+    font-size: 10.5px;
+    color: var(--muted);
+    line-height: 1.3;
+    margin-top: 2px;
+  }
+
+  /* Criminal Profiles */
+  .section-heading-row {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .section-heading {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .section-subtitle {
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+
+  .persona-row {
+    display: flex;
+    flex-direction: row;
+    gap: 12px;
+    overflow-x: auto;
+  }
+
+  .persona-card {
+    width: 220px;
+    min-width: 210px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+
+  .persona-bar {
+    height: 5px;
+    width: 100%;
+  }
+  .bar-red    { background: var(--red); }
+  .bar-green  { background: var(--green); }
+  .bar-amber  { background: var(--yellow); }
+
+  .persona-body {
+    padding: 14px;
+  }
+
+  .persona-id {
+    font-size: 9px;
+    color: var(--muted);
+    font-family: var(--mono);
+    letter-spacing: 0.05em;
+    margin-bottom: 3px;
+  }
+
+  .persona-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+    line-height: 1.2;
+  }
+
+  .persona-spec {
+    font-size: 11px;
+    font-style: italic;
+    color: var(--muted);
+    margin-bottom: 9px;
+    line-height: 1.35;
+  }
+
+  .persona-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    margin-bottom: 10px;
+  }
+
+  .tag-badge {
+    font-size: 10px;
+    font-weight: 500;
+    background: var(--surface2);
+    color: var(--text);
+    border-radius: 4px;
+    padding: 2px 6px;
+    line-height: 1.5;
+  }
+
+  .persona-stats {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+  }
+
+  .persona-stat-box {
+    background: var(--surface);
+    border-radius: 4px;
+    padding: 5px 6px;
+    text-align: center;
+  }
+  .pstat-label {
+    font-size: 9px;
+    color: var(--muted);
+    margin-bottom: 1px;
+  }
+  .pstat-value {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--mono);
+  }
+
+  /* Risk Distribution row */
+  .risk-row {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+  }
+
+  .risk-section {
+    flex: 0 0 auto;
+  }
+
+  .chart-section-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .chart-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  .chart-legend {
+    display: flex;
+    gap: 14px;
+    margin-top: 8px;
+    font-size: 10.5px;
+    color: var(--muted);
+    align-items: center;
+  }
+  .legend-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+
+  /* SVG styles */
+  .chart-wrap svg {
+    display: block;
+  }
+</style>
+</head>
+<body>
+
+<!-- Screen label -->
+<div class="screen-label">
+  <span class="screen-pill">03</span>
+  <span class="screen-title">Results — Summary</span>
+  <span class="screen-subtitle">Run complete · post-run overview</span>
+</div>
+
+<!-- Browser chrome -->
+<div class="browser">
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <span class="dot-red"></span>
+      <span class="dot-yellow"></span>
+      <span class="dot-green"></span>
+    </div>
+    <div class="browser-url">
+      <span class="lock">&#128274;</span>
+      fraudgen.app/run/results/summary
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div class="app-shell">
+
+    <!-- Global Header -->
+    <header class="global-header">
+      <span class="header-logo">FraudGen</span>
+      <span class="header-divider"></span>
+      <span class="header-run-id">run_20260315_143022</span>
+      <span class="header-badge">
+        <span class="badge-dot"></span>
+        Healthy
+      </span>
+      <div class="header-progress-wrap">
+        <div class="header-progress-bar">
+          <div class="header-progress-fill"></div>
+        </div>
+        <span class="header-progress-pct">100%</span>
+      </div>
+      <span class="header-divider"></span>
+      <span class="header-stat"><strong>Variants:</strong>&nbsp;11/12</span>
+      <span class="header-divider"></span>
+      <span class="header-stat"><strong>Elapsed:</strong>&nbsp;4m 18s</span>
+      <span class="header-divider"></span>
+      <span class="header-stat"><strong>Cost:</strong>&nbsp;$1.84 / $5.00 cap</span>
+      <span class="header-spacer"></span>
+    </header>
+
+    <!-- Body -->
+    <div class="app-body">
+
+      <!-- Sidebar -->
+      <nav class="sidebar">
+        <div class="sidebar-logo">FraudGen</div>
+        <div class="sidebar-nav">
+          <div class="nav-item">
+            <span class="nav-icon">&#8594;</span>
+            Input
+          </div>
+          <div class="nav-item">
+            <span class="nav-icon">&#9998;</span>
+            Live Monitor
+          </div>
+          <div class="nav-item nav-section">
+            <span style="display:flex;align-items:center;gap:7px;">
+              <span class="nav-icon">&#128200;</span>
+              Results
+            </span>
+            <span style="font-size:10px;opacity:0.6;">&#9660;</span>
+          </div>
+          <div class="nav-sub">
+            <div class="nav-sub-item nav-active">
+              Summary
+            </div>
+            <div class="nav-sub-item">
+              Quality Gate
+            </div>
+            <div class="nav-sub-item">
+              Operations
+            </div>
+            <div class="nav-sub-item">
+              Variants
+            </div>
+            <div class="nav-sub-item">
+              Dataset
+            </div>
+            <div class="nav-sub-item">
+              Export
+            </div>
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-config">
+          <div class="config-heading">Run Config</div>
+          <div class="config-row">
+            <span class="config-key">Fraud</span>
+            <span class="config-val" title="Layered Mule Network">Mule Network</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">Variants</span>
+            <span class="config-val">12</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">Fidelity</span>
+            <span class="config-val">L3</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">Agents</span>
+            <span class="config-val">5</span>
+          </div>
+          <div class="config-row">
+            <span class="config-key">Critic</span>
+            <span class="config-val">7.0</span>
+          </div>
+        </div>
+      </nav>
+
+      <!-- Main content -->
+      <main class="main-content">
+
+        <!-- Row 1: Stat Cards -->
+        <div class="stat-cards-grid">
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--accent);">11</div>
+            <div class="stat-label">variants approved</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--green);">8.1</div>
+            <div class="stat-label">mean realism score</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--accent);">7.9</div>
+            <div class="stat-label">mean distinctiveness</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--green);">91.7%</div>
+            <div class="stat-label">cells covered</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--text);">$1.84</div>
+            <div class="stat-label">of $5.00 cap</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-value" style="color: var(--muted);">4m 18s</div>
+            <div class="stat-label">total run time</div>
+          </div>
+        </div>
+
+        <!-- Row 2: Criminal Profiles -->
+        <div>
+          <div class="section-heading-row">
+            <span class="section-heading">Criminal Profiles</span>
+            <span class="section-subtitle">4 personas seeded structurally different fraud logic</span>
+          </div>
+          <div class="persona-row">
+
+            <!-- P-001: Viktor Semenov — High / Red -->
+            <div class="persona-card">
+              <div class="persona-bar bar-red"></div>
+              <div class="persona-body">
+                <div class="persona-id">P-001</div>
+                <div class="persona-name">Viktor Semenov</div>
+                <div class="persona-spec">International routing specialist</div>
+                <div class="persona-tags">
+                  <span class="tag-badge">ACH</span>
+                  <span class="tag-badge">Wire</span>
+                  <span class="tag-badge">Velocity evasion</span>
+                </div>
+                <div class="persona-stats">
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Cells</div>
+                    <div class="pstat-value">3</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Geo</div>
+                    <div class="pstat-value" style="font-size:9.5px;">Intl</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Hops</div>
+                    <div class="pstat-value">3–5</div>
+                  </div>
+                  <div class="persona-stat-box" style="background:var(--red-light);">
+                    <div class="pstat-label">Risk</div>
+                    <div class="pstat-value" style="color:var(--red);">High</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- P-002: James Mitchell — Low / Green -->
+            <div class="persona-card">
+              <div class="persona-bar bar-green"></div>
+              <div class="persona-body">
+                <div class="persona-id">P-002</div>
+                <div class="persona-name">James Mitchell</div>
+                <div class="persona-spec">Conservative domestic mule handler</div>
+                <div class="persona-tags">
+                  <span class="tag-badge">Zelle</span>
+                  <span class="tag-badge">P2P</span>
+                  <span class="tag-badge">Structuring</span>
+                </div>
+                <div class="persona-stats">
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Cells</div>
+                    <div class="pstat-value">2</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Geo</div>
+                    <div class="pstat-value" style="font-size:9.5px;">Dom</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Hops</div>
+                    <div class="pstat-value">2–3</div>
+                  </div>
+                  <div class="persona-stat-box" style="background:var(--green-light);">
+                    <div class="pstat-label">Risk</div>
+                    <div class="pstat-value" style="color:var(--green);">Low</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- P-003: Maria Chen — Mid / Amber -->
+            <div class="persona-card">
+              <div class="persona-bar bar-amber"></div>
+              <div class="persona-body">
+                <div class="persona-id">P-003</div>
+                <div class="persona-name">Maria Chen</div>
+                <div class="persona-spec">Crypto extraction coordinator</div>
+                <div class="persona-tags">
+                  <span class="tag-badge">Crypto</span>
+                  <span class="tag-badge">DEX</span>
+                  <span class="tag-badge">Layering</span>
+                </div>
+                <div class="persona-stats">
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Cells</div>
+                    <div class="pstat-value">4</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Geo</div>
+                    <div class="pstat-value" style="font-size:9.5px;">Mixed</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Hops</div>
+                    <div class="pstat-value">3–4</div>
+                  </div>
+                  <div class="persona-stat-box" style="background:var(--yellow-light);">
+                    <div class="pstat-label">Risk</div>
+                    <div class="pstat-value" style="color:var(--yellow);">Mid</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- P-004: David Laurent — Mid / Amber -->
+            <div class="persona-card">
+              <div class="persona-bar bar-amber"></div>
+              <div class="persona-body">
+                <div class="persona-id">P-004</div>
+                <div class="persona-name">David Laurent</div>
+                <div class="persona-spec">Shell company operator</div>
+                <div class="persona-tags">
+                  <span class="tag-badge">Wire</span>
+                  <span class="tag-badge">ACH</span>
+                  <span class="tag-badge">Shell LLC</span>
+                </div>
+                <div class="persona-stats">
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Cells</div>
+                    <div class="pstat-value">3</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Geo</div>
+                    <div class="pstat-value" style="font-size:9.5px;">Dom</div>
+                  </div>
+                  <div class="persona-stat-box">
+                    <div class="pstat-label">Hops</div>
+                    <div class="pstat-value">4–5</div>
+                  </div>
+                  <div class="persona-stat-box" style="background:var(--yellow-light);">
+                    <div class="pstat-label">Risk</div>
+                    <div class="pstat-value" style="color:var(--yellow);">Mid</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </div><!-- /persona-row -->
+        </div>
+
+        <!-- Row 3: Risk Distribution Chart -->
+        <div>
+          <div class="chart-section-label">Risk Distribution</div>
+          <div class="chart-subtitle">Configured target vs actual output</div>
+
+          <div class="chart-wrap">
+            <!--
+              SVG layout:
+              - viewBox: 0 0 400 140
+              - Y axis area: x 0–36
+              - Plot area: x 36–390, y 0–110 (bottom 30px for labels)
+              - Bar height at 100% = 100px (y from 10 to 110)
+              - 3 groups: High, Mid, Low
+              - Each group: 2 bars (28px wide each, 6px gap), groups spaced 32px between
+              - Group centers: High~100, Mid~210, Low~320
+              - Configured bars: same color, 0.3 opacity
+              - Actual bars: solid fill
+              Heights (configured, actual) as % of 100px:
+                High: 80px cfg, 72px actual
+                Mid:  80px cfg, 88px actual
+                Low:  40px cfg, 40px actual
+            -->
+            <svg xmlns="http://www.w3.org/2000/svg" width="400" height="160" viewBox="0 0 400 160">
+              <!-- Defs for pattern (configured/hatched) -->
+              <defs>
+                <pattern id="hatch-red" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#dc2626" stroke-width="2.5" opacity="0.35"/>
+                </pattern>
+                <pattern id="hatch-yellow" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#d97706" stroke-width="2.5" opacity="0.35"/>
+                </pattern>
+                <pattern id="hatch-green" patternUnits="userSpaceOnUse" width="6" height="6" patternTransform="rotate(45)">
+                  <line x1="0" y1="0" x2="0" y2="6" stroke="#059669" stroke-width="2.5" opacity="0.35"/>
+                </pattern>
+              </defs>
+
+              <!-- Y axis ticks and lines -->
+              <!-- Plot area: y=10 (top=100%) to y=110 (bottom=0%) -->
+              <!-- 0% line -->
+              <line x1="36" y1="110" x2="390" y2="110" stroke="#e2e8f0" stroke-width="1"/>
+              <!-- 50% line -->
+              <line x1="36" y1="60" x2="390" y2="60" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3"/>
+              <!-- 100% line -->
+              <line x1="36" y1="10" x2="390" y2="10" stroke="#e2e8f0" stroke-width="1" stroke-dasharray="3,3"/>
+
+              <!-- Y labels -->
+              <text x="32" y="114" text-anchor="end" font-size="9" fill="#94a3b8" font-family="Inter,sans-serif">0%</text>
+              <text x="32" y="64" text-anchor="end" font-size="9" fill="#94a3b8" font-family="Inter,sans-serif">50%</text>
+              <text x="32" y="14" text-anchor="end" font-size="9" fill="#94a3b8" font-family="Inter,sans-serif">100%</text>
+
+              <!-- === HIGH GROUP (center ~100) === -->
+              <!-- Configured: 80%, bar from y=30 to y=110, height=80 -->
+              <!-- x start: 100 - (28+3) = 69 -->
+              <rect x="69" y="30" width="28" height="80" fill="url(#hatch-red)" rx="2"/>
+              <rect x="69" y="30" width="28" height="80" fill="none" stroke="#dc2626" stroke-width="1" stroke-opacity="0.45" rx="2"/>
+              <!-- Actual: 72%, bar from y=38 to y=110, height=72 -->
+              <rect x="103" y="38" width="28" height="72" fill="#dc2626" rx="2"/>
+
+              <!-- HIGH label -->
+              <text x="100" y="128" text-anchor="middle" font-size="10" fill="#64748b" font-family="Inter,sans-serif">High</text>
+
+              <!-- === MID GROUP (center ~210) === -->
+              <!-- Configured: 80%, height=80, y=30 -->
+              <!-- x start: 210 - 31 = 179 -->
+              <rect x="179" y="30" width="28" height="80" fill="url(#hatch-yellow)" rx="2"/>
+              <rect x="179" y="30" width="28" height="80" fill="none" stroke="#d97706" stroke-width="1" stroke-opacity="0.45" rx="2"/>
+              <!-- Actual: 88%, height=88, y=22 -->
+              <rect x="213" y="22" width="28" height="88" fill="#d97706" rx="2"/>
+
+              <!-- MID label -->
+              <text x="210" y="128" text-anchor="middle" font-size="10" fill="#64748b" font-family="Inter,sans-serif">Mid</text>
+
+              <!-- === LOW GROUP (center ~320) === -->
+              <!-- Configured: 40%, height=40, y=70 -->
+              <!-- x start: 320 - 31 = 289 -->
+              <rect x="289" y="70" width="28" height="40" fill="url(#hatch-green)" rx="2"/>
+              <rect x="289" y="70" width="28" height="40" fill="none" stroke="#059669" stroke-width="1" stroke-opacity="0.45" rx="2"/>
+              <!-- Actual: 40%, height=40, y=70 -->
+              <rect x="323" y="70" width="28" height="40" fill="#059669" rx="2"/>
+
+              <!-- LOW label -->
+              <text x="320" y="128" text-anchor="middle" font-size="10" fill="#64748b" font-family="Inter,sans-serif">Low</text>
+            </svg>
+          </div>
+
+          <!-- Legend -->
+          <div class="chart-legend">
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: repeating-linear-gradient(45deg, #94a3b8 0px, #94a3b8 2px, transparent 2px, transparent 5px); border: 1px solid #94a3b8; opacity:0.7;"></div>
+              <span>Configured</span>
+            </div>
+            <div class="legend-item">
+              <div class="legend-swatch" style="background: linear-gradient(90deg, #dc2626 33%, #d97706 33% 66%, #059669 66%);"></div>
+              <span>Actual</span>
+            </div>
+          </div>
+        </div>
+
+      </main><!-- /main-content -->
+    </div><!-- /app-body -->
+  </div><!-- /app-shell -->
+</div><!-- /browser -->
+
+</body>
+</html>

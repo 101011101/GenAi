@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Wireframes</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #1a1a2e; font-family: 'Inter', system-ui, sans-serif; color: #e2e8f0; padding: 3rem 2rem; }
+
+  h1 { font-size: 1.4rem; font-weight: 700; color: #fff; margin-bottom: 0.4rem; }
+  .subtitle { color: #64748b; font-size: 0.85rem; margin-bottom: 3rem; }
+
+  /* SCREEN LABEL */
+  .screen-wrap { margin-bottom: 5rem; }
+  .screen-label {
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase;
+    color: #64748b; margin-bottom: 0.75rem; display: flex; align-items: center; gap: 0.6rem;
+  }
+  .screen-label::after { content: ''; flex: 1; height: 1px; background: #1e2d3d; }
+  .screen-num {
+    background: #0f2235; color: #38bdf8; border: 1px solid #1e3a5f;
+    padding: 0.15rem 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.7rem;
+  }
+
+  /* WIREFRAME SHELL */
+  .wf {
+    background: #0d1117; border: 1px solid #1e2d3d; border-radius: 12px;
+    overflow: hidden; max-width: 1100px; box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+  }
+
+  /* TITLEBAR */
+  .wf-bar {
+    background: #161b22; padding: 0.65rem 1rem; display: flex; align-items: center;
+    gap: 0.5rem; border-bottom: 1px solid #1e2d3d;
+  }
+  .dot { width: 11px; height: 11px; border-radius: 50%; }
+  .dr { background: #ff5f57; } .dy { background: #febc2e; } .dg { background: #28c840; }
+  .wf-title { margin-left: 0.75rem; font-size: 0.72rem; color: #4b5563; font-family: monospace; }
+
+  /* WF PRIMITIVES */
+  .wf-body { display: flex; }
+  .wf-sidebar {
+    width: 220px; flex-shrink: 0; background: #0d1117; border-right: 1px solid #1e2d3d;
+    padding: 1rem;
+  }
+  .wf-main { flex: 1; padding: 1.25rem; }
+
+  /* BLOCKS */
+  .blk { background: #161b22; border: 1px solid #1e2d3d; border-radius: 6px; }
+  .blk-sm { height: 28px; }
+  .blk-md { height: 40px; }
+  .blk-lg { height: 80px; }
+  .blk-xl { height: 120px; }
+  .blk-tall { height: 160px; }
+
+  .lbl { font-size: 0.65rem; color: #4b5563; margin-bottom: 0.35rem; text-transform: uppercase; letter-spacing: 0.06em; }
+  .gap-xs { height: 0.5rem; }
+  .gap-sm { height: 0.85rem; }
+  .gap-md { height: 1.25rem; }
+  .gap-lg { height: 2rem; }
+
+  /* TEXT PLACEHOLDER LINES */
+  .line { height: 8px; border-radius: 4px; background: #1e2d3d; margin-bottom: 6px; }
+  .line-short { width: 45%; }
+  .line-med { width: 70%; }
+  .line-full { width: 100%; }
+
+  /* TEXTAREA */
+  .wf-textarea {
+    background: #0a0e14; border: 1px solid #1e2d3d; border-radius: 6px;
+    height: 90px; width: 100%; padding: 0.6rem;
+  }
+  .wf-textarea .line { background: #1a2235; }
+
+  /* BUTTON */
+  .wf-btn {
+    display: inline-block; padding: 0.5rem 1.25rem; border-radius: 6px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: 0.05em;
+  }
+  .wf-btn-primary { background: #0ea5e9; color: #000; }
+  .wf-btn-ghost { background: transparent; border: 1px solid #1e2d3d; color: #4b5563; }
+  .wf-btn-danger { background: #7f1d1d; color: #fca5a5; border: 1px solid #991b1b; }
+
+  /* BADGE */
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.65rem; font-weight: 700; }
+  .badge-green { background: rgba(16,185,129,0.15); color: #10b981; }
+  .badge-blue { background: rgba(14,165,233,0.15); color: #38bdf8; }
+  .badge-yellow { background: rgba(245,158,11,0.15); color: #f59e0b; }
+  .badge-red { background: rgba(239,68,68,0.15); color: #ef4444; }
+  .badge-gray { background: #1e2d3d; color: #4b5563; }
+
+  /* GRID / ROW LAYOUTS */
+  .row { display: flex; gap: 1rem; }
+  .col { flex: 1; }
+  .col-2 { flex: 2; }
+  .col-3 { flex: 3; }
+
+  /* SECTION DIVIDER */
+  .sec-divider { border: none; border-top: 1px solid #1e2d3d; margin: 1rem 0; }
+
+  /* COVERAGE MATRIX */
+  .matrix { display: grid; gap: 4px; }
+  .matrix-6 { grid-template-columns: repeat(6, 1fr); }
+  .matrix-8 { grid-template-columns: repeat(8, 1fr); }
+  .mx-cell {
+    height: 32px; border-radius: 4px; display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: 600; font-family: monospace;
+  }
+  .mx-green { background: rgba(16,185,129,0.2); color: #10b981; border: 1px solid rgba(16,185,129,0.3); }
+  .mx-blue { background: rgba(14,165,233,0.2); color: #38bdf8; border: 1px solid rgba(14,165,233,0.4); }
+  .mx-yellow { background: rgba(245,158,11,0.18); color: #f59e0b; border: 1px solid rgba(245,158,11,0.3); }
+  .mx-red { background: rgba(239,68,68,0.15); color: #ef4444; border: 1px solid rgba(239,68,68,0.3); }
+  .mx-gray { background: #161b22; color: #2d3748; border: 1px solid #1e2d3d; }
+
+  /* PERSONA CARD */
+  .persona-card {
+    background: #161b22; border: 1px solid #1e2d3d; border-radius: 8px;
+    padding: 0.75rem; margin-bottom: 0.6rem;
+  }
+  .persona-header { display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.5rem; }
+  .persona-avatar { width: 28px; height: 28px; border-radius: 50%; background: #1e3a5f; flex-shrink: 0; }
+
+  /* VARIANT CARD */
+  .variant-card {
+    background: #0f1923; border: 1px solid #1e2d3d; border-radius: 6px;
+    padding: 0.65rem 0.75rem; margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.75rem;
+  }
+  .variant-card .score { margin-left: auto; font-family: monospace; font-size: 0.72rem; font-weight: 700; }
+
+  /* NETWORK GRAPH */
+  .graph-wrap {
+    background: #0a0e14; border: 1px solid #1e2d3d; border-radius: 8px;
+    height: 200px; display: flex; align-items: center; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .g-node {
+    position: absolute; width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.55rem; font-weight: 700; font-family: monospace;
+  }
+  .g-fraud { background: rgba(239,68,68,0.2); border: 2px solid #ef4444; color: #ef4444; }
+  .g-cover { background: rgba(30,45,61,0.8); border: 1px solid #1e2d3d; color: #4b5563; }
+  svg.graph-lines { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+  /* DATASET TABLE */
+  .wf-table { width: 100%; border-collapse: collapse; font-size: 0.7rem; font-family: monospace; }
+  .wf-table th {
+    background: #161b22; padding: 0.5rem 0.6rem; text-align: left;
+    color: #4b5563; font-size: 0.62rem; text-transform: uppercase; letter-spacing: 0.05em;
+    border-bottom: 1px solid #1e2d3d;
+  }
+  .wf-table td { padding: 0.45rem 0.6rem; border-bottom: 1px solid #111827; color: #94a3b8; }
+  .wf-table tr:hover td { background: #0f1923; }
+  .wf-table .fraud { color: #ef4444; }
+  .wf-table .legit { color: #4b5563; }
+  .wf-table .role-place { color: #a78bfa; }
+  .wf-table .role-hop { color: #38bdf8; }
+  .wf-table .role-ext { color: #ef4444; }
+  .wf-table .role-cov { color: #4b5563; }
+  .wf-table .vid { color: #0ea5e9; }
+
+  /* PROGRESS BAR */
+  .progress-wrap { background: #161b22; border-radius: 999px; height: 6px; overflow: hidden; }
+  .progress-fill { height: 100%; border-radius: 999px; background: linear-gradient(90deg, #0ea5e9, #10b981); }
+
+  /* AGENT DOTS */
+  .agent-dots { display: flex; gap: 0.4rem; align-items: center; }
+  .agent-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .ad-run { background: #38bdf8; }
+  .ad-done { background: #10b981; }
+  .ad-retry { background: #f59e0b; }
+  .ad-idle { background: #1e2d3d; }
+
+  /* EXPORT CARD */
+  .export-card {
+    background: #161b22; border: 1px solid #1e2d3d; border-radius: 8px; padding: 1rem;
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 0.75rem;
+  }
+
+  /* TABS */
+  .wf-tabs { display: flex; border-bottom: 1px solid #1e2d3d; background: #0d1117; }
+  .wf-tab {
+    padding: 0.6rem 1.2rem; font-size: 0.72rem; color: #4b5563; cursor: pointer; border-bottom: 2px solid transparent;
+  }
+  .wf-tab.active { color: #38bdf8; border-bottom-color: #38bdf8; }
+
+  /* STATS ROW */
+  .stat-row { display: flex; gap: 1rem; }
+  .stat-box {
+    flex: 1; background: #161b22; border: 1px solid #1e2d3d; border-radius: 6px;
+    padding: 0.75rem; text-align: center;
+  }
+  .stat-val { font-size: 1.4rem; font-weight: 800; color: #38bdf8; font-family: monospace; }
+  .stat-lbl { font-size: 0.62rem; color: #4b5563; margin-top: 0.2rem; text-transform: uppercase; letter-spacing: 0.05em; }
+
+  /* SIDEBAR NAV */
+  .sidebar-item {
+    padding: 0.45rem 0.6rem; border-radius: 5px; font-size: 0.72rem; color: #4b5563;
+    margin-bottom: 0.25rem; display: flex; align-items: center; gap: 0.5rem;
+  }
+  .sidebar-item.active { background: #0f2235; color: #38bdf8; }
+  .sidebar-icon { width: 14px; height: 14px; border-radius: 3px; background: currentColor; opacity: 0.4; flex-shrink: 0; }
+
+  /* LIVE PULSE */
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .pulse { animation: pulse 1.5s infinite; }
+
+  /* ANNOTATION */
+  .annotation {
+    background: rgba(14,165,233,0.08); border: 1px solid rgba(14,165,233,0.2);
+    border-radius: 6px; padding: 0.5rem 0.75rem; font-size: 0.7rem; color: #38bdf8;
+    margin-top: 0.75rem; line-height: 1.5;
+  }
+  .annotation strong { color: #7dd3fc; }
+</style>
+</head>
+<body>
+
+<h1>FraudGen — Screen Wireframes</h1>
+<p class="subtitle">All screens in one page · Left to right = phase order · Annotated</p>
+
+<!-- ============================================================ -->
+<!-- SCREEN 1 — INPUT PANEL -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">01</span> Input Panel — Phase 1: Setup</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · localhost:8501</span></div>
+    <div class="wf-body">
+
+      <!-- SIDEBAR -->
+      <div class="wf-sidebar">
+        <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:1.25rem; font-family:monospace;">FraudGen</div>
+        <div class="sidebar-item active"><div class="sidebar-icon"></div> Input</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Monitor</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Results</div>
+        <hr class="sec-divider" style="margin:0.75rem 0;">
+        <div class="lbl">Last run</div>
+        <div style="font-size:0.65rem; color:#4b5563;">No runs yet</div>
+      </div>
+
+      <!-- MAIN -->
+      <div class="wf-main">
+        <div style="font-size:0.85rem; font-weight:700; color:#e2e8f0; margin-bottom:0.25rem;">Configure Run</div>
+        <div style="font-size:0.7rem; color:#4b5563; margin-bottom:1.25rem;">Describe a fraud type. The system will generate synthetic variants across the full attack space.</div>
+
+        <!-- FRAUD TYPE DROPDOWN -->
+        <div class="row" style="margin-bottom:1rem;">
+          <div class="col">
+            <div class="lbl">Fraud type (quick-fill)</div>
+            <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+              <span style="font-size:0.72rem;color:#4b5563;">Mule Account Network</span>
+              <span style="margin-left:auto;color:#4b5563;font-size:0.7rem;">▾</span>
+            </div>
+          </div>
+          <div class="col" style="flex:0.4; display:flex;align-items:flex-end;">
+            <div class="wf-btn wf-btn-ghost" style="width:100%;text-align:center;font-size:0.65rem;">Pre-fill template</div>
+          </div>
+        </div>
+
+        <!-- DESCRIPTION -->
+        <div style="margin-bottom:1rem;">
+          <div class="lbl">Fraud description <span style="color:#38bdf8;">(required · min 20 chars)</span></div>
+          <div class="wf-textarea">
+            <div class="line line-full"></div>
+            <div class="line line-full"></div>
+            <div class="line line-med"></div>
+          </div>
+          <div style="font-size:0.62rem;color:#4b5563;margin-top:0.3rem;">The richer the description, the more targeted the variant space.</div>
+        </div>
+
+        <!-- VARIANT SLIDER -->
+        <div style="margin-bottom:1.25rem;">
+          <div class="lbl">Variant count</div>
+          <div style="display:flex;align-items:center;gap:1rem;">
+            <div style="flex:1;height:4px;background:#1e2d3d;border-radius:4px;position:relative;">
+              <div style="width:25%;height:100%;background:#0ea5e9;border-radius:4px;"></div>
+              <div style="position:absolute;left:25%;top:-5px;width:14px;height:14px;border-radius:50%;background:#0ea5e9;transform:translateX(-50%);"></div>
+            </div>
+            <span style="font-size:0.8rem;font-weight:700;color:#38bdf8;font-family:monospace;min-width:30px;">25</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:0.6rem;color:#4b5563;margin-top:0.4rem;">
+            <span>10</span><span>100</span>
+          </div>
+          <div style="margin-top:0.5rem;font-size:0.7rem;color:#4b5563;">
+            <span style="color:#f59e0b;">~25 variants</span> · Est. <span style="color:#10b981;">$5.00</span> · Est. <span style="color:#10b981;">4 min</span>
+          </div>
+        </div>
+
+        <hr class="sec-divider">
+
+        <!-- ADVANCED CONTROLS TOGGLE -->
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;cursor:pointer;">
+          <span style="font-size:0.72rem;color:#4b5563;font-weight:600;">▶ Advanced controls</span>
+          <span style="font-size:0.62rem;color:#1e3a5f;">fidelity · parallelism · critic threshold · personas</span>
+        </div>
+
+        <!-- ADVANCED CONTROLS (expanded for wireframe) -->
+        <div style="background:#0a0e14;border:1px solid #1e2d3d;border-radius:6px;padding:1rem;margin-bottom:1.25rem;">
+          <div class="row" style="margin-bottom:0.75rem;">
+            <div class="col">
+              <div class="lbl">Fidelity level</div>
+              <div style="display:flex;gap:0.4rem;">
+                <div class="wf-btn wf-btn-ghost" style="font-size:0.62rem;padding:0.3rem 0.6rem;">L2 Fast</div>
+                <div class="wf-btn wf-btn-primary" style="font-size:0.62rem;padding:0.3rem 0.6rem;">L3 Default</div>
+                <div class="wf-btn wf-btn-ghost" style="font-size:0.62rem;padding:0.3rem 0.6rem;opacity:0.4;">L4 Deep</div>
+              </div>
+            </div>
+            <div class="col">
+              <div class="lbl">Max parallel agents</div>
+              <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+                <span style="font-size:0.72rem;color:#38bdf8;font-family:monospace;">5</span>
+              </div>
+            </div>
+            <div class="col">
+              <div class="lbl">Critic score floor</div>
+              <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+                <span style="font-size:0.72rem;color:#38bdf8;font-family:monospace;">7.0</span>
+              </div>
+            </div>
+          </div>
+          <div class="row">
+            <div class="col">
+              <div class="lbl">Persona count</div>
+              <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+                <span style="font-size:0.72rem;color:#38bdf8;font-family:monospace;">5</span>
+              </div>
+            </div>
+            <div class="col">
+              <div class="lbl">Risk distribution</div>
+              <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+                <span style="font-size:0.72rem;color:#4b5563;">Balanced</span>
+              </div>
+            </div>
+            <div class="col">
+              <div class="lbl">Geographic scope</div>
+              <div class="blk blk-md" style="display:flex;align-items:center;padding:0 0.75rem;">
+                <span style="font-size:0.72rem;color:#4b5563;">Domestic</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:0.75rem;align-items:center;">
+          <div class="wf-btn wf-btn-primary" style="font-size:0.8rem;padding:0.6rem 2rem;">▶ Run</div>
+          <div style="font-size:0.65rem;color:#4b5563;">Button disabled if description &lt; 20 chars</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 1 — Input.</strong> Analyst picks a fraud type dropdown (pre-fills the description), adjusts variant count, optionally opens advanced controls. Hits Run. The cost + time estimate updates live as variant count changes.</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SCREEN 2 — LIVE MONITORING (DURING RUN) -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">02</span> Live Monitoring Panel — Phase 3: During Run</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · Run 20260315_142201 · RUNNING</span></div>
+    <div class="wf-body">
+
+      <div class="wf-sidebar">
+        <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:1.25rem; font-family:monospace;">FraudGen</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Input</div>
+        <div class="sidebar-item active"><div class="sidebar-icon"></div> Monitor</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Results</div>
+        <hr class="sec-divider" style="margin:0.75rem 0;">
+        <!-- AGENT STATUS STRIP -->
+        <div class="lbl">Agents (5)</div>
+        <div class="agent-dots" style="flex-wrap:wrap;gap:0.5rem;margin-bottom:1rem;">
+          <div class="agent-dot ad-done" title="done"></div>
+          <div class="agent-dot ad-done" title="done"></div>
+          <div class="agent-dot ad-run pulse" title="running"></div>
+          <div class="agent-dot ad-retry" title="retrying"></div>
+          <div class="agent-dot ad-run pulse" title="running"></div>
+        </div>
+        <div class="lbl" style="margin-top:0.5rem;">Control</div>
+        <div class="wf-btn wf-btn-ghost" style="width:100%;text-align:center;margin-bottom:0.4rem;font-size:0.65rem;">⏸ Pause</div>
+        <div class="wf-btn wf-btn-danger" style="width:100%;text-align:center;font-size:0.65rem;">⏹ Stop</div>
+        <hr class="sec-divider" style="margin:0.75rem 0;">
+        <div class="lbl">Cost so far</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#10b981;font-family:monospace;">$2.14</div>
+        <div class="lbl" style="margin-top:0.5rem;">Elapsed</div>
+        <div style="font-size:0.9rem;font-weight:700;color:#38bdf8;font-family:monospace;">3m 22s</div>
+      </div>
+
+      <div class="wf-main">
+        <!-- PROGRESS -->
+        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem;">
+          <div style="flex:1;">
+            <div style="display:flex;justify-content:space-between;margin-bottom:0.4rem;">
+              <span style="font-size:0.72rem;color:#38bdf8;font-weight:600;">Generating variants... <span class="pulse">●</span></span>
+              <span style="font-size:0.72rem;color:#4b5563;font-family:monospace;">18 / 25</span>
+            </div>
+            <div class="progress-wrap"><div class="progress-fill" style="width:72%;"></div></div>
+          </div>
+        </div>
+
+        <div class="row" style="gap:1.25rem;">
+          <!-- LEFT COL: COVERAGE MATRIX + VARIANT FEED -->
+          <div class="col-2">
+            <!-- COVERAGE MATRIX -->
+            <div style="font-size:0.7rem;font-weight:600;color:#e2e8f0;margin-bottom:0.6rem;">Coverage Matrix</div>
+            <div class="matrix matrix-8" style="margin-bottom:1rem;">
+              <div class="mx-cell mx-green">3h·ch</div>
+              <div class="mx-cell mx-green">3h·fan</div>
+              <div class="mx-cell mx-green">5h·ch</div>
+              <div class="mx-cell mx-blue pulse">5h·fan</div>
+              <div class="mx-cell mx-green">2h·ch</div>
+              <div class="mx-cell mx-gray">2h·fan</div>
+              <div class="mx-cell mx-green">3h·ch</div>
+              <div class="mx-cell mx-gray">3h·fan</div>
+              <div class="mx-cell mx-yellow">5h·ch</div>
+              <div class="mx-cell mx-green">5h·fan</div>
+              <div class="mx-cell mx-blue pulse">2h·ch</div>
+              <div class="mx-cell mx-green">2h·fan</div>
+              <div class="mx-cell mx-green">3h·ch</div>
+              <div class="mx-cell mx-red">3h·fan</div>
+              <div class="mx-cell mx-green">5h·ch</div>
+              <div class="mx-cell mx-gray">5h·fan</div>
+              <div class="mx-cell mx-green">2h·ch</div>
+              <div class="mx-cell mx-green">2h·fan</div>
+              <div class="mx-cell mx-gray">3h·ch</div>
+              <div class="mx-cell mx-gray">3h·fan</div>
+              <div class="mx-cell mx-gray">5h·ch</div>
+              <div class="mx-cell mx-gray">5h·fan</div>
+              <div class="mx-cell mx-gray">2h·ch</div>
+              <div class="mx-cell mx-gray">2h·fan</div>
+            </div>
+            <!-- MATRIX LEGEND -->
+            <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-bottom:1rem;">
+              <span style="font-size:0.62rem;display:flex;align-items:center;gap:0.3rem;color:#4b5563;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(16,185,129,0.2);border:1px solid #10b981;display:inline-block;"></span>Approved</span>
+              <span style="font-size:0.62rem;display:flex;align-items:center;gap:0.3rem;color:#4b5563;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(14,165,233,0.2);border:1px solid #38bdf8;display:inline-block;"></span>In progress</span>
+              <span style="font-size:0.62rem;display:flex;align-items:center;gap:0.3rem;color:#4b5563;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(245,158,11,0.18);border:1px solid #f59e0b;display:inline-block;"></span>Revised</span>
+              <span style="font-size:0.62rem;display:flex;align-items:center;gap:0.3rem;color:#4b5563;"><span style="width:8px;height:8px;border-radius:2px;background:rgba(239,68,68,0.15);border:1px solid #ef4444;display:inline-block;"></span>Failed</span>
+              <span style="font-size:0.62rem;display:flex;align-items:center;gap:0.3rem;color:#4b5563;"><span style="width:8px;height:8px;border-radius:2px;background:#161b22;border:1px solid #1e2d3d;display:inline-block;"></span>Pending</span>
+            </div>
+
+            <!-- VARIANT FEED -->
+            <div style="font-size:0.7rem;font-weight:600;color:#e2e8f0;margin-bottom:0.6rem;">Variant feed</div>
+            <div class="variant-card"><span class="badge badge-green">✓</span><span style="font-size:0.7rem;"><strong>V-001</strong> · 3-hop chain · same-day · Viktor</span><span class="score" style="color:#10b981;">8.4</span></div>
+            <div class="variant-card"><span class="badge badge-green">✓</span><span style="font-size:0.7rem;"><strong>V-002</strong> · 5-hop fan-out · delayed · James</span><span class="score" style="color:#10b981;">7.9</span></div>
+            <div class="variant-card"><span class="badge badge-yellow">↺</span><span style="font-size:0.7rem;"><strong>V-003</strong> · 2-hop chain · burst · Maria <span style="color:#4b5563;">(retry 1)</span></span><span class="score" style="color:#f59e0b;">5.1 →</span></div>
+            <div class="variant-card"><span class="badge badge-green">✓</span><span style="font-size:0.7rem;"><strong>V-004</strong> · 3-hop fan · delayed · Viktor</span><span class="score" style="color:#10b981;">8.0</span></div>
+            <div class="variant-card" style="opacity:0.4;"><span class="badge badge-blue pulse">…</span><span style="font-size:0.7rem;"><strong>V-005</strong> · generating...</span><span class="score" style="color:#38bdf8;">—</span></div>
+          </div>
+
+          <!-- RIGHT COL: PERSONAS -->
+          <div class="col" style="min-width:220px;">
+            <div style="font-size:0.7rem;font-weight:600;color:#e2e8f0;margin-bottom:0.6rem;">Criminal personas</div>
+            <div class="persona-card">
+              <div class="persona-header">
+                <div class="persona-avatar"></div>
+                <div>
+                  <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">Viktor Sokolov</div>
+                  <span class="badge badge-red" style="font-size:0.6rem;">High risk</span>
+                </div>
+              </div>
+              <div class="line line-full" style="margin-bottom:4px;"></div>
+              <div class="line line-med"></div>
+            </div>
+            <div class="persona-card">
+              <div class="persona-header">
+                <div class="persona-avatar" style="background:#1a2e1a;"></div>
+                <div>
+                  <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">James Harlow</div>
+                  <span class="badge badge-green" style="font-size:0.6rem;">Low risk</span>
+                </div>
+              </div>
+              <div class="line line-full" style="margin-bottom:4px;"></div>
+              <div class="line line-short"></div>
+            </div>
+            <div class="persona-card">
+              <div class="persona-header">
+                <div class="persona-avatar" style="background:#1e2535;"></div>
+                <div>
+                  <div style="font-size:0.72rem;font-weight:700;color:#e2e8f0;">Maria Chen</div>
+                  <span class="badge badge-yellow" style="font-size:0.6rem;">Mid risk</span>
+                </div>
+              </div>
+              <div class="line line-full" style="margin-bottom:4px;"></div>
+              <div class="line line-med"></div>
+            </div>
+            <div class="persona-card" style="opacity:0.35;">
+              <div class="persona-header">
+                <div class="persona-avatar" style="background:#1e2535;"></div>
+                <div><div style="font-size:0.72rem;font-weight:700;color:#4b5563;">Generating...</div></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 2 — Live monitor.</strong> The money shot. Coverage matrix fills cell by cell as agents complete. Variant feed streams in with critic scores. Persona cards appear as they're generated. Agent dots show parallel workers. Pause/Stop controls on sidebar. Updates every 1 second.</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SCREEN 3 — RESULTS: SUMMARY + COVERAGE MATRIX -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">03</span> Results — Summary + Coverage Matrix</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · Run 20260315_142201 · COMPLETE</span></div>
+
+    <!-- TABS -->
+    <div class="wf-tabs">
+      <div class="wf-tab active">Coverage Matrix</div>
+      <div class="wf-tab">Network Graphs</div>
+      <div class="wf-tab">Dataset</div>
+      <div class="wf-tab">Personas</div>
+      <div class="wf-tab">Export</div>
+    </div>
+
+    <div class="wf-body">
+      <div class="wf-sidebar">
+        <div style="font-size:0.8rem; font-weight:700; color:#38bdf8; margin-bottom:1.25rem; font-family:monospace;">FraudGen</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Input</div>
+        <div class="sidebar-item"><div class="sidebar-icon"></div> Monitor</div>
+        <div class="sidebar-item active"><div class="sidebar-icon"></div> Results</div>
+        <hr class="sec-divider" style="margin:0.75rem 0;">
+        <div class="lbl">Run stats</div>
+        <div style="font-size:0.65rem;color:#4b5563;line-height:2;">
+          23 variants<br>
+          <span style="color:#10b981;">8.1/10</span> mean score<br>
+          <span style="color:#10b981;">82%</span> coverage<br>
+          2,140 transactions<br>
+          <span style="color:#f59e0b;">$4.21</span> cost<br>
+          6m 12s runtime
+        </div>
+      </div>
+
+      <div class="wf-main">
+        <!-- SUMMARY BANNER -->
+        <div style="background:#0a1628;border:1px solid #1e3a5f;border-radius:8px;padding:0.75rem 1rem;margin-bottom:1.25rem;display:flex;gap:2rem;align-items:center;flex-wrap:wrap;">
+          <span style="font-size:0.72rem;color:#4b5563;">Run complete ·</span>
+          <span style="font-size:0.72rem;color:#e2e8f0;"><strong>23</strong> variants</span>
+          <span style="font-size:0.72rem;color:#e2e8f0;">Mean score <strong style="color:#10b981;">8.1/10</strong></span>
+          <span style="font-size:0.72rem;color:#e2e8f0;">Coverage <strong style="color:#10b981;">82%</strong></span>
+          <span style="font-size:0.72rem;color:#e2e8f0;"><strong>5</strong> personas</span>
+          <span style="font-size:0.72rem;color:#e2e8f0;"><strong>2,140</strong> transactions</span>
+        </div>
+
+        <!-- STATS ROW -->
+        <div class="stat-row" style="margin-bottom:1.25rem;">
+          <div class="stat-box"><div class="stat-val">23</div><div class="stat-lbl">Variants approved</div></div>
+          <div class="stat-box"><div class="stat-val">82%</div><div class="stat-lbl">Space coverage</div></div>
+          <div class="stat-box"><div class="stat-val">8.1</div><div class="stat-lbl">Avg critic score</div></div>
+          <div class="stat-box"><div class="stat-val">2,140</div><div class="stat-lbl">Transactions</div></div>
+          <div class="stat-box"><div class="stat-val">$4.21</div><div class="stat-lbl">API cost</div></div>
+        </div>
+
+        <!-- FULL COVERAGE MATRIX -->
+        <div style="font-size:0.7rem;font-weight:600;color:#e2e8f0;margin-bottom:0.6rem;">
+          Fraud variant space — hover a cell to see which variants cover it
+        </div>
+        <div class="matrix matrix-8">
+          <div class="mx-cell mx-green">3h·ch·sd</div>
+          <div class="mx-cell mx-green">3h·ch·dl</div>
+          <div class="mx-cell mx-yellow">3h·fan·sd</div>
+          <div class="mx-cell mx-green">3h·fan·dl</div>
+          <div class="mx-cell mx-green">5h·ch·sd</div>
+          <div class="mx-cell mx-green">5h·ch·dl</div>
+          <div class="mx-cell mx-green">5h·fan·sd</div>
+          <div class="mx-cell mx-gray">5h·fan·dl</div>
+
+          <div class="mx-cell mx-green">2h·ch·sd</div>
+          <div class="mx-cell mx-green">2h·ch·dl</div>
+          <div class="mx-cell mx-green">2h·fan·sd</div>
+          <div class="mx-cell mx-red">2h·fan·dl</div>
+          <div class="mx-cell mx-green">3h·ch·sd</div>
+          <div class="mx-cell mx-green">3h·ch·dl</div>
+          <div class="mx-cell mx-yellow">3h·fan·sd</div>
+          <div class="mx-cell mx-green">3h·fan·dl</div>
+
+          <div class="mx-cell mx-green">5h·ch·sd</div>
+          <div class="mx-cell mx-green">5h·ch·dl</div>
+          <div class="mx-cell mx-green">5h·fan·sd</div>
+          <div class="mx-cell mx-gray">5h·fan·dl</div>
+          <div class="mx-cell mx-green">2h·ch·sd</div>
+          <div class="mx-cell mx-green">2h·ch·dl</div>
+          <div class="mx-cell mx-green">2h·fan·sd</div>
+          <div class="mx-cell mx-green">2h·fan·dl</div>
+
+          <div class="mx-cell mx-green">3h·ch·sd</div>
+          <div class="mx-cell mx-gray">3h·ch·dl</div>
+          <div class="mx-cell mx-green">3h·fan·sd</div>
+          <div class="mx-cell mx-green">3h·fan·dl</div>
+          <div class="mx-cell mx-green">5h·ch·sd</div>
+          <div class="mx-cell mx-green">5h·ch·dl</div>
+          <div class="mx-cell mx-yellow">5h·fan·sd</div>
+          <div class="mx-cell mx-green">5h·fan·dl</div>
+        </div>
+
+        <div style="font-size:0.62rem;color:#4b5563;margin-top:0.6rem;">Axes: hop count × topology × timing — each cell = one structural variant point. Click to expand.</div>
+      </div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 3 — Coverage matrix (final).</strong> After run, matrix shows full settled state. Stats banner summarizes the run. Each cell is hoverable/clickable to see which variant covers it. Gray = uncovered (reassign or second pass). Red = failed all attempts.</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SCREEN 4 — RESULTS: NETWORK GRAPHS -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">04</span> Results — Network Graphs</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · Results · Network Graphs</span></div>
+    <div class="wf-tabs">
+      <div class="wf-tab">Coverage Matrix</div>
+      <div class="wf-tab active">Network Graphs</div>
+      <div class="wf-tab">Dataset</div>
+      <div class="wf-tab">Personas</div>
+      <div class="wf-tab">Export</div>
+    </div>
+    <div class="wf-main" style="padding:1.25rem;">
+      <div style="font-size:0.72rem;color:#4b5563;margin-bottom:1rem;">Showing 3 of 23 variants — select from dropdown to compare</div>
+
+      <div class="row" style="gap:1rem;margin-bottom:1rem;">
+        <!-- GRAPH 1 -->
+        <div class="col">
+          <div style="font-size:0.7rem;font-weight:700;color:#e2e8f0;margin-bottom:0.4rem;">V-001 · Viktor · 3-hop chain · same-day</div>
+          <div class="graph-wrap">
+            <svg class="graph-lines">
+              <!-- chain: A→B→C→D -->
+              <line x1="12%" y1="50%" x2="37%" y2="50%" stroke="#ef4444" stroke-width="1.5" marker-end="url(#arr)"/>
+              <line x1="43%" y1="50%" x2="57%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="63%" y1="50%" x2="82%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <!-- cover -->
+              <line x1="12%" y1="50%" x2="12%" y2="20%" stroke="#1e2d3d" stroke-width="1" stroke-dasharray="3,2"/>
+              <defs><marker id="arr" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#ef4444"/></marker></defs>
+            </svg>
+            <div class="g-node g-fraud" style="left:5%;top:37%;">ACC-1</div>
+            <div class="g-node g-fraud" style="left:33%;top:37%;">ACC-2</div>
+            <div class="g-node g-fraud" style="left:53%;top:37%;">ACC-3</div>
+            <div class="g-node g-fraud" style="left:74%;top:37%;">DEST</div>
+            <div class="g-node g-cover" style="left:5%;top:5%;width:30px;height:30px;font-size:0.5rem;">SHOP</div>
+            <div style="position:absolute;bottom:0.5rem;left:0.75rem;font-size:0.6rem;color:#4b5563;">— fraud path &nbsp; ⋯ cover</div>
+          </div>
+          <div style="font-size:0.62rem;color:#4b5563;margin-top:0.4rem;">4 txns · $4,800 → $4,070 · ACH→Zelle→Zelle→wire · critic 8.4</div>
+        </div>
+
+        <!-- GRAPH 2 -->
+        <div class="col">
+          <div style="font-size:0.7rem;font-weight:700;color:#e2e8f0;margin-bottom:0.4rem;">V-002 · James · 5-hop chain · delayed 24h</div>
+          <div class="graph-wrap">
+            <svg class="graph-lines">
+              <line x1="8%" y1="50%" x2="23%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="29%" y1="50%" x2="44%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="50%" y1="50%" x2="63%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="69%" y1="50%" x2="80%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="86%" y1="50%" x2="94%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="8%" y1="50%" x2="15%" y2="20%" stroke="#1e2d3d" stroke-width="1" stroke-dasharray="3,2"/>
+              <line x1="29%" y1="50%" x2="36%" y2="20%" stroke="#1e2d3d" stroke-width="1" stroke-dasharray="3,2"/>
+            </svg>
+            <div class="g-node g-fraud" style="left:1%;top:37%;font-size:0.45rem;">A1</div>
+            <div class="g-node g-fraud" style="left:20%;top:37%;font-size:0.45rem;">A2</div>
+            <div class="g-node g-fraud" style="left:40%;top:37%;font-size:0.45rem;">A3</div>
+            <div class="g-node g-fraud" style="left:58%;top:37%;font-size:0.45rem;">A4</div>
+            <div class="g-node g-fraud" style="left:76%;top:37%;font-size:0.45rem;">A5</div>
+            <div class="g-node g-fraud" style="left:88%;top:37%;font-size:0.45rem;width:28px;height:28px;">DST</div>
+            <div class="g-node g-cover" style="left:8%;top:5%;width:28px;height:28px;font-size:0.45rem;">GRC</div>
+            <div class="g-node g-cover" style="left:28%;top:5%;width:28px;height:28px;font-size:0.45rem;">GAS</div>
+          </div>
+          <div style="font-size:0.62rem;color:#4b5563;margin-top:0.4rem;">7 txns · $1,200 → $1,010 · all ACH · slow drip · critic 7.9</div>
+        </div>
+
+        <!-- GRAPH 3 -->
+        <div class="col">
+          <div style="font-size:0.7rem;font-weight:700;color:#e2e8f0;margin-bottom:0.4rem;">V-008 · Maria · 3-hop fan-out · burst</div>
+          <div class="graph-wrap">
+            <svg class="graph-lines">
+              <!-- fan: A → B, C, D simultaneously -->
+              <line x1="20%" y1="50%" x2="60%" y2="20%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="20%" y1="50%" x2="60%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="20%" y1="50%" x2="60%" y2="80%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="66%" y1="20%" x2="85%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="66%" y1="50%" x2="85%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+              <line x1="66%" y1="80%" x2="85%" y2="50%" stroke="#ef4444" stroke-width="1.5"/>
+            </svg>
+            <div class="g-node g-fraud" style="left:8%;top:37%;">SRC</div>
+            <div class="g-node g-fraud" style="left:55%;top:5%;font-size:0.5rem;">M1</div>
+            <div class="g-node g-fraud" style="left:55%;top:37%;font-size:0.5rem;">M2</div>
+            <div class="g-node g-fraud" style="left:55%;top:68%;font-size:0.5rem;">M3</div>
+            <div class="g-node g-fraud" style="left:78%;top:37%;font-size:0.5rem;background:rgba(167,139,250,0.2);border-color:#a78bfa;color:#a78bfa;">CRPT</div>
+          </div>
+          <div style="font-size:0.62rem;color:#4b5563;margin-top:0.4rem;">6 txns · fan-out → crypto aggregation · critic 8.1</div>
+        </div>
+      </div>
+
+      <div style="font-size:0.65rem;color:#4b5563;">Red = fraud path · Gray = cover activity · Purple = crypto · All graphs from the same run — structurally diverse by design</div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 4 — Network graphs.</strong> Each variant rendered as a directed graph. Red edges = fraud path. Gray dashed = cover activity. Side-by-side comparison proves structural diversity — chain vs fan-out vs burst. This is the visual proof that we're not generating statistical noise.</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SCREEN 5 — RESULTS: DATASET BROWSER -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">05</span> Results — Dataset Browser (ML Output)</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · Results · Dataset</span></div>
+    <div class="wf-tabs">
+      <div class="wf-tab">Coverage Matrix</div>
+      <div class="wf-tab">Network Graphs</div>
+      <div class="wf-tab active">Dataset</div>
+      <div class="wf-tab">Personas</div>
+      <div class="wf-tab">Export</div>
+    </div>
+    <div class="wf-main" style="padding:1.25rem;">
+
+      <!-- FILTER BAR -->
+      <div style="display:flex;gap:0.6rem;align-items:center;flex-wrap:wrap;margin-bottom:1rem;">
+        <span style="font-size:0.65rem;color:#4b5563;">Filter:</span>
+        <div class="blk blk-sm" style="padding:0 0.65rem;display:flex;align-items:center;min-width:100px;">
+          <span style="font-size:0.65rem;color:#4b5563;">Persona ▾</span>
+        </div>
+        <div class="blk blk-sm" style="padding:0 0.65rem;display:flex;align-items:center;min-width:100px;">
+          <span style="font-size:0.65rem;color:#4b5563;">Fraud role ▾</span>
+        </div>
+        <div class="blk blk-sm" style="padding:0 0.65rem;display:flex;align-items:center;min-width:80px;">
+          <span style="font-size:0.65rem;color:#4b5563;">is_fraud ▾</span>
+        </div>
+        <div class="blk blk-sm" style="padding:0 0.65rem;display:flex;align-items:center;min-width:100px;">
+          <span style="font-size:0.65rem;color:#4b5563;">Score ≥ 7 ▾</span>
+        </div>
+        <div class="blk blk-sm" style="padding:0 0.65rem;display:flex;align-items:center;min-width:80px;">
+          <span style="font-size:0.65rem;color:#4b5563;">Variant ▾</span>
+        </div>
+        <div style="margin-left:auto;font-size:0.65rem;color:#4b5563;">Showing 2,140 rows</div>
+      </div>
+
+      <!-- TABLE -->
+      <div style="overflow-x:auto;">
+        <table class="wf-table">
+          <thead>
+            <tr>
+              <th>transaction_id</th>
+              <th>timestamp</th>
+              <th>amount</th>
+              <th>channel</th>
+              <th>is_fraud</th>
+              <th>fraud_role</th>
+              <th>variant_id</th>
+              <th>persona</th>
+              <th>hop_count</th>
+              <th>critic_score</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>TXN-0041</td><td>2026-03-10 09:14</td><td>$4,800.00</td><td>ACH</td>
+              <td class="fraud">True</td><td class="role-place">placement</td>
+              <td class="vid">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:#10b981;">8.4</td>
+            </tr>
+            <tr>
+              <td>TXN-0042</td><td>2026-03-10 11:32</td><td>$4,560.00</td><td>Zelle</td>
+              <td class="fraud">True</td><td class="role-hop">hop_1_of_3</td>
+              <td class="vid">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:#10b981;">8.4</td>
+            </tr>
+            <tr>
+              <td>TXN-0043</td><td>2026-03-10 11:48</td><td>$4,300.00</td><td>Zelle</td>
+              <td class="fraud">True</td><td class="role-hop">hop_2_of_3</td>
+              <td class="vid">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:#10b981;">8.4</td>
+            </tr>
+            <tr>
+              <td>TXN-0044</td><td>2026-03-10 14:05</td><td>$4,070.00</td><td>wire</td>
+              <td class="fraud">True</td><td class="role-ext">extraction</td>
+              <td class="vid">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:#10b981;">8.4</td>
+            </tr>
+            <tr>
+              <td>TXN-0045</td><td>2026-03-10 10:22</td><td>$63.40</td><td>card</td>
+              <td class="legit">False</td><td class="role-cov">cover_activity</td>
+              <td class="vid">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td style="color:#10b981;">8.4</td>
+            </tr>
+            <tr style="background:#0f2235;">
+              <td>TXN-0071</td><td>2026-03-12 08:55</td><td>$1,200.00</td><td>ACH</td>
+              <td class="fraud">True</td><td class="role-place">placement</td>
+              <td class="vid">V-B9C2D1</td><td>James H.</td><td>5</td><td style="color:#10b981;">7.9</td>
+            </tr>
+            <tr style="background:#0f2235;">
+              <td>TXN-0072</td><td>2026-03-13 09:30</td><td>$1,140.00</td><td>ACH</td>
+              <td class="fraud">True</td><td class="role-hop">hop_1_of_5</td>
+              <td class="vid">V-B9C2D1</td><td>James H.</td><td>5</td><td style="color:#10b981;">7.9</td>
+            </tr>
+            <tr style="background:#0f2235;">
+              <td>TXN-0073</td><td>2026-03-13 10:22</td><td>$38.90</td><td>card</td>
+              <td class="legit">False</td><td class="role-cov">cover_activity</td>
+              <td class="vid">V-B9C2D1</td><td>James H.</td><td>5</td><td style="color:#10b981;">7.9</td>
+            </tr>
+            <tr>
+              <td colspan="10" style="text-align:center;color:#1e2d3d;padding:0.5rem;font-size:0.65rem;">· · · 2,130 more rows · · ·</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- COLUMN KEY -->
+      <div style="margin-top:0.75rem;display:flex;gap:1.5rem;flex-wrap:wrap;">
+        <span style="font-size:0.62rem;"><span class="role-place">■</span> placement</span>
+        <span style="font-size:0.62rem;"><span class="role-hop">■</span> hop_N_of_M</span>
+        <span style="font-size:0.62rem;"><span class="role-ext">■</span> extraction</span>
+        <span style="font-size:0.62rem;"><span class="role-cov">■</span> cover_activity</span>
+        <span style="font-size:0.62rem;margin-left:1rem;color:#4b5563;">Highlighted rows = same variant (V-B9C2D1)</span>
+      </div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 5 — Dataset browser.</strong> The actual ML artifact. One row per transaction. Filterable by persona, role, is_fraud, critic score, variant. fraud_role color-coded so the layered structure is readable at a glance. This is what a data scientist would hand to XGBoost.</div>
+</div>
+
+
+<!-- ============================================================ -->
+<!-- SCREEN 6 — EXPORT PANEL -->
+<!-- ============================================================ -->
+<div class="screen-wrap">
+  <div class="screen-label"><span class="screen-num">06</span> Results — Export Panel</div>
+  <div class="wf">
+    <div class="wf-bar"><div class="dot dr"></div><div class="dot dy"></div><div class="dot dg"></div><span class="wf-title">FraudGen · Results · Export</span></div>
+    <div class="wf-tabs">
+      <div class="wf-tab">Coverage Matrix</div>
+      <div class="wf-tab">Network Graphs</div>
+      <div class="wf-tab">Dataset</div>
+      <div class="wf-tab">Personas</div>
+      <div class="wf-tab active">Export</div>
+    </div>
+    <div class="wf-main" style="padding:1.5rem;max-width:640px;">
+      <div style="font-size:0.72rem;color:#4b5563;margin-bottom:1.5rem;">All files from <span style="color:#38bdf8;font-family:monospace;">output/runs/run_20260315_142201/</span> — 23 variants · 2,140 transactions</div>
+
+      <div class="export-card">
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">dataset.csv</div>
+          <div style="font-size:0.65rem;color:#4b5563;margin-top:0.2rem;">One row per transaction · flat tabular · XGBoost / Random Forest</div>
+          <div style="font-size:0.62rem;color:#1e3a5f;font-family:monospace;margin-top:0.25rem;">~1.8 MB · 2,140 rows · 15 columns</div>
+        </div>
+        <div class="wf-btn wf-btn-primary" style="font-size:0.7rem;">↓ Download</div>
+      </div>
+
+      <div class="export-card">
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">dataset.json</div>
+          <div style="font-size:0.65rem;color:#4b5563;margin-top:0.2rem;">Nested structure — variant + persona metadata + transactions · GNN / LSTM</div>
+          <div style="font-size:0.62rem;color:#1e3a5f;font-family:monospace;margin-top:0.25rem;">~3.2 MB · full context preserved</div>
+        </div>
+        <div class="wf-btn wf-btn-primary" style="font-size:0.7rem;">↓ Download</div>
+      </div>
+
+      <div class="export-card">
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">graph_adjacency.json</div>
+          <div style="font-size:0.65rem;color:#4b5563;margin-top:0.2rem;">NetworkX-compatible adjacency list · Graph Neural Network training</div>
+          <div style="font-size:0.62rem;color:#1e3a5f;font-family:monospace;margin-top:0.25rem;">~0.9 MB · nodes = accounts, edges = transactions</div>
+        </div>
+        <div class="wf-btn wf-btn-primary" style="font-size:0.7rem;">↓ Download</div>
+      </div>
+
+      <div class="export-card">
+        <div>
+          <div style="font-size:0.8rem;font-weight:700;color:#e2e8f0;">run_summary.json</div>
+          <div style="font-size:0.65rem;color:#4b5563;margin-top:0.2rem;">Aggregate stats — variant count, scores, coverage %, cost, timing</div>
+          <div style="font-size:0.62rem;color:#1e3a5f;font-family:monospace;margin-top:0.25rem;">~2 KB</div>
+        </div>
+        <div class="wf-btn wf-btn-ghost" style="font-size:0.7rem;">↓ Download</div>
+      </div>
+
+      <div style="margin-top:1rem;background:#0a1628;border:1px solid #1e3a5f;border-radius:6px;padding:0.75rem;font-family:monospace;font-size:0.65rem;color:#4b5563;line-height:2;">
+        <span style="color:#38bdf8;">{</span><br>
+        &nbsp; <span style="color:#7dd3fc;">"variant_count"</span>: <span style="color:#10b981;">23</span>,<br>
+        &nbsp; <span style="color:#7dd3fc;">"mean_critic_score"</span>: <span style="color:#10b981;">8.1</span>,<br>
+        &nbsp; <span style="color:#7dd3fc;">"coverage_saturation_pct"</span>: <span style="color:#10b981;">82.0</span>,<br>
+        &nbsp; <span style="color:#7dd3fc;">"total_transactions"</span>: <span style="color:#10b981;">2140</span>,<br>
+        &nbsp; <span style="color:#7dd3fc;">"total_cost_usd"</span>: <span style="color:#f59e0b;">4.21</span>,<br>
+        &nbsp; <span style="color:#7dd3fc;">"run_duration_seconds"</span>: <span style="color:#10b981;">372</span><br>
+        <span style="color:#38bdf8;">}</span>
+      </div>
+    </div>
+  </div>
+  <div class="annotation"><strong>Screen 6 — Export.</strong> Three download targets: CSV (XGBoost/RF), JSON (GNN/LSTM), graph adjacency (GNN). run_summary.json is the credibility artifact — show this to judges: $4.21 to generate 2,140 labeled fraud transactions across 23 structurally distinct variants.</div>
+</div>
+
+<!-- DECISION MATRIX -->
+<div style="max-width:1100px;margin-bottom:4rem;">
+  <div class="screen-label" style="margin-bottom:1rem;"><span class="screen-num">?</span> Demo option decision matrix</div>
+  <div style="background:#0d1117;border:1px solid #1e2d3d;border-radius:12px;overflow:hidden;">
+    <table style="width:100%;border-collapse:collapse;font-size:0.75rem;">
+      <thead>
+        <tr style="background:#161b22;border-bottom:1px solid #1e2d3d;">
+          <th style="padding:0.75rem 1rem;text-align:left;color:#4b5563;">Criteria</th>
+          <th style="padding:0.75rem 1rem;text-align:center;color:#4b5563;">Weight</th>
+          <th style="padding:0.75rem 1rem;text-align:center;color:#38bdf8;">Streamlit Console</th>
+          <th style="padding:0.75rem 1rem;text-align:center;color:#f59e0b;">CLI Debugger only</th>
+          <th style="padding:0.75rem 1rem;text-align:center;color:#10b981;">Hybrid (Console + CLI)</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr style="border-bottom:1px solid #111827;">
+          <td style="padding:0.65rem 1rem;color:#94a3b8;">Visual impact (room wins)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">3.0</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#38bdf8;">9 (27)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">4 (12)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#10b981;">9 (27)</td>
+        </tr>
+        <tr style="border-bottom:1px solid #111827;background:#0f1923;">
+          <td style="padding:0.65rem 1rem;color:#94a3b8;">Technical depth (judges)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">2.5</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#38bdf8;">6 (15)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">9 (22.5)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#10b981;">9 (22.5)</td>
+        </tr>
+        <tr style="border-bottom:1px solid #111827;">
+          <td style="padding:0.65rem 1rem;color:#94a3b8;">Demo reliability (no failure risk)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">2.0</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#38bdf8;">7 (14)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">8 (16)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#10b981;">7 (14)</td>
+        </tr>
+        <tr style="border-bottom:1px solid #111827;background:#0f1923;">
+          <td style="padding:0.65rem 1rem;color:#94a3b8;">Shows ML-ready output clearly</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">2.0</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#38bdf8;">9 (18)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">5 (10)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#10b981;">9 (18)</td>
+        </tr>
+        <tr style="border-bottom:1px solid #111827;">
+          <td style="padding:0.65rem 1rem;color:#94a3b8;">Time to story (fits 5 min slot)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">1.5</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#38bdf8;">8 (12)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#4b5563;">7 (10.5)</td>
+          <td style="padding:0.65rem 1rem;text-align:center;color:#10b981;">6 (9)</td>
+        </tr>
+        <tr style="background:#0a1628;border-top:2px solid #1e3a5f;">
+          <td style="padding:0.75rem 1rem;color:#e2e8f0;font-weight:700;">Total score</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:#4b5563;font-weight:700;">11</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:#38bdf8;font-weight:700;">86</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:#4b5563;font-weight:700;">71</td>
+          <td style="padding:0.75rem 1rem;text-align:center;color:#10b981;font-weight:700;">90.5 ✓ recommended</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+</body>
+</html>

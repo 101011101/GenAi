@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 07: Results: Dataset</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #dde4ed;
+    font-family: var(--sans);
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 32px 16px;
+  }
+
+  /* ── outer wrapper ── */
+  .wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 1100px;
+  }
+
+  /* ── screen label row ── */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .screen-num {
+    background: var(--accent);
+    color: #fff;
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    padding: 3px 8px;
+    border-radius: 20px;
+    letter-spacing: 0.04em;
+  }
+  .screen-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .screen-sub {
+    font-size: 11px;
+    color: var(--muted);
+  }
+
+  /* ── browser chrome ── */
+  .browser {
+    background: #e8ecf1;
+    border-radius: 10px 10px 0 0;
+    padding: 10px 12px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    border: 1px solid #c8cfd9;
+    border-bottom: none;
+  }
+  .browser-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+  }
+  .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .dot.r { background: #f87171; }
+  .dot.y { background: #fbbf24; }
+  .dot.g { background: #34d399; }
+  .url-bar {
+    background: #fff;
+    border: 1px solid #c8cfd9;
+    border-radius: 5px;
+    padding: 5px 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .url-bar .lock { color: var(--green); font-size: 10px; }
+
+  /* ── app shell ── */
+  .app {
+    background: var(--bg);
+    border: 1px solid #c8cfd9;
+    border-top: none;
+    border-radius: 0 0 10px 10px;
+    height: 760px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── global header ── */
+  .g-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 18px;
+    height: 44px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .g-header-left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .logo {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+  }
+  .logo span { color: var(--red); }
+  .run-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+    background: var(--surface2);
+    padding: 2px 7px;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+  }
+  .g-header-right {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .status-pill {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--green);
+    background: var(--green-light);
+    padding: 3px 9px;
+    border-radius: 20px;
+    border: 1px solid #a7f3d0;
+  }
+  .status-dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .meta-item {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .meta-item strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+  .meta-sep {
+    width: 1px; height: 14px;
+    background: var(--border);
+  }
+  .progress-ring {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+  }
+
+  /* ── body area ── */
+  .body {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── sidebar ── */
+  .sidebar {
+    width: 192px;
+    flex-shrink: 0;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 0;
+    overflow-y: auto;
+  }
+  .sidebar-section {
+    margin-bottom: 2px;
+  }
+  .sidebar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .sidebar-header .chevron {
+    font-size: 9px;
+    color: var(--muted);
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px 6px 24px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 0;
+    position: relative;
+  }
+  .sidebar-item:hover {
+    background: var(--surface2);
+    color: var(--text);
+  }
+  .sidebar-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0; top: 0; bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .sidebar-icon {
+    font-size: 12px;
+    width: 14px;
+    text-align: center;
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 14px;
+  }
+  .sidebar-section-top {
+    padding: 6px 14px 4px;
+    font-size: 9px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+  }
+
+  /* ── main panel ── */
+  .main {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 16px 18px;
+  }
+
+  /* ── page title ── */
+  .page-title-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  .page-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .page-title-icon { font-size: 14px; }
+  .page-sub {
+    font-size: 11px;
+    color: var(--muted);
+    margin-top: 1px;
+  }
+  .header-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: none;
+  }
+  .btn-outline {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    color: var(--text);
+  }
+  .btn-primary {
+    background: var(--accent);
+    color: #fff;
+  }
+
+  /* ── stats row ── */
+  .stats-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 14px;
+    flex-shrink: 0;
+  }
+  .stat-card {
+    flex: 1;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 14px;
+  }
+  .stat-label {
+    font-size: 10px;
+    color: var(--muted);
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-bottom: 4px;
+  }
+  .stat-value {
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text);
+    font-family: var(--mono);
+    line-height: 1;
+  }
+  .stat-value.green { color: var(--green); }
+  .stat-value.red { color: var(--red); }
+  .stat-sub {
+    font-size: 10px;
+    color: var(--faint);
+    margin-top: 3px;
+  }
+
+  /* ── filter bar ── */
+  .filter-bar {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 10px;
+    flex-shrink: 0;
+    flex-wrap: wrap;
+  }
+  .filter-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    flex-wrap: wrap;
+  }
+  .filter-right {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid transparent;
+    white-space: nowrap;
+    line-height: 1.3;
+  }
+  .chip.active-chip {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .chip.purple-chip {
+    background: var(--purple-light);
+    color: var(--purple);
+    border-color: #c4b5fd;
+  }
+  .chip.accent-chip {
+    background: var(--accent-light);
+    color: var(--accent);
+    border-color: #bfdbfe;
+  }
+  .chip.red-chip {
+    background: var(--red-light);
+    color: var(--red);
+    border-color: #fecaca;
+  }
+  .chip.muted-chip {
+    background: var(--surface2);
+    color: var(--muted);
+    border-color: var(--border);
+  }
+  .filter-select {
+    height: 28px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text);
+    padding: 0 8px;
+    cursor: pointer;
+    outline: none;
+  }
+  .filter-select:focus { border-color: var(--accent); }
+  .select-variant { width: 140px; }
+  .select-persona { width: 140px; }
+  .search-input {
+    height: 28px;
+    width: 180px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--bg);
+    font-family: var(--sans);
+    font-size: 11px;
+    color: var(--text);
+    padding: 0 8px 0 26px;
+    outline: none;
+    position: relative;
+  }
+  .search-wrap {
+    position: relative;
+    display: flex;
+    align-items: center;
+  }
+  .search-icon {
+    position: absolute;
+    left: 8px;
+    font-size: 11px;
+    color: var(--faint);
+    pointer-events: none;
+    z-index: 1;
+  }
+
+  .showing-text {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── table ── */
+  .table-wrap {
+    flex: 1;
+    overflow-y: auto;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  thead tr {
+    background: var(--surface2);
+    position: sticky;
+    top: 0;
+    z-index: 10;
+  }
+  th {
+    padding: 8px 10px;
+    text-align: left;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+  }
+  th.right { text-align: right; }
+  tbody tr {
+    border-bottom: 1px solid var(--border);
+    transition: background 0.1s;
+  }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:nth-child(odd) { background: var(--bg); }
+  tbody tr:nth-child(even) { background: var(--surface); }
+  tbody tr:hover { background: var(--surface2) !important; }
+  td {
+    padding: 7px 10px;
+    vertical-align: middle;
+    white-space: nowrap;
+  }
+  td.mono {
+    font-family: var(--mono);
+    font-size: 10.5px;
+  }
+  td.right { text-align: right; }
+  td.amount {
+    font-family: var(--mono);
+    font-size: 11px;
+    text-align: right;
+    font-weight: 500;
+    color: var(--text);
+  }
+  td.ts {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+  td.txn-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  /* ── pills ── */
+  .pill {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    white-space: nowrap;
+  }
+  .pill-fraud {
+    background: var(--green-light);
+    color: var(--green);
+    border: 1px solid #a7f3d0;
+  }
+  .pill-legit {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .pill-placement {
+    background: var(--purple-light);
+    color: var(--purple);
+    border: 1px solid #c4b5fd;
+  }
+  .pill-hop {
+    background: var(--accent-light);
+    color: var(--accent);
+    border: 1px solid #bfdbfe;
+  }
+  .pill-hop-dark {
+    background: #d4e4f7;
+    color: #0a3a6e;
+    border: 1px solid #93c5fd;
+  }
+  .pill-extraction {
+    background: var(--red-light);
+    color: var(--red);
+    border: 1px solid #fecaca;
+  }
+  .pill-cover {
+    background: var(--surface2);
+    color: var(--muted);
+    border: 1px solid var(--border);
+  }
+  .pill-variant {
+    background: var(--yellow-light);
+    color: var(--yellow);
+    border: 1px solid #fde68a;
+    font-family: var(--mono);
+    font-size: 9.5px;
+  }
+  .pill-channel {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1px solid var(--border);
+    font-size: 10px;
+    font-weight: 500;
+  }
+
+  /* ── pagination ── */
+  .pagination-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: 10px;
+    flex-shrink: 0;
+  }
+  .pagination-showing {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .page-controls {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+  .page-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border-radius: 5px;
+    font-size: 11px;
+    font-weight: 500;
+    cursor: pointer;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    color: var(--text);
+    transition: all 0.1s;
+  }
+  .page-btn:hover { background: var(--surface2); }
+  .page-btn.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+  }
+  .page-btn.disabled {
+    color: var(--faint);
+    cursor: default;
+    pointer-events: none;
+  }
+  .page-ellipsis {
+    font-size: 11px;
+    color: var(--faint);
+    padding: 0 2px;
+  }
+</style>
+</head>
+<body>
+<div class="wrapper">
+
+  <!-- screen label -->
+  <div class="screen-label">
+    <span class="screen-num">07</span>
+    <span class="screen-title">Results — Dataset</span>
+    <span class="screen-sub">Labeled transaction records</span>
+  </div>
+
+  <!-- browser chrome -->
+  <div class="browser">
+    <div class="browser-dots">
+      <div class="dot r"></div>
+      <div class="dot y"></div>
+      <div class="dot g"></div>
+    </div>
+    <div class="url-bar">
+      <span class="lock">🔒</span>
+      <span>fraudgen.app/run/results/dataset</span>
+    </div>
+  </div>
+
+  <!-- app shell -->
+  <div class="app">
+
+    <!-- global header -->
+    <div class="g-header">
+      <div class="g-header-left">
+        <div class="logo">Fraud<span>Gen</span></div>
+        <div class="run-id">RUN-2024-0312-7741</div>
+        <div class="status-pill">
+          <div class="status-dot"></div>
+          Healthy
+        </div>
+      </div>
+      <div class="g-header-right">
+        <div class="meta-item">
+          <span class="progress-ring">100%</span>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">
+          Variants <strong>11/12</strong>
+        </div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">
+          Cost <strong>$1.84</strong>
+        </div>
+        <div class="meta-sep"></div>
+        <button class="btn btn-outline" style="font-size:11px;padding:5px 10px;">
+          ⬇ Export CSV
+        </button>
+      </div>
+    </div>
+
+    <!-- body -->
+    <div class="body">
+
+      <!-- sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-section-top">Navigation</div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-item" style="padding-left:14px;">
+            <span class="sidebar-icon">⚙</span> Configuration
+          </div>
+          <div class="sidebar-item" style="padding-left:14px;">
+            <span class="sidebar-icon">▶</span> Run Monitor
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-top">Results</div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-header">
+            Results
+            <span class="chevron">▾</span>
+          </div>
+          <div class="sidebar-item">
+            <span class="sidebar-icon">◎</span> Summary
+          </div>
+          <div class="sidebar-item">
+            <span class="sidebar-icon">⋯</span> Variants
+          </div>
+          <div class="sidebar-item active">
+            <span class="sidebar-icon">⊞</span> Dataset
+          </div>
+          <div class="sidebar-item">
+            <span class="sidebar-icon">↗</span> Export
+          </div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section-top">Analysis</div>
+
+        <div class="sidebar-section">
+          <div class="sidebar-item" style="padding-left:14px;">
+            <span class="sidebar-icon">△</span> Risk Heatmap
+          </div>
+          <div class="sidebar-item" style="padding-left:14px;">
+            <span class="sidebar-icon">⊘</span> Coverage Gaps
+          </div>
+        </div>
+      </div>
+
+      <!-- main panel -->
+      <div class="main">
+
+        <!-- page title row -->
+        <div class="page-title-row">
+          <div>
+            <div class="page-title">
+              <span class="page-title-icon">⊞</span>
+              Labeled Transaction Dataset
+            </div>
+            <div class="page-sub">1,140 synthetic records across 11 variants · ready for ML training</div>
+          </div>
+          <div class="header-actions">
+            <button class="btn btn-outline">⊞ Column View</button>
+            <button class="btn btn-outline">⬇ Export .parquet</button>
+            <button class="btn btn-primary">⬇ Export CSV</button>
+          </div>
+        </div>
+
+        <!-- stats row -->
+        <div class="stats-row">
+          <div class="stat-card">
+            <div class="stat-label">Total Records</div>
+            <div class="stat-value">1,140</div>
+            <div class="stat-sub">across 11 variants</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Fraud Txns</div>
+            <div class="stat-value red">891</div>
+            <div class="stat-sub">78.2% of dataset</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Legit / Cover</div>
+            <div class="stat-value" style="color:var(--muted);">249</div>
+            <div class="stat-sub">21.8% of dataset</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Unique Personas</div>
+            <div class="stat-value">48</div>
+            <div class="stat-sub">synthetic identities</div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Channels</div>
+            <div class="stat-value">6</div>
+            <div class="stat-sub">Zelle, ACH, Wire, P2P…</div>
+          </div>
+        </div>
+
+        <!-- filter bar -->
+        <div class="filter-bar">
+          <div class="filter-left">
+            <span class="chip active-chip">All 1,140</span>
+            <span class="chip purple-chip">placement</span>
+            <span class="chip accent-chip">hop</span>
+            <span class="chip red-chip">extraction</span>
+            <span class="chip muted-chip">cover_activity</span>
+          </div>
+          <div class="filter-right">
+            <select class="filter-select select-variant">
+              <option>Variant: All</option>
+              <option>V-001</option>
+              <option>V-002</option>
+              <option>V-003</option>
+            </select>
+            <select class="filter-select select-persona">
+              <option>Persona: All</option>
+              <option>Viktor S.</option>
+              <option>James M.</option>
+              <option>Maria C.</option>
+            </select>
+            <div class="search-wrap">
+              <span class="search-icon">🔍</span>
+              <input class="search-input" type="text" placeholder="Search transactions…" />
+            </div>
+          </div>
+        </div>
+
+        <div class="showing-text">Showing 1–15 of 1,140 transactions</div>
+
+        <!-- table -->
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>txn_id</th>
+                <th>timestamp</th>
+                <th class="right">amount</th>
+                <th>channel</th>
+                <th>is_fraud</th>
+                <th>fraud_role</th>
+                <th>variant_id</th>
+                <th>persona</th>
+              </tr>
+            </thead>
+            <tbody>
+              <!-- V-001 row 1 -->
+              <tr>
+                <td class="txn-id">TXN-001001</td>
+                <td class="ts">09:34:12</td>
+                <td class="amount">$9,800.00</td>
+                <td><span class="pill pill-channel">Zelle</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-placement">placement</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-001 row 2 -->
+              <tr>
+                <td class="txn-id">TXN-001002</td>
+                <td class="ts">14:02:45</td>
+                <td class="amount">$9,600.00</td>
+                <td><span class="pill pill-channel">Zelle</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-hop">hop_1_of_3</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-001 row 3 -->
+              <tr>
+                <td class="txn-id">TXN-001003</td>
+                <td class="ts">18:47:33</td>
+                <td class="amount">$9,400.00</td>
+                <td><span class="pill pill-channel">ACH</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-hop-dark">hop_2_of_3</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-001 row 4 — extraction -->
+              <tr>
+                <td class="txn-id">TXN-001004</td>
+                <td class="ts">09:22:10</td>
+                <td class="amount" style="color:var(--red);font-weight:700;">$28,700.00</td>
+                <td><span class="pill pill-channel">Wire</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-extraction">extraction</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-001 row 5 — cover -->
+              <tr>
+                <td class="txn-id">TXN-001005</td>
+                <td class="ts">10:15:00</td>
+                <td class="amount">$340.00</td>
+                <td><span class="pill pill-channel">Debit</span></td>
+                <td><span class="pill pill-legit">✗ legit</span></td>
+                <td><span class="pill pill-cover">cover_activity</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-001 row 6 — cover -->
+              <tr>
+                <td class="txn-id">TXN-001006</td>
+                <td class="ts">16:45:22</td>
+                <td class="amount">$87.50</td>
+                <td><span class="pill pill-channel">Debit</span></td>
+                <td><span class="pill pill-legit">✗ legit</span></td>
+                <td><span class="pill pill-cover">cover_activity</span></td>
+                <td><span class="pill pill-variant">V-001</span></td>
+                <td style="font-size:11px;color:var(--text);">Viktor S.</td>
+              </tr>
+              <!-- V-002 row 1 -->
+              <tr>
+                <td class="txn-id">TXN-002001</td>
+                <td class="ts">08:15:00</td>
+                <td class="amount">$4,900.00</td>
+                <td><span class="pill pill-channel">P2P</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-placement">placement</span></td>
+                <td><span class="pill pill-variant" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">V-002</span></td>
+                <td style="font-size:11px;color:var(--text);">James M.</td>
+              </tr>
+              <!-- V-002 row 2 -->
+              <tr>
+                <td class="txn-id">TXN-002002</td>
+                <td class="ts">11:30:45</td>
+                <td class="amount">$4,750.00</td>
+                <td><span class="pill pill-channel">P2P</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-hop">hop_1_of_2</span></td>
+                <td><span class="pill pill-variant" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">V-002</span></td>
+                <td style="font-size:11px;color:var(--text);">James M.</td>
+              </tr>
+              <!-- V-002 row 3 — extraction -->
+              <tr>
+                <td class="txn-id">TXN-002003</td>
+                <td class="ts">15:22:18</td>
+                <td class="amount" style="color:var(--red);font-weight:700;">$9,200.00</td>
+                <td><span class="pill pill-channel">ACH</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-extraction">extraction</span></td>
+                <td><span class="pill pill-variant" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">V-002</span></td>
+                <td style="font-size:11px;color:var(--text);">James M.</td>
+              </tr>
+              <!-- V-002 row 4 — cover -->
+              <tr>
+                <td class="txn-id">TXN-002004</td>
+                <td class="ts">09:05:11</td>
+                <td class="amount">$125.00</td>
+                <td><span class="pill pill-channel">Debit</span></td>
+                <td><span class="pill pill-legit">✗ legit</span></td>
+                <td><span class="pill pill-cover">cover_activity</span></td>
+                <td><span class="pill pill-variant" style="background:#fef3c7;color:#92400e;border-color:#fcd34d;">V-002</span></td>
+                <td style="font-size:11px;color:var(--text);">James M.</td>
+              </tr>
+              <!-- V-003 row 1 -->
+              <tr>
+                <td class="txn-id">TXN-003001</td>
+                <td class="ts">10:44:55</td>
+                <td class="amount">$7,500.00</td>
+                <td><span class="pill pill-channel">Zelle</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-placement">placement</span></td>
+                <td><span class="pill pill-variant" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">V-003</span></td>
+                <td style="font-size:11px;color:var(--text);">Maria C.</td>
+              </tr>
+              <!-- V-003 row 2 -->
+              <tr>
+                <td class="txn-id">TXN-003002</td>
+                <td class="ts">13:12:30</td>
+                <td class="amount">$7,200.00</td>
+                <td><span class="pill pill-channel">Crypto</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-hop">hop_1_of_3</span></td>
+                <td><span class="pill pill-variant" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">V-003</span></td>
+                <td style="font-size:11px;color:var(--text);">Maria C.</td>
+              </tr>
+              <!-- V-003 row 3 -->
+              <tr>
+                <td class="txn-id">TXN-003003</td>
+                <td class="ts">16:55:40</td>
+                <td class="amount">$6,900.00</td>
+                <td><span class="pill pill-channel">Crypto</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-hop-dark">hop_2_of_3</span></td>
+                <td><span class="pill pill-variant" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">V-003</span></td>
+                <td style="font-size:11px;color:var(--text);">Maria C.</td>
+              </tr>
+              <!-- V-003 row 4 — extraction -->
+              <tr>
+                <td class="txn-id">TXN-003004</td>
+                <td class="ts">19:30:00</td>
+                <td class="amount" style="color:var(--red);font-weight:700;">$20,800.00</td>
+                <td><span class="pill pill-channel">Wire</span></td>
+                <td><span class="pill pill-fraud">✓ fraud</span></td>
+                <td><span class="pill pill-extraction">extraction</span></td>
+                <td><span class="pill pill-variant" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">V-003</span></td>
+                <td style="font-size:11px;color:var(--text);">Maria C.</td>
+              </tr>
+              <!-- V-003 row 5 — cover -->
+              <tr>
+                <td class="txn-id">TXN-003005</td>
+                <td class="ts">11:00:00</td>
+                <td class="amount">$55.00</td>
+                <td><span class="pill pill-channel">Debit</span></td>
+                <td><span class="pill pill-legit">✗ legit</span></td>
+                <td><span class="pill pill-cover">cover_activity</span></td>
+                <td><span class="pill pill-variant" style="background:#ede9fe;color:#5b21b6;border-color:#c4b5fd;">V-003</span></td>
+                <td style="font-size:11px;color:var(--text);">Maria C.</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- pagination -->
+        <div class="pagination-row">
+          <div class="pagination-showing">Showing 1–15 of 1,140 transactions</div>
+          <div class="page-controls">
+            <button class="page-btn disabled">← Prev</button>
+            <button class="page-btn active">1</button>
+            <button class="page-btn">2</button>
+            <button class="page-btn">3</button>
+            <span class="page-ellipsis">…</span>
+            <button class="page-btn">76</button>
+            <button class="page-btn">Next →</button>
+          </div>
+        </div>
+
+      </div><!-- /main -->
+    </div><!-- /body -->
+  </div><!-- /app -->
+</div><!-- /wrapper -->
+</body>
+</html>

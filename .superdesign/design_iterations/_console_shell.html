@@ -1,0 +1,1000 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudGen — Red Team Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── CSS Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    ul, ol { list-style: none; }
+    button { cursor: pointer; font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ─── Design Tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --bg:           #ffffff;
+      --surface:      #f8fafc;
+      --surface2:     #f1f5f9;
+      --border:       #e2e8f0;
+      --accent:       #0f4c8a;
+      --accent-light: #e8f0fa;
+      --red:          #dc2626;
+      --red-light:    #fef2f2;
+      --green:        #059669;
+      --green-light:  #ecfdf5;
+      --yellow:       #d97706;
+      --yellow-light: #fffbeb;
+      --purple:       #7c3aed;
+      --purple-light: #f5f3ff;
+      --orange:       #ea580c;
+      --orange-light: #fff7ed;
+      --cyan:         #0891b2;
+      --cyan-light:   #ecfeff;
+      --text:         #0f172a;
+      --muted:        #64748b;
+      --faint:        #94a3b8;
+      --mono:         'JetBrains Mono', 'Fira Code', monospace;
+      --sans:         'Inter', system-ui, sans-serif;
+    }
+
+    /* ─── Base ───────────────────────────────────────────────────────────────── */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────────────────── */
+    .console-layout {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Logo */
+    .logo {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -.02em;
+    }
+    .logo-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: .01em;
+    }
+
+    /* Nav sections */
+    .nav-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--faint);
+      padding: 8px 12px 4px;
+      margin-top: 8px;
+    }
+
+    .nav-list {
+      padding: 4px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      position: relative;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-item.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      border-left: 2px solid var(--accent);
+      padding-left: 8px;
+    }
+
+    .nav-icon {
+      width: 14px;
+      text-align: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .nav-label {
+      flex: 1;
+    }
+
+    /* Sub-items */
+    .nav-sub-item {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      padding: 0 10px 0 34px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      margin-bottom: 1px;
+    }
+    .nav-sub-item:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-sub-item.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      border-left: 2px solid var(--accent);
+      padding-left: 32px;
+    }
+
+    .nav-sub-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+      opacity: .5;
+    }
+
+    /* Results group toggle */
+    .nav-group-header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      margin-bottom: 2px;
+    }
+    .nav-group-header:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-chevron {
+      margin-left: auto;
+      font-size: 10px;
+      transition: transform .2s;
+    }
+    .nav-group-header.open .nav-chevron {
+      transform: rotate(180deg);
+    }
+    .nav-sub-list {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .25s ease;
+    }
+    .nav-sub-list.open {
+      max-height: 300px;
+    }
+
+    /* Run config panel */
+    .run-config-panel {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+    .run-config-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--faint);
+      margin-bottom: 8px;
+    }
+    .run-config-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+      gap: 6px;
+    }
+    .run-config-key {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .run-config-val {
+      color: var(--text);
+      font-weight: 600;
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .run-config-fraud {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    /* ─── Console Main ────────────────────────────────────────────────────────── */
+    .console-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ─── Global Header ───────────────────────────────────────────────────────── */
+    .global-header {
+      height: 52px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(0,0,0,.15);
+    }
+
+    .header-logo {
+      font-size: 13px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -.01em;
+      flex-shrink: 0;
+      margin-right: 4px;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,.2);
+      flex-shrink: 0;
+    }
+
+    .run-id {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(255,255,255,.75);
+      flex-shrink: 0;
+    }
+
+    /* Health badge */
+    .health-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .health-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .health-badge.green {
+      background: rgba(5,150,105,.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(5,150,105,.3);
+    }
+    .health-badge.green .health-badge-dot { background: #34d399; }
+    .health-badge.amber {
+      background: rgba(217,119,6,.2);
+      color: #fcd34d;
+      border: 1px solid rgba(217,119,6,.3);
+    }
+    .health-badge.amber .health-badge-dot { background: #fbbf24; }
+    .health-badge.red {
+      background: rgba(220,38,38,.2);
+      color: #fca5a5;
+      border: 1px solid rgba(220,38,38,.3);
+    }
+    .health-badge.red .health-badge-dot { background: #f87171; }
+
+    /* Header progress */
+    .header-progress {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .progress-bar-track {
+      width: 80px;
+      height: 6px;
+      background: rgba(255,255,255,.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #34d399;
+      border-radius: 3px;
+      transition: width .4s ease;
+    }
+    .progress-pct {
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      font-family: var(--mono);
+      min-width: 32px;
+    }
+
+    /* Header stats */
+    .header-stats {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
+    }
+    .header-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex-shrink: 0;
+    }
+    .header-stat-label {
+      font-size: 9px;
+      color: rgba(255,255,255,.55);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .header-stat-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+      font-family: var(--mono);
+    }
+
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ─── View Container ──────────────────────────────────────────────────────── */
+    .view-container {
+      flex: 1;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .view {
+      display: none;
+      padding: 24px;
+    }
+    .view.active {
+      display: block;
+    }
+
+    /* ─── Cards / Surfaces ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ─── Stat Cards ──────────────────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 26px;
+      font-weight: 800;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ─── Badges ──────────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .badge-green  { background: var(--green-light);  color: var(--green); }
+    .badge-red    { background: var(--red-light);    color: var(--red); }
+    .badge-yellow { background: var(--yellow-light); color: var(--yellow); }
+    .badge-blue   { background: var(--accent-light); color: var(--accent); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+    .badge-gray   { background: var(--surface2);     color: var(--muted); }
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+
+    /* ─── Tables ──────────────────────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: var(--surface2);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface); }
+
+    /* ─── Coverage Cells ──────────────────────────────────────────────────────── */
+    .cell {
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      border: 1.5px solid transparent;
+      min-height: 64px;
+      cursor: pointer;
+      transition: transform .1s;
+    }
+    .cell:hover { transform: scale(1.03); }
+    .cell-empty    { background: var(--surface2);     border-color: var(--border); }
+    .cell-assigned { background: var(--accent-light); border-color: var(--accent); }
+    .cell-running  { background: var(--yellow-light); border-color: var(--yellow); animation: cellPulse 1.5s infinite; }
+    .cell-done     { background: var(--green-light);  border-color: var(--green); }
+    .cell-failed   { background: var(--red-light);    border-color: var(--red); }
+    .cell-revised  { background: var(--orange-light); border-color: var(--orange); }
+    @keyframes cellPulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .cell-label { font-size: 9px;  font-weight: 700; font-family: var(--mono); }
+    .cell-score { font-size: 10px; font-weight: 700; }
+    .cell-meta  { font-size: 9px;  opacity: .7; }
+
+    /* ─── Buttons ─────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      font-family: var(--sans);
+      transition: background .12s, opacity .12s;
+    }
+    .btn-primary       { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #1a5fa0; }
+    .btn-outline       { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--surface2); }
+    .btn-danger        { background: var(--red); color: #fff; }
+    .btn-danger:hover  { background: #b91c1c; }
+    .btn-ghost         { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover   { background: var(--surface2); }
+    .btn-white-outline {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,.4);
+      color: white;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-white-outline:hover { background: rgba(255,255,255,.1); }
+    .btn-red-fill {
+      background: var(--red);
+      color: white;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      font-family: var(--sans);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-red-fill:hover { background: #b91c1c; }
+
+    /* ─── Mono Log ────────────────────────────────────────────────────────────── */
+    .mono-log {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.8;
+      overflow-y: auto;
+    }
+    .log-time  { color: #475569; }
+    .log-cell  { color: #60a5fa; }
+    .log-ok    { color: #4ade80; }
+    .log-fail  { color: #f87171; }
+    .log-score { color: #fbbf24; }
+
+    /* ─── Animations ──────────────────────────────────────────────────────────── */
+    @keyframes dash { to { stroke-dashoffset: -20; } }
+    .flow-edge {
+      stroke-dasharray: 6,3;
+      animation: dash 1.5s linear infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .pulse-dot { animation: pulse 1.5s infinite; }
+
+    /* ─── Form Elements ───────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-select,
+    .form-input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text);
+      background: white;
+      font-family: var(--sans);
+    }
+    .form-textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--text);
+      background: white;
+      resize: vertical;
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+    .form-select:focus,
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* ─── Wanted Cards (Persona) ──────────────────────────────────────────────── */
+    .wanted-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg);
+      flex: 1;
+      min-width: 180px;
+    }
+    .wanted-bar { height: 5px; }
+    .wanted-bar.high   { background: var(--red); }
+    .wanted-bar.mid    { background: var(--yellow); }
+    .wanted-bar.low    { background: var(--green); }
+    .wanted-body       { padding: 14px; }
+    .wanted-name       { font-size: 14px; font-weight: 800; }
+    .wanted-id         { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+    .wanted-spec       { font-size: 10px; color: var(--muted); font-style: italic; margin: 4px 0 8px; }
+    .wanted-tags       { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    .wanted-tag        { background: var(--surface2); border-radius: 3px; padding: 2px 6px; font-size: 9px; color: var(--muted); }
+    .wanted-stats      { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .wanted-stat       { background: var(--surface); border-radius: 5px; padding: 6px; text-align: center; }
+    .wanted-stat-val   { font-size: 14px; font-weight: 700; color: var(--accent); }
+    .wanted-stat-lbl   { font-size: 9px; color: var(--muted); }
+
+    /* ─── Storyboard ──────────────────────────────────────────────────────────── */
+    .storyboard { display: flex; gap: 10px; }
+    .story-card {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .story-card:hover  { border-color: var(--accent); }
+    .story-icon        { font-size: 22px; margin-bottom: 6px; }
+    .story-step        { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+    .story-title       { font-size: 12px; font-weight: 700; margin: 3px 0 6px; }
+    .story-text        { font-size: 10px; color: var(--muted); font-style: italic; line-height: 1.45; }
+    .story-stats       { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+    .story-stat        { font-size: 9px; color: var(--faint); background: var(--bg); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); }
+
+    /* ─── Utilities ───────────────────────────────────────────────────────────── */
+    .flex-row   { display: flex; flex-direction: row; align-items: center; }
+    .flex-col   { display: flex; flex-direction: column; }
+    .gap-8      { gap: 8px; }
+    .gap-12     { gap: 12px; }
+    .gap-16     { gap: 16px; }
+    .gap-20     { gap: 20px; }
+    .mb-12      { margin-bottom: 12px; }
+    .mb-16      { margin-bottom: 16px; }
+    .mb-20      { margin-bottom: 20px; }
+    .text-muted { color: var(--muted); }
+    .text-faint { color: var(--faint); }
+    .text-accent{ color: var(--accent); }
+    .text-mono  { font-family: var(--mono); }
+    .fw-700     { font-weight: 700; }
+    .fw-800     { font-weight: 800; }
+    .fs-10      { font-size: 10px; }
+    .fs-11      { font-size: 11px; }
+    .fs-12      { font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="console-layout">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-scroll">
+
+        <!-- Logo -->
+        <div class="logo">
+          <div class="logo-name">⬡ FraudGen</div>
+          <div class="logo-sub">Red Team Platform</div>
+        </div>
+
+        <!-- Primary nav -->
+        <nav>
+          <div class="nav-section-label">Workspace</div>
+          <ul class="nav-list">
+            <li class="nav-item" data-nav="input">
+              <span class="nav-icon">⬡</span>
+              <span class="nav-label">New Run</span>
+            </li>
+            <li class="nav-item" data-nav="monitor">
+              <span class="nav-icon">◉</span>
+              <span class="nav-label">Live Monitor</span>
+            </li>
+          </ul>
+
+          <div class="nav-section-label">Results</div>
+          <ul class="nav-list">
+            <!-- Expandable Results group -->
+            <li class="nav-group-header open" id="results-group-header">
+              <span class="nav-icon">▤</span>
+              <span class="nav-label">Results</span>
+              <span class="nav-chevron">▾</span>
+            </li>
+            <ul class="nav-sub-list open" id="results-sub-list">
+              <li class="nav-sub-item" data-nav="summary">
+                <span class="nav-sub-dot"></span>
+                Summary
+              </li>
+              <li class="nav-sub-item" data-nav="quality">
+                <span class="nav-sub-dot"></span>
+                Quality Gate
+              </li>
+              <li class="nav-sub-item" data-nav="operations">
+                <span class="nav-sub-dot"></span>
+                Operations
+              </li>
+              <li class="nav-sub-item" data-nav="variants">
+                <span class="nav-sub-dot"></span>
+                Variants
+              </li>
+              <li class="nav-sub-item" data-nav="dataset">
+                <span class="nav-sub-dot"></span>
+                Dataset
+              </li>
+              <li class="nav-sub-item" data-nav="export">
+                <span class="nav-sub-dot"></span>
+                Export
+              </li>
+            </ul>
+          </ul>
+        </nav>
+
+      </div><!-- /sidebar-scroll -->
+
+      <!-- Run Config Panel -->
+      <div class="run-config-panel">
+        <div class="run-config-label">Current Run</div>
+        <div class="run-config-fraud">Layered Mule Network</div>
+        <div class="run-config-row">
+          <span class="run-config-key">Variants</span>
+          <span class="run-config-val">12</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Fidelity</span>
+          <span class="run-config-val">L3</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Agents</span>
+          <span class="run-config-val">5</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Critic</span>
+          <span class="run-config-val">7.0</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Cost cap</span>
+          <span class="run-config-val">$5.00</span>
+        </div>
+      </div>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- CONSOLE MAIN                                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="console-main">
+
+      <!-- Global Header -->
+      <header class="global-header" id="global-header" style="display: none;">
+
+        <span class="header-logo">FraudGen</span>
+        <div class="header-divider"></div>
+
+        <span class="run-id">run_20260315_143022</span>
+
+        <div class="health-badge green">
+          <span class="health-badge-dot pulse-dot"></span>
+          Healthy
+        </div>
+
+        <div class="header-progress">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: 91%;"></div>
+          </div>
+          <span class="progress-pct">91%</span>
+        </div>
+
+        <div class="header-stats">
+          <div class="header-stat">
+            <span class="header-stat-label">Variants</span>
+            <span class="header-stat-value">11 / 12</span>
+          </div>
+          <div class="header-stat">
+            <span class="header-stat-label">Elapsed</span>
+            <span class="header-stat-value">4m 18s</span>
+          </div>
+          <div class="header-stat">
+            <span class="header-stat-label">Cost</span>
+            <span class="header-stat-value">$1.84 / $5.00</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-white-outline" id="btn-pause">
+            ‖ Pause
+          </button>
+          <button class="btn-red-fill" id="btn-stop">
+            ◼ Stop
+          </button>
+        </div>
+
+      </header><!-- /global-header -->
+
+      <!-- View Container -->
+      <div class="view-container">
+
+        <!-- INPUT VIEW -->
+        <div id="view-input" class="view active">
+          <!-- INPUT CONTENT -->
+        </div>
+
+        <!-- MONITOR VIEW -->
+        <div id="view-monitor" class="view">
+          <!-- MONITOR CONTENT -->
+        </div>
+
+        <!-- SUMMARY VIEW -->
+        <div id="view-summary" class="view">
+          <!-- SUMMARY CONTENT -->
+        </div>
+
+        <!-- QUALITY GATE VIEW -->
+        <div id="view-quality" class="view">
+          <!-- QUALITY CONTENT -->
+        </div>
+
+        <!-- OPERATIONS VIEW -->
+        <div id="view-operations" class="view">
+          <!-- OPERATIONS CONTENT -->
+        </div>
+
+        <!-- VARIANTS VIEW -->
+        <div id="view-variants" class="view">
+          <!-- VARIANTS CONTENT -->
+        </div>
+
+        <!-- DATASET VIEW -->
+        <div id="view-dataset" class="view">
+          <!-- DATASET CONTENT -->
+        </div>
+
+        <!-- EXPORT VIEW -->
+        <div id="view-export" class="view">
+          <!-- EXPORT CONTENT -->
+        </div>
+
+      </div><!-- /view-container -->
+
+    </div><!-- /console-main -->
+
+  </div><!-- /console-layout -->
+
+  <script>
+    // ─── Navigation System ───────────────────────────────────────────────────
+    function initNav() {
+      // Primary nav items
+      document.querySelectorAll('[data-nav]').forEach(item => {
+        item.addEventListener('click', () => {
+          const target = item.dataset.nav;
+
+          // Remove active from all nav items and sub-items
+          document.querySelectorAll('[data-nav]').forEach(i => i.classList.remove('active'));
+
+          // Add active to clicked
+          item.classList.add('active');
+
+          // Hide all views
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+          // Show target view
+          const view = document.getElementById('view-' + target);
+          if (view) view.classList.add('active');
+
+          // Update header visibility
+          updateHeader(target);
+        });
+      });
+
+      // Results group toggle
+      const groupHeader = document.getElementById('results-group-header');
+      const subList     = document.getElementById('results-sub-list');
+      if (groupHeader && subList) {
+        groupHeader.addEventListener('click', () => {
+          const isOpen = subList.classList.toggle('open');
+          groupHeader.classList.toggle('open', isOpen);
+        });
+      }
+    }
+
+    function updateHeader(view) {
+      // Show header on all views except 'input'
+      const header = document.getElementById('global-header');
+      if (header) {
+        header.style.display = (view === 'input') ? 'none' : 'flex';
+      }
+    }
+
+    // ─── Header Actions ───────────────────────────────────────────────────────
+    function initHeaderActions() {
+      const pauseBtn = document.getElementById('btn-pause');
+      const stopBtn  = document.getElementById('btn-stop');
+
+      if (pauseBtn) {
+        let paused = false;
+        pauseBtn.addEventListener('click', () => {
+          paused = !paused;
+          pauseBtn.textContent = paused ? '▶ Resume' : '‖ Pause';
+        });
+      }
+
+      if (stopBtn) {
+        stopBtn.addEventListener('click', () => {
+          if (confirm('Stop this run? Progress so far will be preserved.')) {
+            stopBtn.textContent = '◼ Stopped';
+            stopBtn.disabled = true;
+            stopBtn.style.opacity = '0.5';
+          }
+        });
+      }
+    }
+
+    // ─── Init on DOM ready ────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      initNav();
+      initHeaderActions();
+
+      // Set initial active state: input view, no header
+      const inputView = document.getElementById('view-input');
+      if (inputView) inputView.classList.add('active');
+      updateHeader('input');
+    });
+  </script>
+
+</body>
+</html>

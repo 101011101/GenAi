@@ -1,0 +1,453 @@
+<!-- INPUT VIEW -->
+<div style="display:flex; gap:24px; align-items:flex-start;">
+
+  <!-- Left: Form -->
+  <div style="flex:1; min-width:0;">
+    <div style="margin-bottom:20px;">
+      <div style="font-size:20px; font-weight:700; color:var(--text); margin-bottom:4px;">Configure Run</div>
+      <div style="font-size:13px; color:var(--muted);">Define the fraud type and generation parameters</div>
+    </div>
+
+    <!-- Fraud Type Preset -->
+    <div class="form-group">
+      <label class="form-label">Fraud Type Preset</label>
+      <select class="form-select">
+        <option selected>Layered Mule Network</option>
+        <option>Card Skimming Ring</option>
+        <option>Synthetic Identity Fraud</option>
+        <option>ACH Fraud / Business Email Compromise</option>
+        <option>Custom...</option>
+      </select>
+    </div>
+
+    <!-- Fraud Description -->
+    <div class="form-group">
+      <label class="form-label">Fraud Description</label>
+      <textarea class="form-textarea" rows="6">A sophisticated layered mule account network where criminal proceeds flow through 3–5 intermediary accounts using a mix of Zelle, ACH, and wire transfers. Mules are recruited via social media job postings and are unaware they are part of a fraud scheme. Final extraction uses international wire transfer to offshore accounts.</textarea>
+    </div>
+
+    <!-- Target Variants -->
+    <div class="form-group">
+      <label class="form-label">Target Variants</label>
+      <div>
+        <input type="range" min="5" max="50" value="12" style="width:100%; accent-color:var(--accent); margin-bottom:8px;" id="variants-slider" oninput="document.getElementById('variant-pill').textContent=''+this.value+' variants · Est. $'+(this.value*0.175).toFixed(2)+' · Est. '+(this.value*5)+'s'">
+        <div id="variant-pill" style="display:inline-block; background:var(--accent-light); color:var(--accent); font-family:var(--mono), monospace; font-size:11px; padding:6px 12px; border-radius:6px;">12 variants · Est. $2.10 · Est. 60s</div>
+      </div>
+    </div>
+
+    <!-- Fidelity Level -->
+    <div class="form-group">
+      <label class="form-label">Fidelity Level</label>
+      <div style="display:flex; gap:8px;">
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; text-align:center;">
+          <div style="font-size:13px; font-weight:700; color:var(--text);">L2 Basic</div>
+          <div style="font-size:9px; color:var(--muted); margin-top:2px;">Fast, lower cost</div>
+        </button>
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:none; border-radius:8px; background:var(--accent); cursor:pointer; text-align:center;" class="fidelity-active">
+          <div style="font-size:13px; font-weight:700; color:#fff;">L3 Standard</div>
+          <div style="font-size:9px; color:rgba(255,255,255,0.75); margin-top:2px;">Balanced (recommended)</div>
+        </button>
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; text-align:center;">
+          <div style="font-size:13px; font-weight:700; color:var(--text);">L4 Deep</div>
+          <div style="font-size:9px; color:var(--muted); margin-top:2px;">Maximum detail, higher cost</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Advanced Options -->
+    <div style="margin-bottom:16px;">
+      <div onclick="toggleAdvanced()" style="font-size:11px; color:var(--muted); cursor:pointer; user-select:none; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
+        <span id="adv-arrow">▾</span> Advanced Options
+      </div>
+      <div id="adv-panel" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <div>
+          <label class="form-label">Max Parallel Agents</label>
+          <input class="form-input" type="number" value="5">
+        </div>
+        <div>
+          <label class="form-label">Critic Score Floor</label>
+          <input class="form-input" type="number" step="0.1" value="7.0">
+        </div>
+        <div>
+          <label class="form-label">Max Revisions</label>
+          <input class="form-input" type="number" value="3">
+        </div>
+        <div>
+          <label class="form-label">Persona Count</label>
+          <input class="form-input" type="number" value="4">
+        </div>
+        <div>
+          <label class="form-label">Risk High %</label>
+          <input class="form-input" type="number" value="40">
+        </div>
+        <div>
+          <label class="form-label">Risk Mid %</label>
+          <input class="form-input" type="number" value="40">
+        </div>
+        <div>
+          <label class="form-label">Risk Low %</label>
+          <input class="form-input" type="number" value="20">
+        </div>
+        <div>
+          <label class="form-label">Geographic Scope</label>
+          <input class="form-input" type="text" value="Domestic">
+        </div>
+        <div>
+          <label class="form-label">Auto Second-Pass</label>
+          <div style="padding-top:6px;">
+            <span class="badge badge-green" style="font-size:11px; padding:4px 10px; cursor:pointer;">ON</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run Button -->
+    <button class="btn btn-primary" style="width:100%; height:44px; font-size:14px; border-radius:8px; margin-top:24px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; letter-spacing:0.01em;">
+      ▶&nbsp; Run Pipeline
+    </button>
+  </div>
+
+  <!-- Right: Run Preview Card -->
+  <div style="width:300px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;">
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:14px;">Run Preview</div>
+
+    <!-- KV Rows -->
+    <div style="font-size:12px;">
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Variants</span><span style="font-weight:600;">12</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Est. Cost</span><span style="font-weight:600;">~$2.10</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Est. Time</span><span style="font-weight:600;">~60s</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Personas</span><span style="font-weight:600;">4</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Coverage Cells</span><span style="font-weight:600;">12</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; color:var(--text);">
+        <span style="color:var(--muted);">Parallel Agents</span><span style="font-weight:600;">5</span>
+      </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid var(--border); margin:4px 0 16px;">
+
+    <!-- What happens next -->
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:12px;">What happens next</div>
+    <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--text);">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Orchestrator decomposes fraud type into dimensions</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Persona generator creates 4 criminal profiles</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>5 agents explore coverage cells in parallel</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#059669; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Critic scores and approves each variant</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setFidelity(btn) {
+  btn.closest('.form-group').querySelectorAll('button').forEach(function(b) {
+    b.style.background = '#fff';
+    b.style.border = '1px solid var(--border)';
+    b.querySelectorAll('div').forEach(function(d, i) {
+      d.style.color = i === 0 ? 'var(--text)' : 'var(--muted)';
+    });
+  });
+  btn.style.background = 'var(--accent)';
+  btn.style.border = 'none';
+  btn.querySelectorAll('div').forEach(function(d, i) {
+    d.style.color = i === 0 ? '#fff' : 'rgba(255,255,255,0.75)';
+  });
+}
+
+function toggleAdvanced() {
+  var panel = document.getElementById('adv-panel');
+  var arrow = document.getElementById('adv-arrow');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'grid';
+    arrow.textContent = '▾';
+  } else {
+    panel.style.display = 'none';
+    arrow.textContent = '▸';
+  }
+}
+</script>
+
+<!-- MONITOR VIEW -->
+<div style="display:flex; height:calc(100vh - 104px); overflow:hidden; margin:-24px;">
+
+  <!-- Col 1: Personas -->
+  <div style="width:180px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); padding:12px; overflow-y:auto;">
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-bottom:12px;">Personas</div>
+
+    <!-- P01 Viktor S. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#dc2626; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">VS</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Viktor S.</div>
+        <div style="margin:3px 0;"><span class="badge badge-red" style="font-size:10px; padding:2px 7px;">High Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">3 cells · International</div>
+      </div>
+    </div>
+
+    <!-- P02 James M. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#059669; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">JM</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">James M.</div>
+        <div style="margin:3px 0;"><span class="badge badge-green" style="font-size:10px; padding:2px 7px;">Low Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">2 cells · Domestic</div>
+      </div>
+    </div>
+
+    <!-- P03 Maria C. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#d97706; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">MC</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Maria C.</div>
+        <div style="margin:3px 0;"><span class="badge badge-yellow" style="font-size:10px; padding:2px 7px;">Mid Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">4 cells · Mixed</div>
+      </div>
+    </div>
+
+    <!-- P04 David L. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#0f4c8a; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">DL</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">David L.</div>
+        <div style="margin:3px 0;"><span class="badge badge-yellow" style="font-size:10px; padding:2px 7px;">Mid Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">3 cells · Domestic</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 2: Coverage Matrix -->
+  <div style="flex:1; min-width:0; padding:16px; overflow-y:auto;">
+
+    <!-- Header row -->
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+      <div style="font-size:14px; font-weight:700; color:var(--text); margin-right:4px;">Coverage Matrix</div>
+      <span class="badge badge-green" style="font-size:11px; padding:3px 10px;">8 / 12 cells — 66.7%</span>
+      <div style="display:flex; align-items:center; gap:5px; font-size:11px; color:#059669;">
+        <span style="width:7px; height:7px; border-radius:50%; background:#059669; display:inline-block; animation:pulse-dot 1.4s ease-in-out infinite;"></span>
+        Live
+      </div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn btn-outline" style="font-size:12px; padding:5px 12px; color:var(--muted); border-color:var(--border);">‖ Pause</button>
+        <button class="btn" style="font-size:12px; padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; cursor:pointer;">◼ Stop</button>
+      </div>
+    </div>
+
+    <!-- 4×3 Grid -->
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:20px;">
+
+      <!-- cell_001 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_001</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 8.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P02 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_002 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_002</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.8</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_003 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_003</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 8.4</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_004 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_004</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.2</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P04 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_005 running -->
+      <div class="cell cell-running" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; animation:pulse-cell 1.8s ease-in-out infinite;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_005</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--accent);">att.2…</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · running</div>
+        </div>
+      </div>
+
+      <!-- cell_006 assigned -->
+      <div class="cell cell-assigned" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_006</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--muted);">att.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · assigned</div>
+        </div>
+      </div>
+
+      <!-- cell_007 running -->
+      <div class="cell cell-running" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; animation:pulse-cell 1.8s ease-in-out infinite 0.4s;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_007</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--accent);">att.1…</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P02 · running</div>
+        </div>
+      </div>
+
+      <!-- cell_008 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_008</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.9</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_009 failed -->
+      <div class="cell cell-failed" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_009</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--red);">✗ 5.2</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P04 · failed</div>
+        </div>
+      </div>
+
+      <!-- cell_010 assigned -->
+      <div class="cell cell-assigned" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_010</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--muted);">att.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · assigned</div>
+        </div>
+      </div>
+
+      <!-- cell_011 empty -->
+      <div class="cell cell-empty" style="min-height:80px; padding:10px; display:flex; align-items:center; justify-content:center;">
+        <div style="font-size:18px; color:var(--faint);">—</div>
+      </div>
+
+      <!-- cell_012 empty -->
+      <div class="cell cell-empty" style="min-height:80px; padding:10px; display:flex; align-items:center; justify-content:center;">
+        <div style="font-size:18px; color:var(--faint);">—</div>
+      </div>
+
+    </div>
+
+    <!-- Variant Feed -->
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:10px;">Recent Variants</div>
+
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-001</span>
+      <span style="color:var(--muted);">P02</span>
+      <span style="color:var(--muted); font-size:11px;">hop=2, burst</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 8.1</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-002</span>
+      <span style="color:var(--muted);">P01</span>
+      <span style="color:var(--muted); font-size:11px;">hop=3, staggered</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 7.8</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-003</span>
+      <span style="color:var(--muted);">P03</span>
+      <span style="color:var(--muted); font-size:11px;">hop=3, burst</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 8.4</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-008</span>
+      <span style="color:var(--muted);">P04</span>
+      <span style="color:var(--muted); font-size:11px;">hop=5, delayed</span>
+      <span style="margin-left:auto; font-weight:700; color:var(--red);">✗ 5.2</span>
+    </div>
+
+  </div>
+
+  <!-- Col 3: Activity Log -->
+  <div style="width:280px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); padding:12px; overflow-y:auto; display:flex; flex-direction:column;">
+
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-bottom:10px;">Agent Activity</div>
+
+    <!-- Mono log box -->
+    <div class="mono-log" style="height:280px; overflow-y:auto; flex-shrink:0; font-size:11px; line-height:1.7;">
+      <div><span class="log-time">[14:32:01]</span> <span class="log-cell">cell_001</span>: assigned → <span class="log-ok">P02</span></div>
+      <div><span class="log-time">[14:32:04]</span> <span class="log-cell">cell_001</span>: in_progress (att.1)</div>
+      <div><span class="log-time">[14:32:18]</span> <span class="log-cell">cell_001</span>: completed <span class="log-ok">✓ 8.1</span></div>
+      <div><span class="log-time">[14:32:20]</span> <span class="log-cell">cell_002</span>: assigned → P01</div>
+      <div><span class="log-time">[14:32:24]</span> <span class="log-cell">cell_002</span>: in_progress (att.1)</div>
+      <div><span class="log-time">[14:33:02]</span> <span class="log-cell">cell_002</span>: completed <span class="log-ok">✓ 7.8</span></div>
+      <div><span class="log-time">[14:33:45]</span> <span class="log-cell">cell_005</span>: in_progress (att.2)</div>
+      <div><span class="log-time">[14:34:02]</span> <span class="log-cell">cell_009</span>: <span class="log-fail">failed ✗ 5.2</span> → queued revision</div>
+      <div><span class="log-time">[14:34:04]</span> <span class="log-cell">cell_010</span>: assigned → P03</div>
+      <div><span class="log-time">[14:34:08]</span> <span class="log-cell">cell_010</span>: in_progress (att.1)</div>
+    </div>
+
+    <!-- Agent Status -->
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-top:14px; margin-bottom:8px;">Agent Status</div>
+
+    <div style="display:flex; flex-direction:column; gap:0;">
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#059669; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 1</span>
+        <span style="color:var(--muted);">· Completing V-003</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#0f4c8a; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 2</span>
+        <span style="color:var(--muted);">· Generating V-005</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#0f4c8a; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 3</span>
+        <span style="color:var(--muted);">· Planning V-006 network</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#d97706; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 4</span>
+        <span style="color:var(--muted);">· Revising V-009</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#94a3b8; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 5</span>
+        <span style="color:var(--muted);">· Idle</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes pulse-cell {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+</style>

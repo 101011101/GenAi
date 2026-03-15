@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 06: Results Variants</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --purple: #7c3aed;
+    --purple-light: #f5f3ff;
+    --orange: #ea580c;
+    --orange-light: #fff7ed;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: var(--sans);
+    background: #dde4ed;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 32px 24px 48px;
+    color: var(--text);
+  }
+
+  /* ── Screen label ── */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 18px;
+    align-self: flex-start;
+    margin-left: calc(50% - 540px);
+  }
+  .pill-number {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 99px;
+    font-family: var(--mono);
+    letter-spacing: 0.04em;
+  }
+  .screen-name {
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e293b;
+  }
+  .screen-desc {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 2px;
+  }
+
+  /* ── Browser chrome ── */
+  .browser {
+    width: 1080px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.18), 0 2px 8px rgba(0,0,0,0.10);
+    display: flex;
+    flex-direction: column;
+  }
+  .browser-chrome {
+    background: #e5e7eb;
+    height: 38px;
+    display: flex;
+    align-items: center;
+    padding: 0 14px;
+    gap: 10px;
+    border-bottom: 1px solid #d1d5db;
+    flex-shrink: 0;
+  }
+  .chrome-dots { display: flex; gap: 6px; }
+  .chrome-dot { width: 11px; height: 11px; border-radius: 50%; }
+  .chrome-dot.r { background: #ef4444; }
+  .chrome-dot.y { background: #f59e0b; }
+  .chrome-dot.g { background: #22c55e; }
+  .chrome-url {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 5px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    padding: 0 10px;
+    font-size: 11px;
+    color: #374151;
+    font-family: var(--mono);
+    margin-left: 8px;
+  }
+  .chrome-url-lock { color: #6b7280; margin-right: 5px; font-size: 10px; }
+
+  /* ── App shell ── */
+  .app-shell {
+    background: var(--bg);
+    display: flex;
+    flex-direction: column;
+    height: 860px;
+    overflow: hidden;
+  }
+
+  /* ── Global header ── */
+  .global-header {
+    height: 44px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    padding: 0 18px;
+    gap: 16px;
+    flex-shrink: 0;
+    background: var(--bg);
+  }
+  .gh-brand {
+    font-size: 13px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    margin-right: 4px;
+  }
+  .gh-divider { width: 1px; height: 18px; background: var(--border); }
+  .gh-run-id {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .gh-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    background: var(--green-light);
+    border: 1px solid #a7f3d0;
+    border-radius: 99px;
+    padding: 2px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+  }
+  .gh-status-dot {
+    width: 7px; height: 7px;
+    border-radius: 50%;
+    background: var(--green);
+  }
+  .gh-stat {
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .gh-stat strong { color: var(--text); font-weight: 600; }
+  .gh-stat-badge {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-size: 10px;
+    font-weight: 700;
+    padding: 1px 7px;
+    border-radius: 99px;
+    font-family: var(--mono);
+  }
+  .gh-spacer { flex: 1; }
+  .gh-cost {
+    font-size: 11px;
+    color: var(--muted);
+  }
+  .gh-cost strong { color: var(--text); font-weight: 600; }
+
+  /* ── Content row: sidebar + main ── */
+  .content-row {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+
+  /* ── Sidebar ── */
+  .sidebar {
+    width: 188px;
+    border-right: 1px solid var(--border);
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    padding: 12px 0;
+    flex-shrink: 0;
+    overflow-y: auto;
+  }
+  .sidebar-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 14px 6px;
+  }
+  .sidebar-group {
+    margin-bottom: 4px;
+  }
+  .sidebar-group-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: default;
+  }
+  .sidebar-group-header .chevron {
+    font-size: 10px;
+    color: var(--muted);
+    transition: transform 0.15s;
+  }
+  .sidebar-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 5px 14px 5px 24px;
+    font-size: 11px;
+    color: var(--muted);
+    border-radius: 0;
+    cursor: default;
+    position: relative;
+  }
+  .sidebar-item.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 600;
+  }
+  .sidebar-item.active::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    border-radius: 0 2px 2px 0;
+  }
+  .sidebar-item .item-dot {
+    width: 5px; height: 5px;
+    border-radius: 50%;
+    background: currentColor;
+    opacity: 0.5;
+    flex-shrink: 0;
+  }
+  .sidebar-item.active .item-dot { opacity: 1; }
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 8px 14px;
+  }
+
+  /* ── Main area ── */
+  .main-area {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* ── Two-panel layout ── */
+  .two-panel {
+    display: flex;
+    flex: 1;
+    gap: 0;
+    overflow: hidden;
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    width: 32%;
+    border-right: 1px solid var(--border);
+    padding: 18px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+    flex-shrink: 0;
+  }
+  .panel-title-row {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+  .panel-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  .panel-subtitle {
+    font-size: 11px;
+    color: var(--faint);
+  }
+
+  /* Coverage grid */
+  .coverage-grid-wrap {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .grid-col-headers {
+    display: grid;
+    grid-template-columns: 52px repeat(3, 1fr);
+    gap: 4px;
+    padding-left: 0;
+  }
+  .grid-col-header {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    text-align: center;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    padding: 0 2px;
+  }
+  .grid-row {
+    display: grid;
+    grid-template-columns: 52px repeat(3, 1fr);
+    gap: 4px;
+    align-items: start;
+  }
+  .grid-row-header {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    height: 76px;
+    padding-right: 4px;
+    letter-spacing: 0.03em;
+  }
+  .grid-cell {
+    border-radius: 6px;
+    border: 1.5px solid var(--border);
+    background: var(--surface);
+    height: 76px;
+    padding: 7px 8px;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: box-shadow 0.12s;
+    position: relative;
+    overflow: hidden;
+  }
+  .grid-cell:hover { box-shadow: 0 0 0 2px #94a3b8; }
+  .grid-cell.green { border-color: #a7f3d0; background: #f0fdf8; }
+  .grid-cell.red { border-color: #fecaca; background: #fff8f8; }
+  .grid-cell.gray { border-color: var(--border); background: var(--surface2); }
+  .grid-cell.selected {
+    border: 2px solid var(--accent);
+    background: var(--accent-light);
+  }
+  .cell-selected-chip {
+    position: absolute;
+    top: 4px;
+    right: 5px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 8px;
+    font-weight: 700;
+    padding: 1px 5px;
+    border-radius: 4px;
+    letter-spacing: 0.04em;
+  }
+  .cell-id {
+    font-family: var(--mono);
+    font-size: 9px;
+    font-weight: 600;
+    color: var(--muted);
+  }
+  .cell-id.green { color: #065f46; }
+  .cell-id.red { color: #991b1b; }
+  .cell-persona {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    font-weight: 500;
+  }
+  .cell-score-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .cell-score {
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .cell-score.green { color: var(--green); }
+  .cell-score.red { color: var(--red); }
+  .cell-score.gray { color: var(--faint); }
+  .cell-check {
+    font-size: 11px;
+    font-weight: 700;
+  }
+  .cell-check.green { color: var(--green); }
+  .cell-check.red { color: var(--red); }
+  .cell-badge {
+    position: absolute;
+    bottom: 5px;
+    right: 5px;
+    background: var(--yellow-light);
+    border: 1px solid #fde68a;
+    color: var(--yellow);
+    font-size: 7px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-family: var(--mono);
+  }
+  .cell-empty-label {
+    font-size: 9px;
+    color: var(--faint);
+    font-style: italic;
+    margin-top: auto;
+  }
+
+  .coverage-stat {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: var(--green-light);
+    border: 1px solid #a7f3d0;
+    border-radius: 99px;
+    padding: 3px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--green);
+    align-self: flex-start;
+  }
+  .coverage-stat span { color: var(--muted); font-weight: 400; font-size: 10px; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    flex: 1;
+    padding: 18px 18px 0;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    overflow-y: auto;
+  }
+
+  /* Variant selector */
+  .variant-selector-row {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .variant-selector-label {
+    font-size: 11px;
+    color: var(--muted);
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .variant-select {
+    flex: 1;
+    border: 1.5px solid var(--accent);
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    font-family: var(--mono);
+    color: var(--text);
+    background: var(--accent-light);
+    outline: none;
+    cursor: pointer;
+    font-weight: 500;
+  }
+
+  /* Section heading */
+  .section-heading {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+
+  /* ── Storyboard cards ── */
+  .storyboard-row {
+    display: flex;
+    gap: 8px;
+  }
+  .story-card {
+    flex: 1;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 10px 9px;
+    background: var(--surface);
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    min-width: 0;
+  }
+  .story-card-step {
+    font-size: 8px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--faint);
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .story-card-step .step-emoji { font-size: 11px; }
+  .story-card-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text);
+    line-height: 1.2;
+  }
+  .story-card-body {
+    font-size: 9.5px;
+    color: var(--muted);
+    font-style: italic;
+    line-height: 1.45;
+    flex: 1;
+  }
+  .story-card-badges {
+    display: flex;
+    gap: 4px;
+    margin-top: 4px;
+    flex-wrap: wrap;
+  }
+  .story-badge {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 6px;
+    font-size: 8.5px;
+    font-family: var(--mono);
+    color: var(--muted);
+    font-weight: 500;
+  }
+
+  /* ── Money Trail ── */
+  .money-trail-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 12px 12px 10px;
+  }
+  .money-trail-svg {
+    width: 100%;
+    display: block;
+    border-radius: 4px;
+  }
+
+  @keyframes dash {
+    to { stroke-dashoffset: -20; }
+  }
+  .flow-edge {
+    stroke-dasharray: 6, 3;
+    animation: dash 1.5s linear infinite;
+    fill: none;
+  }
+
+  /* ── Attempt History ── */
+  .attempt-table-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 18px;
+  }
+  .attempt-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .attempt-table th {
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 7px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+  }
+  .attempt-table td {
+    padding: 7px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--text);
+    font-size: 11px;
+    vertical-align: middle;
+  }
+  .attempt-table tr:last-child td { border-bottom: none; }
+  .attempt-table tr.pass-row td { background: var(--green-light); }
+  .pass-icon { color: var(--green); font-weight: 700; font-size: 13px; }
+  .fail-icon { color: var(--red); font-weight: 700; font-size: 13px; }
+  .attempt-feedback { color: var(--muted); font-size: 10.5px; font-style: italic; }
+  .attempt-num {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--faint);
+  }
+  .score-val { font-family: var(--mono); font-weight: 600; }
+</style>
+</head>
+<body>
+
+<!-- Screen label -->
+<div class="screen-label">
+  <span class="pill-number">06</span>
+  <span class="screen-name">Results — Variants</span>
+  <span class="screen-desc">/ Per-variant deep dive</span>
+</div>
+
+<!-- Browser -->
+<div class="browser">
+  <!-- Chrome bar -->
+  <div class="browser-chrome">
+    <div class="chrome-dots">
+      <div class="chrome-dot r"></div>
+      <div class="chrome-dot y"></div>
+      <div class="chrome-dot g"></div>
+    </div>
+    <div class="chrome-url">
+      <span class="chrome-url-lock">&#128274;</span>
+      fraudgen.app/run/results/variants
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div class="app-shell">
+
+    <!-- Global header -->
+    <div class="global-header">
+      <span class="gh-brand">FraudGen</span>
+      <div class="gh-divider"></div>
+      <span class="gh-run-id">run_9f2e1c</span>
+      <div class="gh-status">
+        <div class="gh-status-dot"></div>
+        Healthy
+      </div>
+      <div class="gh-stat"><strong>100%</strong></div>
+      <div class="gh-stat">
+        <span>Variants</span>
+        <span class="gh-stat-badge">11 / 12</span>
+      </div>
+      <div class="gh-spacer"></div>
+      <div class="gh-cost">Cost <strong>$1.84</strong></div>
+    </div>
+
+    <!-- Content row -->
+    <div class="content-row">
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+        <div class="sidebar-section-label">Navigation</div>
+        <div class="sidebar-group">
+          <div class="sidebar-item" style="padding-left:14px; color: var(--muted); font-size:11px; font-weight:500;">
+            Overview
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Summary
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-group">
+          <div class="sidebar-group-header">
+            Results <span class="chevron">&#9660;</span>
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Coverage Map
+          </div>
+          <div class="sidebar-item active">
+            <span class="item-dot"></span>Variants
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Dataset Export
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Critic Report
+          </div>
+        </div>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-group">
+          <div class="sidebar-item" style="padding-left:14px; color: var(--muted); font-size:11px; font-weight:500;">
+            Settings
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Run Config
+          </div>
+          <div class="sidebar-item">
+            <span class="item-dot"></span>Personas
+          </div>
+        </div>
+      </div>
+
+      <!-- Main area -->
+      <div class="main-area">
+        <div class="two-panel">
+
+          <!-- LEFT PANEL: Coverage Heatmap -->
+          <div class="left-panel">
+            <div class="panel-title-row">
+              <div class="panel-title">Coverage Grid</div>
+              <div class="panel-subtitle">Click a cell to inspect variant</div>
+            </div>
+
+            <div class="coverage-grid-wrap">
+              <!-- Column headers -->
+              <div class="grid-col-headers">
+                <div class="grid-col-header"></div>
+                <div class="grid-col-header">burst</div>
+                <div class="grid-col-header">staggered</div>
+                <div class="grid-col-header">delayed</div>
+              </div>
+
+              <!-- Row: hop=2 -->
+              <div class="grid-row">
+                <div class="grid-row-header">hop=2</div>
+
+                <div class="grid-cell green">
+                  <div class="cell-id green">cell_001</div>
+                  <div class="cell-persona">P02</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">8.1</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+
+                <div class="grid-cell green">
+                  <div class="cell-id green">cell_002</div>
+                  <div class="cell-persona">P01</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">7.8</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+
+                <div class="grid-cell green">
+                  <div class="cell-id green">cell_003</div>
+                  <div class="cell-persona">P03</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">8.4</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row: hop=3 -->
+              <div class="grid-row">
+                <div class="grid-row-header">hop=3</div>
+
+                <div class="grid-cell green">
+                  <div class="cell-id green">cell_004</div>
+                  <div class="cell-persona">P04</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">7.2</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+
+                <!-- SELECTED CELL -->
+                <div class="grid-cell selected">
+                  <span class="cell-selected-chip">Selected</span>
+                  <div class="cell-id" style="color: var(--accent);">cell_005</div>
+                  <div class="cell-persona" style="color: var(--accent); opacity:0.8;">P01</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score" style="color: var(--accent);">7.9</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+
+                <div class="grid-cell green">
+                  <div class="cell-id green">cell_006</div>
+                  <div class="cell-persona">P03</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">8.6</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Row: hop=5 -->
+              <div class="grid-row">
+                <div class="grid-row-header">hop=5</div>
+
+                <div class="grid-cell red">
+                  <div class="cell-id red">cell_007</div>
+                  <div class="cell-persona">P02</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score red">5.8</span>
+                    <span class="cell-check red">&#10007;</span>
+                  </div>
+                </div>
+
+                <div class="grid-cell green" style="position:relative;">
+                  <div class="cell-id green">cell_008</div>
+                  <div class="cell-persona">P04</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score green">7.5</span>
+                    <span class="cell-check green">&#10003;</span>
+                  </div>
+                  <span class="cell-badge">rev.2</span>
+                </div>
+
+                <div class="grid-cell gray">
+                  <div class="cell-id" style="color:var(--faint);">cell_009</div>
+                  <div class="cell-empty-label">empty</div>
+                  <div class="cell-score-row">
+                    <span class="cell-score gray">—</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Coverage stat -->
+            <div class="coverage-stat">
+              8/9 cells &mdash; 88.9%
+              <span>covered</span>
+            </div>
+          </div>
+
+          <!-- RIGHT PANEL: Variant Detail -->
+          <div class="right-panel">
+
+            <!-- Variant selector -->
+            <div class="variant-selector-row">
+              <span class="variant-selector-label">Variant:</span>
+              <select class="variant-select">
+                <option>V-005 &middot; cell_005 &middot; hop=3, staggered &middot; P01 (Viktor)</option>
+              </select>
+            </div>
+
+            <!-- Section A: Heist Storyboard -->
+            <div>
+              <div class="section-heading">Constructor Reasoning Chain</div>
+              <div class="storyboard-row">
+
+                <!-- Card 1: Motive -->
+                <div class="story-card">
+                  <div class="story-card-step">
+                    <span class="step-emoji">&#127919;</span>
+                    01 &middot; Motive
+                  </div>
+                  <div class="story-card-title">Criminal Profile</div>
+                  <div class="story-card-body">Viktor needs to move $47K through domestic channels before velocity triggers. Prioritizes speed over stealth.</div>
+                  <div class="story-card-badges">
+                    <span class="story-badge">1,240 tok</span>
+                    <span class="story-badge">3.2s</span>
+                  </div>
+                </div>
+
+                <!-- Card 2: Blueprint -->
+                <div class="story-card">
+                  <div class="story-card-step">
+                    <span class="step-emoji">&#128279;</span>
+                    02 &middot; Blueprint
+                  </div>
+                  <div class="story-card-title">Network Plan</div>
+                  <div class="story-card-body">3-hop chain topology, staggered timing (4&ndash;8hr intervals). Zelle for domestic hops, final ACH wire.</div>
+                  <div class="story-card-badges">
+                    <span class="story-badge">890 tok</span>
+                    <span class="story-badge">2.1s</span>
+                  </div>
+                </div>
+
+                <!-- Card 3: Crew -->
+                <div class="story-card">
+                  <div class="story-card-step">
+                    <span class="step-emoji">&#128101;</span>
+                    03 &middot; Crew
+                  </div>
+                  <div class="story-card-title">Participants</div>
+                  <div class="story-card-body">4 accounts: shell LLC origin, 2 recruited mules (job-ad), crypto exchange destination.</div>
+                  <div class="story-card-badges">
+                    <span class="story-badge">2,100 tok</span>
+                    <span class="story-badge">5.4s</span>
+                  </div>
+                </div>
+
+                <!-- Card 4: Execution -->
+                <div class="story-card">
+                  <div class="story-card-step">
+                    <span class="step-emoji">&#9201;</span>
+                    04 &middot; Execution
+                  </div>
+                  <div class="story-card-title">Transactions</div>
+                  <div class="story-card-body">$9,800 Zelle &rarr; mule1 at 09:34. $9,600 Zelle &rarr; mule2 at 14:02. $29,400 ACH wire at 18:45.</div>
+                  <div class="story-card-badges">
+                    <span class="story-badge">3,400 tok</span>
+                    <span class="story-badge">8.7s</span>
+                  </div>
+                </div>
+
+                <!-- Card 5: Cleanup -->
+                <div class="story-card">
+                  <div class="story-card-step">
+                    <span class="step-emoji">&#128737;</span>
+                    05 &middot; Self-Review
+                  </div>
+                  <div class="story-card-title">Quality Check</div>
+                  <div class="story-card-body">Detected round-number pattern, adjusted amounts. Added $340 cover grocery transaction.</div>
+                  <div class="story-card-badges">
+                    <span class="story-badge">620 tok</span>
+                    <span class="story-badge">1.8s</span>
+                  </div>
+                </div>
+
+              </div>
+            </div>
+
+            <!-- Section B: Money Trail -->
+            <div>
+              <div class="section-heading">Money Trail</div>
+              <div class="money-trail-wrap">
+                <svg class="money-trail-svg" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" height="200">
+                  <defs>
+                    <!-- Arrow markers -->
+                    <marker id="arrow-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L8,3 z" fill="#ea580c" />
+                    </marker>
+                    <marker id="arrow-darkorange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L8,3 z" fill="#c2410c" />
+                    </marker>
+                    <marker id="arrow-darkred" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L8,3 z" fill="#7f1d1d" />
+                    </marker>
+                    <marker id="arrow-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+                      <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8" />
+                    </marker>
+                  </defs>
+
+                  <!-- Background -->
+                  <rect width="680" height="200" fill="#f8fafc" rx="4"/>
+
+                  <!-- ── EDGES ── -->
+
+                  <!-- ACC-001 → ACC-002 (orange, $9,800) -->
+                  <line class="flow-edge" x1="102" y1="92" x2="205" y2="68"
+                    stroke="#ea580c" stroke-width="2.5"
+                    marker-end="url(#arrow-orange)" />
+                  <!-- Label -->
+                  <text x="148" y="70" font-size="8" fill="#ea580c" font-family="'JetBrains Mono',monospace" text-anchor="middle" font-weight="600">$9,800 · 09:34</text>
+
+                  <!-- ACC-002 → ACC-003 (darker orange, $9,600) -->
+                  <line class="flow-edge" x1="255" y1="72" x2="355" y2="95"
+                    stroke="#c2410c" stroke-width="2"
+                    marker-end="url(#arrow-darkorange)" />
+                  <text x="305" y="76" font-size="8" fill="#c2410c" font-family="'JetBrains Mono',monospace" text-anchor="middle" font-weight="600">$9,600 · 14:02</text>
+
+                  <!-- ACC-003 → ACC-004 (dark red, $29,400 bigger) -->
+                  <line class="flow-edge" x1="402" y1="93" x2="520" y2="86"
+                    stroke="#7f1d1d" stroke-width="3"
+                    marker-end="url(#arrow-darkred)" />
+                  <text x="462" y="79" font-size="8" fill="#7f1d1d" font-family="'JetBrains Mono',monospace" text-anchor="middle" font-weight="600">$29,400 · 18:45</text>
+
+                  <!-- ACC-001 → ACC-005 (gray, $340 cover) -->
+                  <line class="flow-edge" x1="84" y1="118" x2="185" y2="155"
+                    stroke="#94a3b8" stroke-width="1"
+                    marker-end="url(#arrow-gray)" />
+                  <text x="127" y="148" font-size="8" fill="#94a3b8" font-family="'JetBrains Mono',monospace" text-anchor="middle">$340 · 10:15</text>
+
+                  <!-- ── NODES ── -->
+
+                  <!-- ACC-001: Shell LLC — circle, red, x=80 y=100 -->
+                  <circle cx="80" cy="100" r="22" fill="#dc2626" />
+                  <text x="80" y="104" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="'JetBrains Mono',monospace">SRC</text>
+                  <text x="80" y="133" text-anchor="middle" font-size="8" fill="#64748b" font-family="'JetBrains Mono',monospace">ACC-001</text>
+                  <text x="80" y="143" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="'Inter',system-ui,sans-serif">Shell LLC</text>
+
+                  <!-- ACC-002: Mule 1 — diamond, orange, x=230 y=60 -->
+                  <rect x="215" y="45" width="30" height="30" rx="3"
+                    fill="#ea580c"
+                    transform="rotate(45 230 60)" />
+                  <text x="230" y="63" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="'JetBrains Mono',monospace">M1</text>
+                  <text x="230" y="90" text-anchor="middle" font-size="8" fill="#64748b" font-family="'JetBrains Mono',monospace">ACC-002</text>
+                  <text x="230" y="100" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="'Inter',system-ui,sans-serif">Mule 1</text>
+
+                  <!-- ACC-003: Mule 2 — diamond, darker orange, x=380 y=100 -->
+                  <rect x="365" y="85" width="30" height="30" rx="3"
+                    fill="#c2410c"
+                    transform="rotate(45 380 100)" />
+                  <text x="380" y="103" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="'JetBrains Mono',monospace">M2</text>
+                  <text x="380" y="132" text-anchor="middle" font-size="8" fill="#64748b" font-family="'JetBrains Mono',monospace">ACC-003</text>
+                  <text x="380" y="142" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="'Inter',system-ui,sans-serif">Mule 2</text>
+
+                  <!-- ACC-004: Crypto Dest — rect, dark red, x=550 y=80 -->
+                  <rect x="530" y="66" width="42" height="30" rx="4" fill="#7f1d1d" />
+                  <text x="551" y="85" text-anchor="middle" font-size="9" font-weight="700" fill="#fff" font-family="'JetBrains Mono',monospace">DST</text>
+                  <text x="551" y="112" text-anchor="middle" font-size="8" fill="#64748b" font-family="'JetBrains Mono',monospace">ACC-004</text>
+                  <text x="551" y="122" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="'Inter',system-ui,sans-serif">Crypto Dest</text>
+
+                  <!-- ACC-005: Grocery — triangle, gray, x=200 y=160 -->
+                  <polygon points="200,143 215,167 185,167" fill="#94a3b8" />
+                  <text x="200" y="162" text-anchor="middle" font-size="7.5" font-weight="700" fill="#fff" font-family="'JetBrains Mono',monospace">CVR</text>
+                  <text x="200" y="181" text-anchor="middle" font-size="8" fill="#64748b" font-family="'JetBrains Mono',monospace">ACC-005</text>
+                  <text x="200" y="191" text-anchor="middle" font-size="7.5" fill="#94a3b8" font-family="'Inter',system-ui,sans-serif">Grocery</text>
+
+                </svg>
+              </div>
+            </div>
+
+            <!-- Section C: Attempt History -->
+            <div>
+              <div class="section-heading">Attempt History</div>
+              <div class="attempt-table-wrap">
+                <table class="attempt-table">
+                  <thead>
+                    <tr>
+                      <th>#</th>
+                      <th>Realism</th>
+                      <th>Distinctiveness</th>
+                      <th>Passed</th>
+                      <th>Critic Feedback</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td class="attempt-num">1</td>
+                      <td><span class="score-val">4.2</span></td>
+                      <td><span class="score-val">7.1</span></td>
+                      <td><span class="fail-icon">&#10007;</span></td>
+                      <td class="attempt-feedback">Timing too uniform, amounts suspiciously round</td>
+                    </tr>
+                    <tr>
+                      <td class="attempt-num">2</td>
+                      <td><span class="score-val">6.8</span></td>
+                      <td><span class="score-val">7.1</span></td>
+                      <td><span class="fail-icon">&#10007;</span></td>
+                      <td class="attempt-feedback">Better timing but round numbers persist</td>
+                    </tr>
+                    <tr class="pass-row">
+                      <td class="attempt-num">3</td>
+                      <td><span class="score-val" style="color:var(--green);">8.1</span></td>
+                      <td><span class="score-val" style="color:var(--green);">7.4</span></td>
+                      <td><span class="pass-icon">&#10003;</span></td>
+                      <td class="attempt-feedback" style="color:var(--green); font-style:normal;">—</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div><!-- /right-panel -->
+        </div><!-- /two-panel -->
+      </div><!-- /main-area -->
+    </div><!-- /content-row -->
+  </div><!-- /app-shell -->
+</div><!-- /browser -->
+
+</body>
+</html>

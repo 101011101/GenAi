@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Clean Light Concept</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--sans); }
+
+  nav {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 1rem 5rem; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: rgba(255,255,255,0.96); backdrop-filter: blur(8px); z-index: 99;
+  }
+  .logo { font-weight: 800; font-size: 1.2rem; color: var(--accent); letter-spacing: -0.02em; }
+  nav a { color: var(--muted); text-decoration: none; font-size: 0.875rem; margin-left: 2rem; }
+  nav a:hover { color: var(--text); }
+  .nav-cta {
+    margin-left: 2rem; background: var(--accent); color: #fff; padding: 0.5rem 1.25rem;
+    border-radius: 6px; font-size: 0.875rem; font-weight: 600; text-decoration: none;
+  }
+
+  /* HERO */
+  .hero {
+    padding: 7rem 5rem 5rem; max-width: 1200px; margin: 0 auto;
+    display: grid; grid-template-columns: 1fr 1fr; gap: 5rem; align-items: center;
+  }
+  .hero-label {
+    display: inline-block; background: var(--accent-light); color: var(--accent);
+    font-size: 0.75rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase;
+    padding: 0.35rem 0.8rem; border-radius: 4px; margin-bottom: 1.5rem;
+  }
+  .hero h1 { font-size: clamp(2rem, 3.5vw, 3rem); font-weight: 800; line-height: 1.1; letter-spacing: -0.03em; }
+  .hero h1 span { color: var(--accent); }
+  .hero p { color: var(--muted); font-size: 1.1rem; line-height: 1.7; margin-top: 1.25rem; }
+  .hero-actions { display: flex; gap: 1rem; margin-top: 2rem; flex-wrap: wrap; }
+  .btn-primary {
+    background: var(--accent); color: #fff; font-weight: 700; padding: 0.8rem 1.75rem;
+    border-radius: 8px; text-decoration: none; font-size: 0.9rem;
+  }
+  .btn-outline {
+    border: 1.5px solid var(--border); color: var(--text); padding: 0.8rem 1.75rem;
+    border-radius: 8px; text-decoration: none; font-size: 0.9rem; font-weight: 500;
+  }
+  .hero-stats {
+    display: flex; gap: 2rem; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border);
+  }
+  .stat-item { }
+  .stat-num { font-size: 1.6rem; font-weight: 800; color: var(--accent); }
+  .stat-label { font-size: 0.8rem; color: var(--muted); margin-top: 0.15rem; }
+
+  /* HERO VISUAL — coverage matrix */
+  .hero-visual { }
+  .matrix-card {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 16px;
+    padding: 1.5rem; box-shadow: 0 20px 50px rgba(0,0,0,0.08);
+  }
+  .matrix-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .matrix-title { font-size: 0.8rem; font-weight: 600; color: var(--muted); text-transform: uppercase; letter-spacing: 0.06em; }
+  .matrix-live {
+    display: flex; align-items: center; gap: 0.4rem; font-size: 0.75rem; color: var(--green); font-weight: 600;
+  }
+  .pulse { width: 8px; height: 8px; border-radius: 50%; background: var(--green); animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.3;} }
+  .matrix-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 5px; margin-bottom: 1rem; }
+  .cell {
+    height: 36px; border-radius: 5px; display: flex; align-items: center; justify-content: center;
+    font-family: var(--mono); font-size: 0.6rem; font-weight: 600;
+  }
+  .cell-green { background: var(--green-light); color: var(--green); }
+  .cell-blue { background: var(--accent-light); color: var(--accent); animation: pulse 2s infinite; }
+  .cell-yellow { background: var(--yellow-light); color: var(--yellow); }
+  .cell-red { background: var(--red-light); color: var(--red); }
+  .cell-gray { background: #f1f5f9; color: #cbd5e1; }
+  .matrix-legend { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 0.35rem; font-size: 0.72rem; color: var(--muted); }
+  .legend-dot { width: 8px; height: 8px; border-radius: 2px; }
+
+  /* AGENT FEED */
+  .agent-feed { margin-top: 1rem; }
+  .agent-row {
+    display: flex; align-items: center; gap: 0.75rem; padding: 0.6rem 0.75rem;
+    border-radius: 6px; font-size: 0.78rem; margin-bottom: 0.35rem;
+    background: var(--surface); border: 1px solid var(--border);
+  }
+  .agent-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .agent-row .score { margin-left: auto; font-family: var(--mono); font-weight: 700; }
+  .score-good { color: var(--green); }
+  .score-warn { color: var(--yellow); }
+
+  /* SECTIONS */
+  .section { padding: 5rem 5rem; max-width: 1200px; margin: 0 auto; }
+  .section-tag {
+    display: inline-block; background: var(--accent-light); color: var(--accent);
+    font-size: 0.7rem; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase;
+    padding: 0.3rem 0.75rem; border-radius: 4px; margin-bottom: 1rem;
+  }
+  h2 { font-size: clamp(1.75rem, 3vw, 2.5rem); font-weight: 800; letter-spacing: -0.02em; }
+  h2 span { color: var(--accent); }
+
+  /* PIPELINE */
+  .pipeline { display: flex; gap: 0; margin-top: 3rem; align-items: stretch; }
+  .pipe-step {
+    flex: 1; padding: 1.5rem; border: 1px solid var(--border); background: var(--surface);
+    position: relative;
+  }
+  .pipe-step:first-child { border-radius: 12px 0 0 12px; }
+  .pipe-step:last-child { border-radius: 0 12px 12px 0; }
+  .pipe-step + .pipe-step { border-left: none; }
+  .pipe-num { font-family: var(--mono); font-size: 0.65rem; color: var(--muted); margin-bottom: 0.5rem; }
+  .pipe-step h4 { font-size: 0.875rem; font-weight: 700; margin-bottom: 0.4rem; }
+  .pipe-step p { font-size: 0.78rem; color: var(--muted); line-height: 1.5; }
+  .pipe-arrow {
+    position: absolute; right: -12px; top: 50%; transform: translateY(-50%);
+    z-index: 2; color: var(--accent); font-size: 1.1rem;
+  }
+
+  /* OUTPUT TABLE */
+  .out-table { width: 100%; border-collapse: collapse; font-size: 0.82rem; margin-top: 2rem; }
+  .out-table th {
+    background: var(--surface); padding: 0.7rem 1rem; text-align: left;
+    font-size: 0.75rem; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em;
+    border-bottom: 2px solid var(--border);
+  }
+  .out-table td { padding: 0.7rem 1rem; border-bottom: 1px solid var(--border); }
+  .out-table tr:hover td { background: var(--surface); }
+  .tag-fraud { background: var(--red-light); color: var(--red); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; font-weight: 600; }
+  .tag-legit { background: #f1f5f9; color: var(--muted); padding: 0.15rem 0.5rem; border-radius: 4px; font-size: 0.72rem; }
+  .tag-role { font-family: var(--mono); font-size: 0.72rem; }
+  .role-place { color: #7c3aed; } .role-hop { color: var(--accent); } .role-ext { color: var(--red); } .role-cov { color: var(--muted); }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--border); padding: 2.5rem 5rem;
+    display: flex; align-items: center; justify-content: space-between;
+    font-size: 0.8rem; color: var(--muted); background: var(--surface);
+  }
+  .footer-logo { font-weight: 800; color: var(--accent); font-size: 1rem; }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="logo">FraudGen</div>
+  <div>
+    <a href="#">Problem</a>
+    <a href="#">Solution</a>
+    <a href="#">Architecture</a>
+    <a href="#">Output</a>
+    <a class="nav-cta" href="#">Live Demo →</a>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-left">
+    <div class="hero-label">TD Best AI Hack · Detect Financial Fraud</div>
+    <h1>Stop being reactive.<br/><span>See the attack surface before attackers do.</span></h1>
+    <p>FraudGen is an adversarial AI red team that synthetically generates fraud variants your model has never seen — producing labeled training data that closes the known-unknown gap.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="#">Run the demo</a>
+      <a class="btn-outline" href="#">Read the architecture</a>
+    </div>
+    <div class="hero-stats">
+      <div class="stat-item"><div class="stat-num">100×</div><div class="stat-label">more fraud graph coverage than<br/>typical bank datasets</div></div>
+      <div class="stat-item"><div class="stat-num">$5</div><div class="stat-label">per 100 labeled variants<br/>via Claude API</div></div>
+      <div class="stat-item"><div class="stat-num">6 files</div><div class="stat-label">per run — CSV, JSON,<br/>GNN adjacency list</div></div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="matrix-card">
+      <div class="matrix-header">
+        <div class="matrix-title">Coverage Matrix — Live</div>
+        <div class="matrix-live"><div class="pulse"></div>Running · 18/25 approved</div>
+      </div>
+      <div class="matrix-grid">
+        <div class="cell cell-green">3h·chain</div>
+        <div class="cell cell-green">3h·fan</div>
+        <div class="cell cell-green">5h·chain</div>
+        <div class="cell cell-blue">5h·fan</div>
+        <div class="cell cell-green">2h·chain</div>
+        <div class="cell cell-gray">2h·fan</div>
+        <div class="cell cell-yellow">3h·chain</div>
+        <div class="cell cell-green">3h·fan</div>
+        <div class="cell cell-blue">5h·chain</div>
+        <div class="cell cell-green">5h·fan</div>
+        <div class="cell cell-green">2h·chain</div>
+        <div class="cell cell-gray">2h·fan</div>
+        <div class="cell cell-green">3h·chain</div>
+        <div class="cell cell-red">3h·fan</div>
+        <div class="cell cell-green">5h·chain</div>
+        <div class="cell cell-green">5h·fan</div>
+        <div class="cell cell-blue">2h·chain</div>
+        <div class="cell cell-green">2h·fan</div>
+      </div>
+      <div class="matrix-legend">
+        <div class="legend-item"><div class="legend-dot" style="background:var(--green-light); border:1px solid var(--green)"></div>Approved</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--accent-light); border:1px solid var(--accent)"></div>In progress</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--yellow-light); border:1px solid var(--yellow)"></div>Revised</div>
+        <div class="legend-item"><div class="legend-dot" style="background:var(--red-light); border:1px solid var(--red)"></div>Failed</div>
+        <div class="legend-item"><div class="legend-dot" style="background:#f1f5f9; border:1px solid #cbd5e1"></div>Pending</div>
+      </div>
+
+      <!-- AGENT FEED -->
+      <div style="margin-top:1rem; border-top:1px solid var(--border); padding-top:1rem;">
+        <div style="font-size:0.72rem; color:var(--muted); margin-bottom:0.5rem; font-weight:600; text-transform:uppercase; letter-spacing:0.06em;">Agent feed</div>
+        <div class="agent-row">
+          <div class="agent-dot" style="background:var(--green)"></div>
+          <span><strong>V-018</strong> · 5h fan-out · delayed · Viktor</span>
+          <span class="score score-good">8.4 ✓</span>
+        </div>
+        <div class="agent-row">
+          <div class="agent-dot" style="background:var(--accent); animation:pulse 1.5s infinite"></div>
+          <span><strong>V-019</strong> · 5h chain · same-day · James</span>
+          <span class="score" style="color:var(--muted)">generating...</span>
+        </div>
+        <div class="agent-row">
+          <div class="agent-dot" style="background:var(--yellow)"></div>
+          <span><strong>V-020</strong> · 2h chain · burst · Maria (retry 1)</span>
+          <span class="score score-warn">5.1 → revising</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PIPELINE -->
+<div class="section">
+  <div class="section-tag">How It Works</div>
+  <h2>5 stages. Orchestrator to <span>labeled dataset.</span></h2>
+  <div class="pipeline">
+    <div class="pipe-step">
+      <div class="pipe-num">01</div>
+      <h4>Orchestrator</h4>
+      <p>Claude Opus decomposes your fraud type into variation dimensions</p>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">02</div>
+      <h4>Persona Generator</h4>
+      <p>Creates N criminal profiles with distinct risk tolerance and behavior</p>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">03</div>
+      <h4>Fraud Constructor ×N</h4>
+      <p>Parallel agents each generate a full transaction sequence for their variant</p>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">04</div>
+      <h4>Critic Agent</h4>
+      <p>Scores realism + distinctiveness; failed variants are revised</p>
+      <div class="pipe-arrow">›</div>
+    </div>
+    <div class="pipe-step">
+      <div class="pipe-num">05</div>
+      <h4>Output Handler</h4>
+      <p>CSV · JSON · graph adjacency list — ready for XGBoost, LSTM, GNN</p>
+    </div>
+  </div>
+</div>
+
+<!-- OUTPUT TABLE -->
+<div class="section">
+  <div class="section-tag">Output</div>
+  <h2>Every transaction <span>labeled and explainable.</span></h2>
+  <p style="color:var(--muted); margin-top:0.75rem; max-width:560px; line-height:1.6; font-size:0.95rem;">
+    One row per transaction. Every row knows its role in the fraud graph, which variant it belongs to, and which criminal persona drove it.
+  </p>
+  <div style="overflow-x:auto;">
+    <table class="out-table">
+      <thead>
+        <tr>
+          <th>transaction_id</th><th>timestamp</th><th>amount</th><th>channel</th>
+          <th>is_fraud</th><th>fraud_role</th><th>variant_id</th><th>persona</th><th>hop_count</th><th>critic_score</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>TXN-0041</td><td>2026-03-10 09:14</td><td>$4,800.00</td><td>ACH</td>
+          <td><span class="tag-fraud">fraud</span></td><td><span class="tag-role role-place">placement</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td>8.4</td>
+        </tr>
+        <tr>
+          <td>TXN-0042</td><td>2026-03-10 11:32</td><td>$4,560.00</td><td>Zelle</td>
+          <td><span class="tag-fraud">fraud</span></td><td><span class="tag-role role-hop">hop_1_of_3</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td>8.4</td>
+        </tr>
+        <tr>
+          <td>TXN-0043</td><td>2026-03-10 11:48</td><td>$4,300.00</td><td>Zelle</td>
+          <td><span class="tag-fraud">fraud</span></td><td><span class="tag-role role-hop">hop_2_of_3</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td>8.4</td>
+        </tr>
+        <tr>
+          <td>TXN-0044</td><td>2026-03-10 14:05</td><td>$4,070.00</td><td>wire</td>
+          <td><span class="tag-fraud">fraud</span></td><td><span class="tag-role role-ext">extraction</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td>8.4</td>
+        </tr>
+        <tr>
+          <td>TXN-0045</td><td>2026-03-10 10:22</td><td>$63.40</td><td>card</td>
+          <td><span class="tag-legit">legit</span></td><td><span class="tag-role role-cov">cover_activity</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-A3F7B2</td><td>Viktor S.</td><td>3</td><td>8.4</td>
+        </tr>
+        <tr>
+          <td>TXN-0071</td><td>2026-03-12 08:55</td><td>$1,200.00</td><td>ACH</td>
+          <td><span class="tag-fraud">fraud</span></td><td><span class="tag-role role-place">placement</span></td>
+          <td style="font-family:var(--mono);font-size:0.75rem">V-B9C2D1</td><td>James H.</td><td>5</td><td>7.9</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<footer>
+  <div class="footer-logo">FraudGen</div>
+  <div>TD Best AI Hack · Detect Financial Fraud</div>
+  <div>All data is synthetic · Defense-only · No real PII</div>
+</footer>
+
+</body>
+</html>

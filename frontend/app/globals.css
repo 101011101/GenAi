@@ -1,0 +1,197 @@
+@import "tailwindcss";
+
+@theme {
+  /* Design tokens — canonical: ide_landing_clean_2.html */
+  --color-bg:           #ffffff;
+  --color-surface:      #f8fafc;
+  --color-surface2:     #f1f5f9;
+  --color-border:       #e2e8f0;
+  --color-accent:       #0f4c8a;
+  --color-accent-light: #e8f0fa;
+  --color-red:          #dc2626;
+  --color-red-light:    #fef2f2;
+  --color-green:        #059669;
+  --color-green-light:  #ecfdf5;
+  --color-yellow:       #d97706;
+  --color-yellow-light: #fffbeb;
+  --color-purple:       #7c3aed;
+  --color-purple-light: #f5f3ff;
+  --color-text:         #0f172a;
+  --color-muted:        #64748b;
+  --color-faint:        #94a3b8;
+  --color-green-border:  #a7f3d0;
+  --color-red-border:    #fecaca;
+  --color-yellow-border: #fde68a;
+  --color-accent-border: #bdd4ef;
+  --color-accent-dark:   #0c3d6f;
+  --color-code-bg:      #1e293b;
+  --color-red-dark:     #991b1b;
+  --color-purple-dark:  #5b21b6;
+  --color-info:         #0369a1;
+  --color-info-light:   #f0f9ff;
+  --color-info-border:  #bae6fd;
+
+  --color-json-key:     #7dd3fc;
+  --color-json-string:  #fde68a;
+  --color-json-number:  #c084fc;
+  --color-json-boolean: #86efac;
+  --color-json-null:    #94a3b8;
+
+  /* Agent slot colors */
+  --color-a1: #0f4c8a; --color-a1-light: #e8f0fa;
+  --color-a2: #059669; --color-a2-light: #ecfdf5;
+  --color-a3: #7c3aed; --color-a3-light: #f5f3ff;
+  --color-a4: #d97706; --color-a4-light: #fffbeb;
+  --color-a5: #dc2626; --color-a5-light: #fef2f2;
+
+  --font-sans:    'Inter', system-ui, sans-serif;
+  --font-serif:   Georgia, serif;
+  --font-display: var(--font-sans);
+  --font-mono:    'JetBrains Mono', 'Fira Code', monospace;
+
+  --color-surface3: #e8ecf0;
+
+  --radius-tag:     4px;
+  --radius-sm:      6px;
+  --radius-btn:     8px;
+  --radius-card:    12px;
+  --radius-card-lg: 16px;
+
+  --shadow-card: 0 20px 50px rgba(0,0,0,0.08);
+}
+
+/* ── Dark theme ─────────────────────────────────────────── */
+[data-theme="dark"] {
+  --color-bg:           #0f172a;
+  --color-surface:      #1e293b;
+  --color-surface2:     #334155;
+  --color-border:       #334155;
+  --color-accent:       #60a5fa;
+  --color-accent-light: #1e3a5f;
+  --color-text:         #f1f5f9;
+  --color-muted:        #94a3b8;
+  --color-faint:        #64748b;
+  --color-green-border:  #34d39944;
+  --color-red-border:    #f8717144;
+  --color-yellow-border: #fbbf2444;
+  --color-accent-border: #60a5fa44;
+  --color-accent-dark:   #93c5fd;
+  --color-code-bg:      #0f172a;
+  --color-red-dark:     #fca5a5;
+  --color-purple-dark:  #c4b5fd;
+  --color-info:         #38bdf8;
+  --color-info-light:   #082f49;
+  --color-info-border:  #0369a1;
+}
+
+/* ── Comfort theme ───────────────────────────────────────── */
+[data-theme="comfort"] {
+  --font-sans:    var(--font-dm-sans), system-ui, sans-serif;
+  --font-serif:   var(--font-instrument-serif), Georgia, serif;
+  --font-display: var(--font-serif);
+
+  --color-bg:           #1d1d1d;
+  --color-surface:      #2a2a2a;
+  --color-surface2:     #333333;
+  --color-surface3:     #3d3d3d;
+  --color-border:       rgba(255, 255, 255, 0.12);
+  --color-accent:       #a78bfa;
+  --color-accent-light: #a78bfa33;
+  --color-text:         #ffffff;
+  --color-muted:        #999999;
+  --color-faint:        #666666;
+  --color-green-border:  #34d39944;
+  --color-red-border:    #f8717144;
+  --color-yellow-border: #fbbf2444;
+  --color-accent-border: #a78bfa44;
+  --color-accent-dark:   #7c3aef;
+  --color-code-bg:      #111111;
+  --color-red-dark:     #fca5a5;
+  --color-purple-dark:  #c4b5fd;
+  --color-info:         #38bdf8;
+  --color-info-light:   #0c2233;
+  --color-info-border:  #1e6fa8;
+
+  --color-red:          #f87171;
+  --color-red-light:    #f8717122;
+  --color-green:        #34d399;
+  --color-green-light:  #34d39922;
+  --color-yellow:       #fbbf24;
+  --color-yellow-light: #fbbf2422;
+  --color-purple:       #a78bfa;
+  --color-purple-light: #a78bfa33;
+}
+
+/* ── TD theme ────────────────────────────────────────────── */
+[data-theme="td"] {
+  --color-bg:           #f4f6f4;
+  --color-surface:      #ffffff;
+  --color-surface2:     #e8f0e8;
+  --color-border:       #d1e0d1;
+  --color-accent:       #00a650;
+  --color-accent-light: #e6f7ee;
+  --color-text:         #0f1f0f;
+  --color-muted:        #4a6741;
+  --color-faint:        #7a9e72;
+  --color-green-border:  #a7f3d0;
+  --color-red-border:    #fecaca;
+  --color-yellow-border: #fde68a;
+  --color-accent-border: #86efac;
+  --color-accent-dark:   #007a3c;
+  --color-code-bg:      #0f1a0f;
+  --color-red-dark:     #7f1d1d;
+  --color-purple-dark:  #4c1d95;
+  --color-info:         #0369a1;
+  --color-info-light:   #f0f9ff;
+  --color-info-border:  #bae6fd;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Pulse animation for live indicators */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.3; }
+}
+.pulse { animation: pulse 1.8s ease-in-out infinite; }
+
+/* Freeze all animations when paused */
+body.animation-paused .pulse {
+  animation-play-state: paused;
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: var(--color-surface); }
+::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-faint); }
+
+/* Display font — headings and prominent labels */
+h1, h2, h3 { font-family: var(--font-display); }
+
+/* Section tag chip */
+.section-tag {
+  display: inline-block;
+  background: var(--color-accent-light);
+  color: var(--color-accent);
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  padding: 0.3rem 0.75rem;
+  border-radius: 4px;
+}
+
+/* JSON syntax highlighting — theme-aware classes used in LiveMonitor */
+.json-key     { color: var(--color-json-key); }
+.json-string  { color: var(--color-json-string); }
+.json-number  { color: var(--color-json-number); }
+.json-boolean { color: var(--color-json-boolean); }
+.json-null    { color: var(--color-json-null); }

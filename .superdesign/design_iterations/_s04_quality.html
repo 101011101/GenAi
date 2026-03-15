@@ -1,0 +1,876 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 04: Results — Quality Gate</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #dde4ed;
+    font-family: var(--sans);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* Screen label */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-start;
+  }
+  .screen-pill {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 20px;
+  }
+  .screen-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text);
+  }
+  .screen-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    margin-left: 4px;
+  }
+
+  /* Browser chrome */
+  .browser {
+    width: 100%;
+    max-width: 1200px;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 4px 32px rgba(0,0,0,0.13), 0 1px 4px rgba(0,0,0,0.07);
+  }
+  .browser-bar {
+    background: #e8eaed;
+    padding: 10px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    border-bottom: 1px solid #d1d5db;
+  }
+  .browser-dots {
+    display: flex;
+    gap: 6px;
+  }
+  .browser-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .browser-dot.red { background: #ef4444; }
+  .browser-dot.yellow { background: #f59e0b; }
+  .browser-dot.green { background: #22c55e; }
+  .browser-url {
+    flex: 1;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 6px;
+    padding: 5px 10px;
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .browser-url-lock {
+    color: #6b7280;
+    font-size: 10px;
+  }
+
+  /* App shell */
+  .app {
+    background: var(--bg);
+    height: 780px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+  }
+
+  /* Global header */
+  .global-header {
+    background: var(--accent);
+    height: 52px;
+    display: flex;
+    align-items: center;
+    padding: 0 20px;
+    gap: 16px;
+    flex-shrink: 0;
+  }
+  .gh-logo {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    letter-spacing: -0.02em;
+    white-space: nowrap;
+  }
+  .gh-logo span { color: rgba(255,255,255,0.55); font-weight: 400; }
+  .gh-run-id {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: rgba(255,255,255,0.65);
+    background: rgba(255,255,255,0.1);
+    padding: 3px 8px;
+    border-radius: 4px;
+    white-space: nowrap;
+  }
+  .gh-status {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    color: #fff;
+    white-space: nowrap;
+  }
+  .gh-status-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #34d399;
+    box-shadow: 0 0 6px #34d399;
+    flex-shrink: 0;
+  }
+  .gh-progress-wrap {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+  }
+  .gh-progress-bar-bg {
+    flex: 1;
+    height: 4px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 2px;
+    min-width: 80px;
+    max-width: 140px;
+  }
+  .gh-progress-bar-fill {
+    height: 100%;
+    background: #34d399;
+    border-radius: 2px;
+    width: 100%;
+  }
+  .gh-progress-pct {
+    font-size: 11px;
+    color: #fff;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+  .gh-meta {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    margin-left: 4px;
+  }
+  .gh-meta-item {
+    font-size: 11px;
+    color: rgba(255,255,255,0.75);
+    white-space: nowrap;
+  }
+  .gh-meta-item strong {
+    color: #fff;
+    font-weight: 600;
+  }
+
+  /* Body layout */
+  .app-body {
+    display: flex;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
+    padding: 14px 0;
+  }
+  .sidebar-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    color: var(--faint);
+    text-transform: uppercase;
+    padding: 0 14px;
+    margin-bottom: 4px;
+    margin-top: 10px;
+  }
+  .sidebar-section-label:first-child { margin-top: 0; }
+  .sidebar-nav-group {
+    margin-bottom: 2px;
+  }
+  .sidebar-nav-parent {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text);
+    cursor: pointer;
+    user-select: none;
+  }
+  .sidebar-nav-parent .arrow {
+    font-size: 9px;
+    color: var(--muted);
+  }
+  .sidebar-nav-child {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px 6px 26px;
+    font-size: 11px;
+    color: var(--muted);
+    cursor: pointer;
+    border-radius: 0;
+    white-space: nowrap;
+  }
+  .sidebar-nav-child.active {
+    background: var(--accent-light);
+    color: var(--accent);
+    font-weight: 600;
+    border-right: 2px solid var(--accent);
+  }
+  .sidebar-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 10px 14px;
+  }
+  .sidebar-meta-block {
+    padding: 0 14px;
+  }
+  .sidebar-meta-row {
+    font-size: 10px;
+    color: var(--muted);
+    line-height: 1.7;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+  }
+  .sidebar-meta-row .key {
+    color: var(--faint);
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    margin-top: 6px;
+  }
+  .sidebar-meta-row .val {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--text);
+    font-weight: 500;
+  }
+
+  /* Main content */
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 18px 20px;
+    background: var(--bg);
+  }
+
+  .content-columns {
+    display: grid;
+    grid-template-columns: 55% 45%;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* Section labels */
+  .section-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    margin-bottom: 2px;
+  }
+  .section-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+  .section-subtitle {
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* Chart card */
+  .card {
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+  .card-inner {
+    padding: 14px 16px;
+  }
+
+  /* Donut legend */
+  .donut-legend {
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .donut-legend-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11px;
+  }
+  .legend-swatch {
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    flex-shrink: 0;
+  }
+  .legend-label { color: var(--text); flex: 1; }
+  .legend-count { color: var(--muted); font-weight: 600; }
+  .legend-pct { color: var(--faint); font-size: 10px; margin-left: 4px; }
+
+  /* Quality issues table */
+  .issues-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+    margin-top: 10px;
+  }
+  .issues-table th {
+    text-align: left;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 6px 8px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .issues-table td {
+    padding: 6px 8px;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+  .issues-table tr:last-child td { border-bottom: none; }
+  .row-error { background: var(--red-light); }
+  .row-warning { background: var(--yellow-light); }
+  .severity-badge {
+    font-size: 9px;
+    font-weight: 700;
+    padding: 2px 6px;
+    border-radius: 10px;
+    letter-spacing: 0.04em;
+  }
+  .severity-error { background: #fee2e2; color: var(--red); }
+  .severity-warning { background: #fef3c7; color: var(--yellow); }
+  .res-pass { color: var(--green); font-weight: 600; }
+  .res-fail { color: var(--red); font-weight: 600; }
+  .variant-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--accent);
+    background: var(--accent-light);
+    padding: 1px 5px;
+    border-radius: 3px;
+  }
+  .gate-tag {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--muted);
+  }
+</style>
+</head>
+<body>
+
+<!-- Screen label -->
+<div class="screen-label">
+  <div class="screen-pill">04</div>
+  <div class="screen-title">Results — Quality Gate</div>
+  <div class="screen-subtitle">Realism &amp; distinctiveness scoring</div>
+</div>
+
+<!-- Browser chrome -->
+<div class="browser">
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <div class="browser-dot red"></div>
+      <div class="browser-dot yellow"></div>
+      <div class="browser-dot green"></div>
+    </div>
+    <div class="browser-url">
+      <span class="browser-url-lock">🔒</span>
+      fraudgen.app/run/results/quality
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div class="app">
+
+    <!-- Global header -->
+    <div class="global-header">
+      <div class="gh-logo">Fraud<span>Gen</span></div>
+      <div class="gh-run-id">run_20260315_a7f2c</div>
+      <div class="gh-status">
+        <div class="gh-status-dot"></div>
+        Healthy
+      </div>
+      <div class="gh-progress-wrap">
+        <div class="gh-progress-bar-bg">
+          <div class="gh-progress-bar-fill"></div>
+        </div>
+        <div class="gh-progress-pct">100%</div>
+      </div>
+      <div class="gh-meta">
+        <div class="gh-meta-item">Variants <strong>11/12</strong></div>
+        <div class="gh-meta-item">Elapsed <strong>4m 18s</strong></div>
+        <div class="gh-meta-item">Cost <strong>$1.84</strong></div>
+      </div>
+    </div>
+
+    <!-- Body -->
+    <div class="app-body">
+
+      <!-- Sidebar -->
+      <div class="sidebar">
+
+        <div class="sidebar-section-label">Navigation</div>
+
+        <div class="sidebar-nav-group">
+          <div class="sidebar-nav-parent">
+            <span style="font-size:13px;">⚙</span> Run Config
+          </div>
+        </div>
+
+        <div class="sidebar-nav-group">
+          <div class="sidebar-nav-parent">
+            <span style="font-size:13px;">▶</span> Generation
+          </div>
+        </div>
+
+        <div class="sidebar-nav-group">
+          <div class="sidebar-nav-parent">
+            <span style="font-size:13px;">📋</span> Results <span class="arrow">▾</span>
+          </div>
+          <div class="sidebar-nav-child">Overview</div>
+          <div class="sidebar-nav-child active">Quality Gate</div>
+          <div class="sidebar-nav-child">Dataset Preview</div>
+          <div class="sidebar-nav-child">Export</div>
+        </div>
+
+        <div class="sidebar-divider"></div>
+
+        <div class="sidebar-section-label">Run Config</div>
+        <div class="sidebar-meta-block">
+          <div class="sidebar-meta-row">
+            <span class="key">Fraud Type</span>
+            <span class="val">Layered Mule Network</span>
+          </div>
+          <div class="sidebar-meta-row">
+            <span class="key">Critic Floor</span>
+            <span class="val">7.0</span>
+          </div>
+          <div class="sidebar-meta-row">
+            <span class="key">Variants</span>
+            <span class="val">12</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Main content -->
+      <div class="main-content">
+        <div class="content-columns">
+
+          <!-- LEFT COLUMN -->
+          <div>
+            <div class="section-label">Quality Battlefield</div>
+            <div class="section-title">Realism vs. Distinctiveness</div>
+            <div class="section-subtitle">All variants with revision trails — hover dots for details</div>
+
+            <div class="card">
+              <div style="padding: 12px 14px 10px;">
+
+                <!-- Quality Battlefield SVG -->
+                <svg width="100%" viewBox="0 0 520 380" style="display:block; font-family: 'Inter', system-ui, sans-serif;">
+                  <defs>
+                    <!-- Tooltip drop shadow -->
+                    <filter id="tooltip-shadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,0,0,0.12)" />
+                    </filter>
+                  </defs>
+
+                  <!-- ============================================================ -->
+                  <!-- Chart area: left margin 45px, top 20px, right 20px, bottom 40px -->
+                  <!-- Chart width: 520-45-20 = 455px, Chart height: 380-20-40 = 320px -->
+                  <!-- X axis: 0-10 → 455/10 = 45.5 px per unit                    -->
+                  <!-- Y axis: 0-10 → 320/10 = 32 px per unit (inverted)            -->
+                  <!-- Score 7.0 on X: 45 + 7.0*45.5 = 45 + 318.5 = 363.5          -->
+                  <!-- Score 7.0 on Y: 20 + (10-7.0)*32 = 20 + 96 = 116            -->
+                  <!-- ============================================================ -->
+
+                  <!-- Pass zone: x > 7.0, y > 7.0 -->
+                  <!-- X start: 363.5, X end: 475 (45+455) -->
+                  <!-- Y start: 20, Y end: 116 -->
+                  <rect x="363.5" y="20" width="111.5" height="96"
+                        fill="#ecfdf5" stroke="#059669" stroke-dasharray="4,3" stroke-width="1" opacity="0.7"/>
+                  <text x="467" y="34" text-anchor="end" font-size="9" fill="#059669" font-weight="600">Pass Zone</text>
+
+                  <!-- Gridlines every 2 units -->
+                  <!-- Vertical lines at x=2,4,6,8 (not 0 and 10 which are axis borders) -->
+                  <!-- x=2: 45+2*45.5=136, x=4: 45+4*45.5=227, x=6: 45+6*45.5=318, x=8: 45+8*45.5=409 -->
+                  <line x1="136" y1="20" x2="136" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="227" y1="20" x2="227" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="318" y1="20" x2="318" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="409" y1="20" x2="409" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+                  <!-- Horizontal lines at y=2,4,6,8 -->
+                  <!-- y=2: 20+(10-2)*32=276, y=4: 20+(10-4)*32=212, y=6: 20+(10-6)*32=148, y=8: 20+(10-8)*32=84 -->
+                  <line x1="45" y1="276" x2="475" y2="276" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="45" y1="212" x2="475" y2="212" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="45" y1="148" x2="475" y2="148" stroke="#e2e8f0" stroke-width="1"/>
+                  <line x1="45" y1="84" x2="475" y2="84" stroke="#e2e8f0" stroke-width="1"/>
+
+                  <!-- Axis borders -->
+                  <line x1="45" y1="20" x2="45" y2="340" stroke="#cbd5e1" stroke-width="1.5"/>
+                  <line x1="45" y1="340" x2="475" y2="340" stroke="#cbd5e1" stroke-width="1.5"/>
+
+                  <!-- Score floor reference lines at x=7.0, y=7.0 -->
+                  <line x1="363.5" y1="20" x2="363.5" y2="340" stroke="#dc2626" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+                  <line x1="45" y1="116" x2="475" y2="116" stroke="#dc2626" stroke-width="1" stroke-dasharray="4,3" opacity="0.4"/>
+
+                  <!-- X axis labels -->
+                  <text x="45" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">0</text>
+                  <text x="136" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">2</text>
+                  <text x="227" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">4</text>
+                  <text x="318" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">6</text>
+                  <text x="409" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">8</text>
+                  <text x="475" y="356" text-anchor="middle" font-size="9" fill="#94a3b8">10</text>
+                  <!-- X axis title -->
+                  <text x="260" y="374" text-anchor="middle" font-size="11" fill="#64748b" font-weight="500">Realism Score</text>
+
+                  <!-- Y axis labels -->
+                  <text x="38" y="340" text-anchor="end" font-size="9" fill="#94a3b8">0</text>
+                  <text x="38" y="276" text-anchor="end" font-size="9" fill="#94a3b8">2</text>
+                  <text x="38" y="212" text-anchor="end" font-size="9" fill="#94a3b8">4</text>
+                  <text x="38" y="148" text-anchor="end" font-size="9" fill="#94a3b8">6</text>
+                  <text x="38" y="84" text-anchor="end" font-size="9" fill="#94a3b8">8</text>
+                  <text x="38" y="24" text-anchor="end" font-size="9" fill="#94a3b8">10</text>
+                  <!-- Y axis title -->
+                  <text transform="translate(12, 190) rotate(-90)" text-anchor="middle" font-size="11" fill="#64748b" font-weight="500">Distinctiveness</text>
+
+                  <!-- ============================================================ -->
+                  <!-- Coord helper: svgX(score) = 45 + score * 45.5               -->
+                  <!--               svgY(score) = 20 + (10 - score) * 32          -->
+                  <!-- ============================================================ -->
+
+                  <!-- REVISION TRAILS -->
+
+                  <!-- V-007: ghost (4.0,7.0) → final (8.1,7.4) -->
+                  <!-- ghost: svgX(4.0)=227, svgY(7.0)=116 -->
+                  <!-- final: svgX(8.1)=413.55, svgY(7.4)=103.2 -->
+                  <line x1="227" y1="116" x2="413.55" y2="103.2"
+                        stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.6"/>
+                  <circle cx="227" cy="116" r="5" fill="#94a3b8" opacity="0.35"/>
+                  <text x="222" y="109" font-size="8" fill="#94a3b8" opacity="0.6">V-007₁</text>
+
+                  <!-- V-009: ghost (3.5,5.5) → ghost (5.8,6.2) → final (8.0,7.2) -->
+                  <!-- ghost1: svgX(3.5)=204.25, svgY(5.5)=164 -->
+                  <!-- ghost2: svgX(5.8)=308.9, svgY(6.2)=140.4 -->
+                  <!-- final:  svgX(8.0)=409, svgY(7.2)=109.6 -->
+                  <line x1="204.25" y1="164" x2="308.9" y2="140.4"
+                        stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.6"/>
+                  <line x1="308.9" y1="140.4" x2="409" y2="109.6"
+                        stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.6"/>
+                  <circle cx="204.25" cy="164" r="5" fill="#94a3b8" opacity="0.35"/>
+                  <circle cx="308.9" cy="140.4" r="5" fill="#94a3b8" opacity="0.35"/>
+                  <text x="196" y="175" font-size="8" fill="#94a3b8" opacity="0.6">V-009₁</text>
+                  <text x="304" y="133" font-size="8" fill="#94a3b8" opacity="0.6">₂</text>
+
+                  <!-- V-011: ghost (5.0,4.5) → final red (6.5,6.8) -->
+                  <!-- ghost: svgX(5.0)=272.5, svgY(4.5)=196 -->
+                  <!-- final: svgX(6.5)=340.75, svgY(6.8)=148.4 -->
+                  <line x1="272.5" y1="196" x2="340.75" y2="148.4"
+                        stroke="#94a3b8" stroke-width="1.2" stroke-dasharray="5,3" opacity="0.6"/>
+                  <circle cx="272.5" cy="196" r="5" fill="#94a3b8" opacity="0.35"/>
+                  <text x="256" y="205" font-size="8" fill="#94a3b8" opacity="0.6">V-011₁</text>
+
+                  <!-- ============================================================ -->
+                  <!-- FINAL SCORE DOTS                                             -->
+                  <!-- GREEN (passed):                                              -->
+                  <!--  (7.2,7.5): svgX=372.6, svgY=100                            -->
+                  <!--  (8.1,7.4): svgX=413.55, svgY=103.2   (V-007 final)        -->
+                  <!--  (7.8,8.2): svgX=399.9, svgY=57.6                           -->
+                  <!--  (8.4,7.8): svgX=427.2, svgY=70.4  (tooltip dot V-003)     -->
+                  <!--  (9.0,8.5): svgX=454.5, svgY=36                             -->
+                  <!--  (7.5,9.0): svgX=386.25, svgY=20   — clip to edge           -->
+                  <!--  (8.8,7.3): svgX=445.4, svgY=106.4                          -->
+                  <!--  (7.3,8.8): svgX=377.15, svgY=26.4                          -->
+                  <!--  (8.0,7.2): svgX=409, svgY=109.6   (V-009 final)           -->
+                  <!-- RED (failed):                                                -->
+                  <!--  (6.5,6.8): svgX=340.75, svgY=148.4   (V-011 final)        -->
+                  <!--  (5.2,5.0): svgX=281.6, svgY=180                            -->
+                  <!-- ============================================================ -->
+
+                  <!-- Green dots -->
+                  <circle cx="372.6" cy="100" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="413.55" cy="103.2" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="399.9" cy="57.6" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <!-- V-003 tooltip dot -->
+                  <circle cx="427.2" cy="70.4" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="454.5" cy="36" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="386.25" cy="28" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="445.4" cy="106.4" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="377.15" cy="34.4" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="409" cy="109.6" r="7" fill="#059669" stroke="#fff" stroke-width="1.5"/>
+
+                  <!-- Red dots -->
+                  <circle cx="340.75" cy="148.4" r="7" fill="#dc2626" stroke="#fff" stroke-width="1.5"/>
+                  <circle cx="281.6" cy="180" r="7" fill="#dc2626" stroke="#fff" stroke-width="1.5"/>
+
+                  <!-- ============================================================ -->
+                  <!-- TOOLTIP MOCK for V-003 at (8.4, 7.8)                        -->
+                  <!-- Dot is at svg (427.2, 70.4). Box to left, above.            -->
+                  <!-- ============================================================ -->
+                  <!-- Tooltip box: 120px wide, 56px tall, positioned at ~(295, 20)-->
+                  <g filter="url(#tooltip-shadow)">
+                    <rect x="290" y="18" width="124" height="60" rx="4"
+                          fill="#ffffff" stroke="#e2e8f0" stroke-width="1"/>
+                  </g>
+                  <!-- Connector line from tooltip to dot -->
+                  <line x1="414" y1="70" x2="427.2" y2="70.4" stroke="#e2e8f0" stroke-width="1"/>
+                  <!-- Tooltip content -->
+                  <text x="298" y="32" font-size="9.5" fill="#0f172a" font-weight="700">V-003 · P03</text>
+                  <text x="298" y="45" font-size="9" fill="#64748b">Realism: <tspan fill="#0f172a" font-weight="600">8.4</tspan>  Dist: <tspan fill="#0f172a" font-weight="600">7.8</tspan></text>
+                  <text x="298" y="57" font-size="9" fill="#64748b">Attempts: <tspan fill="#0f172a" font-weight="600">1</tspan></text>
+                  <text x="298" y="69" font-size="9" fill="#059669" font-weight="700">✓ PASSED</text>
+                </svg>
+
+              </div>
+            </div>
+          </div>
+
+          <!-- RIGHT COLUMN -->
+          <div style="display: flex; flex-direction: column; gap: 16px;">
+
+            <!-- Donut chart section -->
+            <div>
+              <div class="section-label">Outcome Breakdown</div>
+              <div class="section-title">Pass/Fail Distribution</div>
+
+              <div class="card">
+                <div class="card-inner" style="display: flex; flex-direction: column; align-items: center;">
+
+                  <!-- Donut SVG -->
+                  <!-- Total: 12 variants. Passed first: 8, After revision: 3, Failed: 1 -->
+                  <!-- Total shown as approved: 11 (8+3) -->
+                  <!-- Circle: cx=100, cy=100, r=70. Circumference = 2π*70 ≈ 439.8px -->
+                  <!-- We'll draw arcs from top (12 o'clock = -90 deg) clockwise       -->
+                  <!-- 8/12 = 266.7°, 3/12 = 90°, 1/12 = 30°                          -->
+                  <!-- Using path arc commands                                           -->
+                  <!--   start angle: -90° (top)                                        -->
+                  <!--   green arc: 0° → 240° (8/12 * 360 = 240°)                      -->
+                  <!--   yellow arc: 240° → 330° (3/12 * 360 = 90°)                    -->
+                  <!--   red arc: 330° → 360° (1/12 * 360 = 30°)                       -->
+
+                  <svg width="200" height="200" viewBox="0 0 200 200" style="display:block;">
+                    <defs>
+                      <filter id="donut-shadow" x="-10%" y="-10%" width="120%" height="120%">
+                        <feDropShadow dx="0" dy="1" stdDeviation="4" flood-color="rgba(0,0,0,0.08)"/>
+                      </filter>
+                    </defs>
+
+                    <!-- Donut arcs, stroke-width 28, r=72 gives nice donut -->
+                    <!-- cx=100, cy=100, r=72 -->
+                    <!-- Circumference = 2*pi*72 = 452.4 -->
+                    <!-- We use stroke-dasharray/offset approach for clean arcs -->
+
+                    <!-- Background ring -->
+                    <circle cx="100" cy="100" r="72" fill="none" stroke="#f1f5f9" stroke-width="28"/>
+
+                    <!-- Green segment: 8/12 = 0.6667, dasharray = 0.6667*452.4 = 301.6, rest -->
+                    <!-- Start at top (-90°), so we rotate -90deg around center -->
+                    <circle cx="100" cy="100" r="72" fill="none"
+                            stroke="#059669" stroke-width="28"
+                            stroke-dasharray="301.6 452.4"
+                            stroke-dashoffset="0"
+                            transform="rotate(-90 100 100)"
+                            filter="url(#donut-shadow)"/>
+
+                    <!-- Yellow segment: 3/12 = 0.25, dasharray = 0.25*452.4=113.1 -->
+                    <!-- Offset: -(452.4 - 301.6) = offset so it starts after green -->
+                    <!-- dashoffset = -(301.6) means it starts at end of green segment -->
+                    <circle cx="100" cy="100" r="72" fill="none"
+                            stroke="#d97706" stroke-width="28"
+                            stroke-dasharray="113.1 452.4"
+                            stroke-dashoffset="-301.6"
+                            transform="rotate(-90 100 100)"
+                            filter="url(#donut-shadow)"/>
+
+                    <!-- Red segment: 1/12 = 0.0833, dasharray = 0.0833*452.4=37.7 -->
+                    <!-- Offset: -(301.6+113.1) = -414.7 -->
+                    <circle cx="100" cy="100" r="72" fill="none"
+                            stroke="#dc2626" stroke-width="28"
+                            stroke-dasharray="37.7 452.4"
+                            stroke-dashoffset="-414.7"
+                            transform="rotate(-90 100 100)"
+                            filter="url(#donut-shadow)"/>
+
+                    <!-- Hole (white center) -->
+                    <circle cx="100" cy="100" r="55" fill="#ffffff"/>
+
+                    <!-- Center text -->
+                    <text x="100" y="95" text-anchor="middle" font-size="26" font-weight="700"
+                          fill="#0f4c8a" font-family="'Inter', system-ui, sans-serif">11</text>
+                    <text x="100" y="112" text-anchor="middle" font-size="10" fill="#64748b"
+                          font-family="'Inter', system-ui, sans-serif">approved</text>
+                  </svg>
+
+                  <!-- Legend -->
+                  <div class="donut-legend" style="width: 100%; max-width: 220px;">
+                    <div class="donut-legend-row">
+                      <div class="legend-swatch" style="background: #059669; border-radius: 3px;"></div>
+                      <span class="legend-label">Passed first attempt</span>
+                      <span class="legend-count">8</span>
+                      <span class="legend-pct">66.7%</span>
+                    </div>
+                    <div class="donut-legend-row">
+                      <div class="legend-swatch" style="background: #d97706; border-radius: 3px;"></div>
+                      <span class="legend-label">After revision</span>
+                      <span class="legend-count">3</span>
+                      <span class="legend-pct">25.0%</span>
+                    </div>
+                    <div class="donut-legend-row">
+                      <div class="legend-swatch" style="background: #dc2626; border-radius: 3px;"></div>
+                      <span class="legend-label">Permanently failed</span>
+                      <span class="legend-count">1</span>
+                      <span class="legend-pct">8.3%</span>
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Quality Issues section -->
+            <div>
+              <div class="section-label">Quality Issues</div>
+              <div class="section-title">Validation Log</div>
+              <div class="section-subtitle">Schema validation + critic failures merged</div>
+
+              <div class="card">
+                <table class="issues-table">
+                  <thead>
+                    <tr>
+                      <th>Variant</th>
+                      <th>Gate</th>
+                      <th>Issue</th>
+                      <th>Sev.</th>
+                      <th>Resolution</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr class="row-warning">
+                      <td><span class="variant-tag">V-007</span></td>
+                      <td><span class="gate-tag">Critic</span></td>
+                      <td>Timing too uniform</td>
+                      <td><span class="severity-badge severity-warning">Warning</span></td>
+                      <td class="res-pass">Revised → ✓</td>
+                    </tr>
+                    <tr class="row-warning">
+                      <td><span class="variant-tag">V-009</span></td>
+                      <td><span class="gate-tag">Critic</span></td>
+                      <td>Round-number amounts</td>
+                      <td><span class="severity-badge severity-warning">Warning</span></td>
+                      <td class="res-pass">Revised → ✓</td>
+                    </tr>
+                    <tr class="row-error">
+                      <td><span class="variant-tag">V-009</span></td>
+                      <td><span class="gate-tag">Schema</span></td>
+                      <td>amount_floor violation</td>
+                      <td><span class="severity-badge severity-error">Error</span></td>
+                      <td style="color: var(--muted); font-weight:500;">Auto-corrected</td>
+                    </tr>
+                    <tr class="row-warning">
+                      <td><span class="variant-tag">V-011</span></td>
+                      <td><span class="gate-tag">Critic</span></td>
+                      <td>Realism: 5.8 below floor</td>
+                      <td><span class="severity-badge severity-warning">Warning</span></td>
+                      <td class="res-pass">Revised → ✓</td>
+                    </tr>
+                    <tr class="row-error">
+                      <td><span class="variant-tag">V-012</span></td>
+                      <td><span class="gate-tag">Critic</span></td>
+                      <td>Low persona consistency</td>
+                      <td><span class="severity-badge severity-error">Error</span></td>
+                      <td class="res-fail">Discarded</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+          </div>
+          <!-- END RIGHT COLUMN -->
+
+        </div>
+      </div>
+      <!-- END MAIN CONTENT -->
+
+    </div>
+    <!-- END APP BODY -->
+
+  </div>
+  <!-- END APP SHELL -->
+
+</div>
+<!-- END BROWSER -->
+
+</body>
+</html>

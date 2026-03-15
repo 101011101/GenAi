@@ -1,0 +1,3086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FraudGen — Red Team Platform</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <style>
+    /* ─── CSS Reset ──────────────────────────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    ul, ol { list-style: none; }
+    button { cursor: pointer; font-family: inherit; }
+    a { text-decoration: none; color: inherit; }
+
+    /* ─── Design Tokens ──────────────────────────────────────────────────────── */
+    :root {
+      --bg:           #ffffff;
+      --surface:      #f8fafc;
+      --surface2:     #f1f5f9;
+      --border:       #e2e8f0;
+      --accent:       #0f4c8a;
+      --accent-light: #e8f0fa;
+      --red:          #dc2626;
+      --red-light:    #fef2f2;
+      --green:        #059669;
+      --green-light:  #ecfdf5;
+      --yellow:       #d97706;
+      --yellow-light: #fffbeb;
+      --purple:       #7c3aed;
+      --purple-light: #f5f3ff;
+      --orange:       #ea580c;
+      --orange-light: #fff7ed;
+      --cyan:         #0891b2;
+      --cyan-light:   #ecfeff;
+      --text:         #0f172a;
+      --muted:        #64748b;
+      --faint:        #94a3b8;
+      --mono:         'JetBrains Mono', 'Fira Code', monospace;
+      --sans:         'Inter', system-ui, sans-serif;
+    }
+
+    /* ─── Base ───────────────────────────────────────────────────────────────── */
+    html, body {
+      height: 100%;
+      overflow: hidden;
+      font-family: var(--sans);
+      color: var(--text);
+      background: var(--bg);
+      font-size: 13px;
+      line-height: 1.5;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────────────────────────── */
+    .console-layout {
+      display: flex;
+      flex-direction: row;
+      height: 100vh;
+      width: 100vw;
+      overflow: hidden;
+    }
+
+    /* ─── Sidebar ─────────────────────────────────────────────────────────────── */
+    .sidebar {
+      width: 220px;
+      min-width: 220px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
+
+    .sidebar-scroll {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+    }
+
+    /* Logo */
+    .logo {
+      padding: 18px 16px 14px;
+      border-bottom: 1px solid var(--border);
+    }
+    .logo-name {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--accent);
+      letter-spacing: -.02em;
+    }
+    .logo-sub {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 2px;
+      letter-spacing: .01em;
+    }
+
+    /* Nav sections */
+    .nav-section-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--faint);
+      padding: 8px 12px 4px;
+      margin-top: 8px;
+    }
+
+    .nav-list {
+      padding: 4px 8px;
+    }
+
+    .nav-item {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      position: relative;
+      margin-bottom: 2px;
+    }
+    .nav-item:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-item.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      border-left: 2px solid var(--accent);
+      padding-left: 8px;
+    }
+
+    .nav-icon {
+      width: 14px;
+      text-align: center;
+      font-size: 13px;
+      flex-shrink: 0;
+    }
+
+    .nav-label {
+      flex: 1;
+    }
+
+    /* Sub-items */
+    .nav-sub-item {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 28px;
+      padding: 0 10px 0 34px;
+      border-radius: 6px;
+      font-size: 11px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      margin-bottom: 1px;
+    }
+    .nav-sub-item:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-sub-item.active {
+      background: var(--accent-light);
+      color: var(--accent);
+      font-weight: 600;
+      border-left: 2px solid var(--accent);
+      padding-left: 32px;
+    }
+
+    .nav-sub-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: currentColor;
+      flex-shrink: 0;
+      opacity: .5;
+    }
+
+    /* Results group toggle */
+    .nav-group-header {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      height: 34px;
+      padding: 0 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      color: var(--muted);
+      cursor: pointer;
+      user-select: none;
+      transition: background .12s, color .12s;
+      margin-bottom: 2px;
+    }
+    .nav-group-header:hover {
+      background: var(--accent-light);
+      color: var(--accent);
+    }
+    .nav-chevron {
+      margin-left: auto;
+      font-size: 10px;
+      transition: transform .2s;
+    }
+    .nav-group-header.open .nav-chevron {
+      transform: rotate(180deg);
+    }
+    .nav-sub-list {
+      overflow: hidden;
+      max-height: 0;
+      transition: max-height .25s ease;
+    }
+    .nav-sub-list.open {
+      max-height: 300px;
+    }
+
+    /* Run config panel */
+    .run-config-panel {
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      font-size: 10px;
+      flex-shrink: 0;
+    }
+    .run-config-label {
+      font-size: 9px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+      color: var(--faint);
+      margin-bottom: 8px;
+    }
+    .run-config-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      margin-bottom: 5px;
+      gap: 6px;
+    }
+    .run-config-key {
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .run-config-val {
+      color: var(--text);
+      font-weight: 600;
+      text-align: right;
+      font-family: var(--mono);
+      font-size: 9.5px;
+      min-width: 0;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .run-config-fraud {
+      color: var(--accent);
+      font-size: 10px;
+      font-weight: 700;
+      margin-bottom: 8px;
+      line-height: 1.3;
+    }
+
+    /* ─── Console Main ────────────────────────────────────────────────────────── */
+    .console-main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      min-width: 0;
+    }
+
+    /* ─── Global Header ───────────────────────────────────────────────────────── */
+    .global-header {
+      height: 52px;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 16px;
+      padding: 0 20px;
+      flex-shrink: 0;
+      border-bottom: 1px solid rgba(0,0,0,.15);
+    }
+
+    .header-logo {
+      font-size: 13px;
+      font-weight: 800;
+      color: white;
+      letter-spacing: -.01em;
+      flex-shrink: 0;
+      margin-right: 4px;
+    }
+
+    .header-divider {
+      width: 1px;
+      height: 20px;
+      background: rgba(255,255,255,.2);
+      flex-shrink: 0;
+    }
+
+    .run-id {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: rgba(255,255,255,.75);
+      flex-shrink: 0;
+    }
+
+    /* Health badge */
+    .health-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+    .health-badge-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+    }
+    .health-badge.green {
+      background: rgba(5,150,105,.2);
+      color: #6ee7b7;
+      border: 1px solid rgba(5,150,105,.3);
+    }
+    .health-badge.green .health-badge-dot { background: #34d399; }
+    .health-badge.amber {
+      background: rgba(217,119,6,.2);
+      color: #fcd34d;
+      border: 1px solid rgba(217,119,6,.3);
+    }
+    .health-badge.amber .health-badge-dot { background: #fbbf24; }
+    .health-badge.red {
+      background: rgba(220,38,38,.2);
+      color: #fca5a5;
+      border: 1px solid rgba(220,38,38,.3);
+    }
+    .health-badge.red .health-badge-dot { background: #f87171; }
+
+    /* Header progress */
+    .header-progress {
+      display: flex;
+      flex-direction: row;
+      align-items: center;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    .progress-bar-track {
+      width: 80px;
+      height: 6px;
+      background: rgba(255,255,255,.2);
+      border-radius: 3px;
+      overflow: hidden;
+    }
+    .progress-bar-fill {
+      height: 100%;
+      background: #34d399;
+      border-radius: 3px;
+      transition: width .4s ease;
+    }
+    .progress-pct {
+      font-size: 11px;
+      font-weight: 700;
+      color: white;
+      font-family: var(--mono);
+      min-width: 32px;
+    }
+
+    /* Header stats */
+    .header-stats {
+      display: flex;
+      flex-direction: row;
+      gap: 16px;
+      flex: 1;
+      min-width: 0;
+    }
+    .header-stat {
+      display: flex;
+      flex-direction: column;
+      gap: 1px;
+      flex-shrink: 0;
+    }
+    .header-stat-label {
+      font-size: 9px;
+      color: rgba(255,255,255,.55);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+    }
+    .header-stat-value {
+      font-size: 12px;
+      font-weight: 700;
+      color: white;
+      font-family: var(--mono);
+    }
+
+    /* Header actions */
+    .header-actions {
+      display: flex;
+      flex-direction: row;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+
+    /* ─── View Container ──────────────────────────────────────────────────────── */
+    .view-container {
+      flex: 1;
+      overflow: auto;
+      background: var(--bg);
+    }
+
+    .view {
+      display: none;
+      padding: 24px;
+    }
+    .view.active {
+      display: block;
+    }
+
+    /* ─── Cards / Surfaces ────────────────────────────────────────────────────── */
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+    }
+    .card-title {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .06em;
+      color: var(--muted);
+      margin-bottom: 12px;
+    }
+
+    /* ─── Stat Cards ──────────────────────────────────────────────────────────── */
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(6, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px;
+      text-align: center;
+    }
+    .stat-val {
+      font-size: 26px;
+      font-weight: 800;
+    }
+    .stat-label {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 3px;
+    }
+
+    /* ─── Badges ──────────────────────────────────────────────────────────────── */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      padding: 2px 8px;
+      border-radius: 20px;
+      font-size: 10px;
+      font-weight: 700;
+    }
+    .badge-green  { background: var(--green-light);  color: var(--green); }
+    .badge-red    { background: var(--red-light);    color: var(--red); }
+    .badge-yellow { background: var(--yellow-light); color: var(--yellow); }
+    .badge-blue   { background: var(--accent-light); color: var(--accent); }
+    .badge-purple { background: var(--purple-light); color: var(--purple); }
+    .badge-gray   { background: var(--surface2);     color: var(--muted); }
+    .badge-orange { background: var(--orange-light); color: var(--orange); }
+
+    /* ─── Tables ──────────────────────────────────────────────────────────────── */
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+    }
+    .data-table th {
+      text-align: left;
+      padding: 8px 12px;
+      background: var(--surface2);
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--muted);
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table td {
+      padding: 9px 12px;
+      border-bottom: 1px solid var(--border);
+    }
+    .data-table tr:last-child td { border-bottom: none; }
+    .data-table tr:hover td { background: var(--surface); }
+
+    /* ─── Coverage Cells ──────────────────────────────────────────────────────── */
+    .cell {
+      border-radius: 6px;
+      padding: 8px;
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
+      border: 1.5px solid transparent;
+      min-height: 64px;
+      cursor: pointer;
+      transition: transform .1s;
+    }
+    .cell:hover { transform: scale(1.03); }
+    .cell-empty    { background: var(--surface2);     border-color: var(--border); }
+    .cell-assigned { background: var(--accent-light); border-color: var(--accent); }
+    .cell-running  { background: var(--yellow-light); border-color: var(--yellow); animation: cellPulse 1.5s infinite; }
+    .cell-done     { background: var(--green-light);  border-color: var(--green); }
+    .cell-failed   { background: var(--red-light);    border-color: var(--red); }
+    .cell-revised  { background: var(--orange-light); border-color: var(--orange); }
+    @keyframes cellPulse { 0%,100%{opacity:1} 50%{opacity:.6} }
+    .cell-label { font-size: 9px;  font-weight: 700; font-family: var(--mono); }
+    .cell-score { font-size: 10px; font-weight: 700; }
+    .cell-meta  { font-size: 9px;  opacity: .7; }
+
+    /* ─── Buttons ─────────────────────────────────────────────────────────────── */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 7px;
+      font-weight: 600;
+      font-size: 12px;
+      padding: 8px 16px;
+      cursor: pointer;
+      border: none;
+      font-family: var(--sans);
+      transition: background .12s, opacity .12s;
+    }
+    .btn-primary       { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: #1a5fa0; }
+    .btn-outline       { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+    .btn-outline:hover { background: var(--surface2); }
+    .btn-danger        { background: var(--red); color: #fff; }
+    .btn-danger:hover  { background: #b91c1c; }
+    .btn-ghost         { background: var(--surface); border: 1px solid var(--border); color: var(--muted); }
+    .btn-ghost:hover   { background: var(--surface2); }
+    .btn-white-outline {
+      background: transparent;
+      border: 1.5px solid rgba(255,255,255,.4);
+      color: white;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-family: var(--sans);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-white-outline:hover { background: rgba(255,255,255,.1); }
+    .btn-red-fill {
+      background: var(--red);
+      color: white;
+      font-size: 11px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      cursor: pointer;
+      border: none;
+      font-family: var(--sans);
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .btn-red-fill:hover { background: #b91c1c; }
+
+    /* ─── Mono Log ────────────────────────────────────────────────────────────── */
+    .mono-log {
+      background: #0f172a;
+      border-radius: 8px;
+      padding: 12px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: #94a3b8;
+      line-height: 1.8;
+      overflow-y: auto;
+    }
+    .log-time  { color: #475569; }
+    .log-cell  { color: #60a5fa; }
+    .log-ok    { color: #4ade80; }
+    .log-fail  { color: #f87171; }
+    .log-score { color: #fbbf24; }
+
+    /* ─── Animations ──────────────────────────────────────────────────────────── */
+    @keyframes dash { to { stroke-dashoffset: -20; } }
+    .flow-edge {
+      stroke-dasharray: 6,3;
+      animation: dash 1.5s linear infinite;
+    }
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+    .pulse-dot { animation: pulse 1.5s infinite; }
+
+    /* ─── Form Elements ───────────────────────────────────────────────────────── */
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--text);
+      margin-bottom: 6px;
+      display: block;
+    }
+    .form-select,
+    .form-input {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 8px 10px;
+      font-size: 12px;
+      color: var(--text);
+      background: white;
+      font-family: var(--sans);
+    }
+    .form-textarea {
+      width: 100%;
+      border: 1.5px solid var(--border);
+      border-radius: 7px;
+      padding: 10px;
+      font-size: 12px;
+      color: var(--text);
+      background: white;
+      resize: vertical;
+      font-family: var(--sans);
+      line-height: 1.5;
+    }
+    .form-select:focus,
+    .form-input:focus,
+    .form-textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+    }
+
+    /* ─── Wanted Cards (Persona) ──────────────────────────────────────────────── */
+    .wanted-card {
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      overflow: hidden;
+      background: var(--bg);
+      flex: 1;
+      min-width: 180px;
+    }
+    .wanted-bar { height: 5px; }
+    .wanted-bar.high   { background: var(--red); }
+    .wanted-bar.mid    { background: var(--yellow); }
+    .wanted-bar.low    { background: var(--green); }
+    .wanted-body       { padding: 14px; }
+    .wanted-name       { font-size: 14px; font-weight: 800; }
+    .wanted-id         { font-size: 10px; color: var(--muted); font-family: var(--mono); }
+    .wanted-spec       { font-size: 10px; color: var(--muted); font-style: italic; margin: 4px 0 8px; }
+    .wanted-tags       { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 10px; }
+    .wanted-tag        { background: var(--surface2); border-radius: 3px; padding: 2px 6px; font-size: 9px; color: var(--muted); }
+    .wanted-stats      { display: grid; grid-template-columns: 1fr 1fr; gap: 4px; }
+    .wanted-stat       { background: var(--surface); border-radius: 5px; padding: 6px; text-align: center; }
+    .wanted-stat-val   { font-size: 14px; font-weight: 700; color: var(--accent); }
+    .wanted-stat-lbl   { font-size: 9px; color: var(--muted); }
+
+    /* ─── Storyboard ──────────────────────────────────────────────────────────── */
+    .storyboard { display: flex; gap: 10px; }
+    .story-card {
+      flex: 1;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px;
+      background: var(--surface);
+      cursor: pointer;
+      transition: border-color .15s;
+    }
+    .story-card:hover  { border-color: var(--accent); }
+    .story-icon        { font-size: 22px; margin-bottom: 6px; }
+    .story-step        { font-size: 9px; font-weight: 700; text-transform: uppercase; letter-spacing: .06em; color: var(--faint); }
+    .story-title       { font-size: 12px; font-weight: 700; margin: 3px 0 6px; }
+    .story-text        { font-size: 10px; color: var(--muted); font-style: italic; line-height: 1.45; }
+    .story-stats       { display: flex; gap: 5px; margin-top: 8px; flex-wrap: wrap; }
+    .story-stat        { font-size: 9px; color: var(--faint); background: var(--bg); padding: 2px 6px; border-radius: 3px; border: 1px solid var(--border); }
+
+    /* ─── Utilities ───────────────────────────────────────────────────────────── */
+    .flex-row   { display: flex; flex-direction: row; align-items: center; }
+    .flex-col   { display: flex; flex-direction: column; }
+    .gap-8      { gap: 8px; }
+    .gap-12     { gap: 12px; }
+    .gap-16     { gap: 16px; }
+    .gap-20     { gap: 20px; }
+    .mb-12      { margin-bottom: 12px; }
+    .mb-16      { margin-bottom: 16px; }
+    .mb-20      { margin-bottom: 20px; }
+    .text-muted { color: var(--muted); }
+    .text-faint { color: var(--faint); }
+    .text-accent{ color: var(--accent); }
+    .text-mono  { font-family: var(--mono); }
+    .fw-700     { font-weight: 700; }
+    .fw-800     { font-weight: 800; }
+    .fs-10      { font-size: 10px; }
+    .fs-11      { font-size: 11px; }
+    .fs-12      { font-size: 12px; }
+  </style>
+</head>
+<body>
+
+  <div class="console-layout">
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- SIDEBAR                                                                 -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <aside class="sidebar">
+      <div class="sidebar-scroll">
+
+        <!-- Logo -->
+        <div class="logo">
+          <div class="logo-name">⬡ FraudGen</div>
+          <div class="logo-sub">Red Team Platform</div>
+        </div>
+
+        <!-- Primary nav -->
+        <nav>
+          <div class="nav-section-label">Workspace</div>
+          <ul class="nav-list">
+            <li class="nav-item" data-nav="input">
+              <span class="nav-icon">⬡</span>
+              <span class="nav-label">New Run</span>
+            </li>
+            <li class="nav-item" data-nav="monitor">
+              <span class="nav-icon">◉</span>
+              <span class="nav-label">Live Monitor</span>
+            </li>
+          </ul>
+
+          <div class="nav-section-label">Results</div>
+          <ul class="nav-list">
+            <!-- Expandable Results group -->
+            <li class="nav-group-header open" id="results-group-header">
+              <span class="nav-icon">▤</span>
+              <span class="nav-label">Results</span>
+              <span class="nav-chevron">▾</span>
+            </li>
+            <ul class="nav-sub-list open" id="results-sub-list">
+              <li class="nav-sub-item" data-nav="summary">
+                <span class="nav-sub-dot"></span>
+                Summary
+              </li>
+              <li class="nav-sub-item" data-nav="quality">
+                <span class="nav-sub-dot"></span>
+                Quality Gate
+              </li>
+              <li class="nav-sub-item" data-nav="operations">
+                <span class="nav-sub-dot"></span>
+                Operations
+              </li>
+              <li class="nav-sub-item" data-nav="variants">
+                <span class="nav-sub-dot"></span>
+                Variants
+              </li>
+              <li class="nav-sub-item" data-nav="dataset">
+                <span class="nav-sub-dot"></span>
+                Dataset
+              </li>
+              <li class="nav-sub-item" data-nav="export">
+                <span class="nav-sub-dot"></span>
+                Export
+              </li>
+            </ul>
+          </ul>
+        </nav>
+
+      </div><!-- /sidebar-scroll -->
+
+      <!-- Run Config Panel -->
+      <div class="run-config-panel">
+        <div class="run-config-label">Current Run</div>
+        <div class="run-config-fraud">Layered Mule Network</div>
+        <div class="run-config-row">
+          <span class="run-config-key">Variants</span>
+          <span class="run-config-val">12</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Fidelity</span>
+          <span class="run-config-val">L3</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Agents</span>
+          <span class="run-config-val">5</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Critic</span>
+          <span class="run-config-val">7.0</span>
+        </div>
+        <div class="run-config-row">
+          <span class="run-config-key">Cost cap</span>
+          <span class="run-config-val">$5.00</span>
+        </div>
+      </div>
+
+    </aside><!-- /sidebar -->
+
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <!-- CONSOLE MAIN                                                            -->
+    <!-- ═══════════════════════════════════════════════════════════════════════ -->
+    <div class="console-main">
+
+      <!-- Global Header -->
+      <header class="global-header" id="global-header" style="display: none;">
+
+        <span class="header-logo">FraudGen</span>
+        <div class="header-divider"></div>
+
+        <span class="run-id">run_20260315_143022</span>
+
+        <div class="health-badge green">
+          <span class="health-badge-dot pulse-dot"></span>
+          Healthy
+        </div>
+
+        <div class="header-progress">
+          <div class="progress-bar-track">
+            <div class="progress-bar-fill" style="width: 91%;"></div>
+          </div>
+          <span class="progress-pct">91%</span>
+        </div>
+
+        <div class="header-stats">
+          <div class="header-stat">
+            <span class="header-stat-label">Variants</span>
+            <span class="header-stat-value">11 / 12</span>
+          </div>
+          <div class="header-stat">
+            <span class="header-stat-label">Elapsed</span>
+            <span class="header-stat-value">4m 18s</span>
+          </div>
+          <div class="header-stat">
+            <span class="header-stat-label">Cost</span>
+            <span class="header-stat-value">$1.84 / $5.00</span>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="btn-white-outline" id="btn-pause">
+            ‖ Pause
+          </button>
+          <button class="btn-red-fill" id="btn-stop">
+            ◼ Stop
+          </button>
+        </div>
+
+      </header><!-- /global-header -->
+
+      <!-- View Container -->
+      <div class="view-container">
+
+        <!-- INPUT VIEW -->
+        <div id="view-input" class="view active">
+          <!-- INPUT VIEW -->
+<div style="display:flex; gap:24px; align-items:flex-start;">
+
+  <!-- Left: Form -->
+  <div style="flex:1; min-width:0;">
+    <div style="margin-bottom:20px;">
+      <div style="font-size:20px; font-weight:700; color:var(--text); margin-bottom:4px;">Configure Run</div>
+      <div style="font-size:13px; color:var(--muted);">Define the fraud type and generation parameters</div>
+    </div>
+
+    <!-- Fraud Type Preset -->
+    <div class="form-group">
+      <label class="form-label">Fraud Type Preset</label>
+      <select class="form-select">
+        <option selected>Layered Mule Network</option>
+        <option>Card Skimming Ring</option>
+        <option>Synthetic Identity Fraud</option>
+        <option>ACH Fraud / Business Email Compromise</option>
+        <option>Custom...</option>
+      </select>
+    </div>
+
+    <!-- Fraud Description -->
+    <div class="form-group">
+      <label class="form-label">Fraud Description</label>
+      <textarea class="form-textarea" rows="6">A sophisticated layered mule account network where criminal proceeds flow through 3–5 intermediary accounts using a mix of Zelle, ACH, and wire transfers. Mules are recruited via social media job postings and are unaware they are part of a fraud scheme. Final extraction uses international wire transfer to offshore accounts.</textarea>
+    </div>
+
+    <!-- Target Variants -->
+    <div class="form-group">
+      <label class="form-label">Target Variants</label>
+      <div>
+        <input type="range" min="5" max="50" value="12" style="width:100%; accent-color:var(--accent); margin-bottom:8px;" id="variants-slider" oninput="document.getElementById('variant-pill').textContent=''+this.value+' variants · Est. $'+(this.value*0.175).toFixed(2)+' · Est. '+(this.value*5)+'s'">
+        <div id="variant-pill" style="display:inline-block; background:var(--accent-light); color:var(--accent); font-family:var(--mono), monospace; font-size:11px; padding:6px 12px; border-radius:6px;">12 variants · Est. $2.10 · Est. 60s</div>
+      </div>
+    </div>
+
+    <!-- Fidelity Level -->
+    <div class="form-group">
+      <label class="form-label">Fidelity Level</label>
+      <div style="display:flex; gap:8px;">
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; text-align:center;">
+          <div style="font-size:13px; font-weight:700; color:var(--text);">L2 Basic</div>
+          <div style="font-size:9px; color:var(--muted); margin-top:2px;">Fast, lower cost</div>
+        </button>
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:none; border-radius:8px; background:var(--accent); cursor:pointer; text-align:center;" class="fidelity-active">
+          <div style="font-size:13px; font-weight:700; color:#fff;">L3 Standard</div>
+          <div style="font-size:9px; color:rgba(255,255,255,0.75); margin-top:2px;">Balanced (recommended)</div>
+        </button>
+        <button onclick="setFidelity(this)" style="flex:1; padding:10px 8px; border:1px solid var(--border); border-radius:8px; background:#fff; cursor:pointer; text-align:center;">
+          <div style="font-size:13px; font-weight:700; color:var(--text);">L4 Deep</div>
+          <div style="font-size:9px; color:var(--muted); margin-top:2px;">Maximum detail, higher cost</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Advanced Options -->
+    <div style="margin-bottom:16px;">
+      <div onclick="toggleAdvanced()" style="font-size:11px; color:var(--muted); cursor:pointer; user-select:none; margin-bottom:10px; display:flex; align-items:center; gap:4px;">
+        <span id="adv-arrow">▾</span> Advanced Options
+      </div>
+      <div id="adv-panel" style="display:grid; grid-template-columns:repeat(3, 1fr); gap:12px;">
+        <div>
+          <label class="form-label">Max Parallel Agents</label>
+          <input class="form-input" type="number" value="5">
+        </div>
+        <div>
+          <label class="form-label">Critic Score Floor</label>
+          <input class="form-input" type="number" step="0.1" value="7.0">
+        </div>
+        <div>
+          <label class="form-label">Max Revisions</label>
+          <input class="form-input" type="number" value="3">
+        </div>
+        <div>
+          <label class="form-label">Persona Count</label>
+          <input class="form-input" type="number" value="4">
+        </div>
+        <div>
+          <label class="form-label">Risk High %</label>
+          <input class="form-input" type="number" value="40">
+        </div>
+        <div>
+          <label class="form-label">Risk Mid %</label>
+          <input class="form-input" type="number" value="40">
+        </div>
+        <div>
+          <label class="form-label">Risk Low %</label>
+          <input class="form-input" type="number" value="20">
+        </div>
+        <div>
+          <label class="form-label">Geographic Scope</label>
+          <input class="form-input" type="text" value="Domestic">
+        </div>
+        <div>
+          <label class="form-label">Auto Second-Pass</label>
+          <div style="padding-top:6px;">
+            <span class="badge badge-green" style="font-size:11px; padding:4px 10px; cursor:pointer;">ON</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Run Button -->
+    <button class="btn btn-primary" style="width:100%; height:44px; font-size:14px; border-radius:8px; margin-top:24px; display:flex; align-items:center; justify-content:center; gap:8px; font-weight:600; letter-spacing:0.01em;">
+      ▶&nbsp; Run Pipeline
+    </button>
+  </div>
+
+  <!-- Right: Run Preview Card -->
+  <div style="width:300px; flex-shrink:0; background:var(--surface); border:1px solid var(--border); border-radius:12px; padding:20px;">
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:14px;">Run Preview</div>
+
+    <!-- KV Rows -->
+    <div style="font-size:12px;">
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Variants</span><span style="font-weight:600;">12</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Est. Cost</span><span style="font-weight:600;">~$2.10</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Est. Time</span><span style="font-weight:600;">~60s</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Personas</span><span style="font-weight:600;">4</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; border-bottom:1px solid var(--border); color:var(--text);">
+        <span style="color:var(--muted);">Coverage Cells</span><span style="font-weight:600;">12</span>
+      </div>
+      <div style="display:flex; justify-content:space-between; padding:10px 0; color:var(--text);">
+        <span style="color:var(--muted);">Parallel Agents</span><span style="font-weight:600;">5</span>
+      </div>
+    </div>
+
+    <hr style="border:none; border-top:1px solid var(--border); margin:4px 0 16px;">
+
+    <!-- What happens next -->
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:12px;">What happens next</div>
+    <div style="display:flex; flex-direction:column; gap:10px; font-size:13px; color:var(--text);">
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Orchestrator decomposes fraud type into dimensions</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Persona generator creates 4 criminal profiles</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#0f4c8a; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>5 agents explore coverage cells in parallel</span>
+      </div>
+      <div style="display:flex; align-items:flex-start; gap:10px;">
+        <span style="width:8px; height:8px; border-radius:50%; background:#059669; flex-shrink:0; margin-top:4px; display:inline-block;"></span>
+        <span>Critic scores and approves each variant</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+function setFidelity(btn) {
+  btn.closest('.form-group').querySelectorAll('button').forEach(function(b) {
+    b.style.background = '#fff';
+    b.style.border = '1px solid var(--border)';
+    b.querySelectorAll('div').forEach(function(d, i) {
+      d.style.color = i === 0 ? 'var(--text)' : 'var(--muted)';
+    });
+  });
+  btn.style.background = 'var(--accent)';
+  btn.style.border = 'none';
+  btn.querySelectorAll('div').forEach(function(d, i) {
+    d.style.color = i === 0 ? '#fff' : 'rgba(255,255,255,0.75)';
+  });
+}
+
+function toggleAdvanced() {
+  var panel = document.getElementById('adv-panel');
+  var arrow = document.getElementById('adv-arrow');
+  if (panel.style.display === 'none') {
+    panel.style.display = 'grid';
+    arrow.textContent = '▾';
+  } else {
+    panel.style.display = 'none';
+    arrow.textContent = '▸';
+  }
+}
+</script>
+        </div>
+
+        <!-- MONITOR VIEW -->
+        <div id="view-monitor" class="view">
+          <div style="display:flex; height:calc(100vh - 104px); overflow:hidden; margin:-24px;">
+
+  <!-- Col 1: Personas -->
+  <div style="width:180px; flex-shrink:0; background:var(--surface); border-right:1px solid var(--border); padding:12px; overflow-y:auto;">
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-bottom:12px;">Personas</div>
+
+    <!-- P01 Viktor S. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#dc2626; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">VS</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Viktor S.</div>
+        <div style="margin:3px 0;"><span class="badge badge-red" style="font-size:10px; padding:2px 7px;">High Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">3 cells · International</div>
+      </div>
+    </div>
+
+    <!-- P02 James M. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#059669; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">JM</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">James M.</div>
+        <div style="margin:3px 0;"><span class="badge badge-green" style="font-size:10px; padding:2px 7px;">Low Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">2 cells · Domestic</div>
+      </div>
+    </div>
+
+    <!-- P03 Maria C. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#d97706; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">MC</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Maria C.</div>
+        <div style="margin:3px 0;"><span class="badge badge-yellow" style="font-size:10px; padding:2px 7px;">Mid Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">4 cells · Mixed</div>
+      </div>
+    </div>
+
+    <!-- P04 David L. -->
+    <div style="display:flex; gap:10px; padding:10px; border:1px solid var(--border); border-radius:8px; margin-bottom:8px; background:#fff; align-items:flex-start;">
+      <div style="width:36px; height:36px; border-radius:50%; background:#0f4c8a; display:flex; align-items:center; justify-content:center; color:#fff; font-weight:700; font-size:13px; flex-shrink:0;">DL</div>
+      <div style="min-width:0;">
+        <div style="font-size:12px; font-weight:700; color:var(--text); white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">David L.</div>
+        <div style="margin:3px 0;"><span class="badge badge-yellow" style="font-size:10px; padding:2px 7px;">Mid Risk</span></div>
+        <div style="font-size:10px; color:var(--muted);">3 cells · Domestic</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Col 2: Coverage Matrix -->
+  <div style="flex:1; min-width:0; padding:16px; overflow-y:auto;">
+
+    <!-- Header row -->
+    <div style="display:flex; align-items:center; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+      <div style="font-size:14px; font-weight:700; color:var(--text); margin-right:4px;">Coverage Matrix</div>
+      <span class="badge badge-green" style="font-size:11px; padding:3px 10px;">8 / 12 cells — 66.7%</span>
+      <div style="display:flex; align-items:center; gap:5px; font-size:11px; color:#059669;">
+        <span style="width:7px; height:7px; border-radius:50%; background:#059669; display:inline-block; animation:pulse-dot 1.4s ease-in-out infinite;"></span>
+        Live
+      </div>
+      <div style="margin-left:auto; display:flex; gap:8px;">
+        <button class="btn btn-outline" style="font-size:12px; padding:5px 12px; color:var(--muted); border-color:var(--border);">‖ Pause</button>
+        <button class="btn" style="font-size:12px; padding:5px 12px; background:var(--red); color:#fff; border:none; border-radius:6px; cursor:pointer;">◼ Stop</button>
+      </div>
+    </div>
+
+    <!-- 4×3 Grid -->
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:8px; margin-bottom:20px;">
+
+      <!-- cell_001 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_001</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 8.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P02 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_002 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_002</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.8</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_003 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_003</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 8.4</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_004 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_004</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.2</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P04 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_005 running -->
+      <div class="cell cell-running" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; animation:pulse-cell 1.8s ease-in-out infinite;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_005</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--accent);">att.2…</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · running</div>
+        </div>
+      </div>
+
+      <!-- cell_006 assigned -->
+      <div class="cell cell-assigned" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_006</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--muted);">att.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · assigned</div>
+        </div>
+      </div>
+
+      <!-- cell_007 running -->
+      <div class="cell cell-running" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between; animation:pulse-cell 1.8s ease-in-out infinite 0.4s;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_007</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--accent);">att.1…</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P02 · running</div>
+        </div>
+      </div>
+
+      <!-- cell_008 done -->
+      <div class="cell cell-done" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_008</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:#059669;">✓ 7.9</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P01 · done</div>
+        </div>
+      </div>
+
+      <!-- cell_009 failed -->
+      <div class="cell cell-failed" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_009</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--red);">✗ 5.2</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P04 · failed</div>
+        </div>
+      </div>
+
+      <!-- cell_010 assigned -->
+      <div class="cell cell-assigned" style="min-height:80px; padding:10px; display:flex; flex-direction:column; justify-content:space-between;">
+        <div class="cell-label" style="font-size:9px; font-family:var(--mono),monospace; color:var(--muted);">cell_010</div>
+        <div>
+          <div class="cell-score" style="font-size:10px; font-weight:700; color:var(--muted);">att.1</div>
+          <div class="cell-meta" style="font-size:9px; color:var(--muted);">P03 · assigned</div>
+        </div>
+      </div>
+
+      <!-- cell_011 empty -->
+      <div class="cell cell-empty" style="min-height:80px; padding:10px; display:flex; align-items:center; justify-content:center;">
+        <div style="font-size:18px; color:var(--faint);">—</div>
+      </div>
+
+      <!-- cell_012 empty -->
+      <div class="cell cell-empty" style="min-height:80px; padding:10px; display:flex; align-items:center; justify-content:center;">
+        <div style="font-size:18px; color:var(--faint);">—</div>
+      </div>
+
+    </div>
+
+    <!-- Variant Feed -->
+    <div style="font-size:10px; text-transform:uppercase; letter-spacing:0.08em; color:var(--muted); font-weight:700; margin-bottom:10px;">Recent Variants</div>
+
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-001</span>
+      <span style="color:var(--muted);">P02</span>
+      <span style="color:var(--muted); font-size:11px;">hop=2, burst</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 8.1</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-002</span>
+      <span style="color:var(--muted);">P01</span>
+      <span style="color:var(--muted); font-size:11px;">hop=3, staggered</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 7.8</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-003</span>
+      <span style="color:var(--muted);">P03</span>
+      <span style="color:var(--muted); font-size:11px;">hop=3, burst</span>
+      <span style="margin-left:auto; font-weight:700; color:#059669;">✓ 8.4</span>
+    </div>
+    <div style="display:flex; align-items:center; gap:12px; border:1px solid var(--border); border-radius:6px; padding:8px 12px; margin-bottom:6px; font-size:12px;">
+      <span style="font-family:var(--mono),monospace; font-weight:700; color:var(--text);">V-008</span>
+      <span style="color:var(--muted);">P04</span>
+      <span style="color:var(--muted); font-size:11px;">hop=5, delayed</span>
+      <span style="margin-left:auto; font-weight:700; color:var(--red);">✗ 5.2</span>
+    </div>
+
+  </div>
+
+  <!-- Col 3: Activity Log -->
+  <div style="width:280px; flex-shrink:0; background:var(--surface); border-left:1px solid var(--border); padding:12px; overflow-y:auto; display:flex; flex-direction:column;">
+
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-bottom:10px;">Agent Activity</div>
+
+    <!-- Mono log box -->
+    <div class="mono-log" style="height:280px; overflow-y:auto; flex-shrink:0; font-size:11px; line-height:1.7;">
+      <div><span class="log-time">[14:32:01]</span> <span class="log-cell">cell_001</span>: assigned → <span class="log-ok">P02</span></div>
+      <div><span class="log-time">[14:32:04]</span> <span class="log-cell">cell_001</span>: in_progress (att.1)</div>
+      <div><span class="log-time">[14:32:18]</span> <span class="log-cell">cell_001</span>: completed <span class="log-ok">✓ 8.1</span></div>
+      <div><span class="log-time">[14:32:20]</span> <span class="log-cell">cell_002</span>: assigned → P01</div>
+      <div><span class="log-time">[14:32:24]</span> <span class="log-cell">cell_002</span>: in_progress (att.1)</div>
+      <div><span class="log-time">[14:33:02]</span> <span class="log-cell">cell_002</span>: completed <span class="log-ok">✓ 7.8</span></div>
+      <div><span class="log-time">[14:33:45]</span> <span class="log-cell">cell_005</span>: in_progress (att.2)</div>
+      <div><span class="log-time">[14:34:02]</span> <span class="log-cell">cell_009</span>: <span class="log-fail">failed ✗ 5.2</span> → queued revision</div>
+      <div><span class="log-time">[14:34:04]</span> <span class="log-cell">cell_010</span>: assigned → P03</div>
+      <div><span class="log-time">[14:34:08]</span> <span class="log-cell">cell_010</span>: in_progress (att.1)</div>
+    </div>
+
+    <!-- Agent Status -->
+    <div style="font-size:9px; text-transform:uppercase; letter-spacing:0.1em; color:var(--muted); font-weight:700; margin-top:14px; margin-bottom:8px;">Agent Status</div>
+
+    <div style="display:flex; flex-direction:column; gap:0;">
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#059669; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 1</span>
+        <span style="color:var(--muted);">· Completing V-003</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#0f4c8a; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 2</span>
+        <span style="color:var(--muted);">· Generating V-005</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#0f4c8a; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 3</span>
+        <span style="color:var(--muted);">· Planning V-006 network</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#d97706; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 4</span>
+        <span style="color:var(--muted);">· Revising V-009</span>
+      </div>
+      <div style="display:flex; align-items:center; gap:8px; font-size:11px; padding:4px 0; color:var(--text);">
+        <span style="width:7px; height:7px; border-radius:50%; background:#94a3b8; flex-shrink:0; display:inline-block;"></span>
+        <span style="font-weight:600;">Agent 5</span>
+        <span style="color:var(--muted);">· Idle</span>
+      </div>
+    </div>
+
+  </div>
+
+</div>
+
+<style>
+@keyframes pulse-dot {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+@keyframes pulse-cell {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.6; }
+}
+</style>
+        </div>
+
+        <!-- SUMMARY VIEW -->
+        <div id="view-summary" class="view">
+          <!-- ============================================================
+     SECTION 1: SUMMARY VIEW
+     ============================================================ -->
+<div class="summary-view">
+
+  <!-- Row 1: Stat Grid -->
+  <div class="stat-grid" style="margin-bottom:20px;">
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--accent,#0f4c8a);">11</div>
+      <div class="stat-label">Total Approved</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--green,#059669);">8.1</div>
+      <div class="stat-label">Mean Realism</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--accent,#0f4c8a);">7.9</div>
+      <div class="stat-label">Mean Distinctiveness</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--green,#059669);">91.7%</div>
+      <div class="stat-label">Coverage</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--text,#0f172a);">$1.84</div>
+      <div class="stat-label">Total Cost</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-val" style="color:var(--muted,#64748b);">4m 18s</div>
+      <div class="stat-label">Duration</div>
+    </div>
+  </div>
+
+  <!-- Row 2: Criminal Profiles -->
+  <div class="card" style="margin-bottom:20px;">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px;">
+      <div>
+        <span style="font-size:14px;font-weight:700;color:var(--text,#0f172a);">Criminal Profiles</span>
+        <span style="font-size:11px;color:var(--muted,#64748b);margin-left:10px;">4 personas seeded structurally different fraud logic</span>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:row;gap:12px;">
+
+      <!-- Card 1: Viktor Semenov -->
+      <div class="wanted-card" style="flex:1;min-width:0;">
+        <div class="wanted-bar high"></div>
+        <div class="wanted-body">
+          <div class="wanted-id">P-001</div>
+          <div class="wanted-name">Viktor Semenov</div>
+          <div class="wanted-spec">International routing specialist</div>
+          <div class="wanted-tags">
+            <span class="wanted-tag">ACH</span>
+            <span class="wanted-tag">Wire Transfer</span>
+            <span class="wanted-tag">Velocity Evasion</span>
+            <span class="wanted-tag">Shell LLC</span>
+          </div>
+          <div class="wanted-stats">
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">3</div>
+              <div class="wanted-stat-lbl">Cells</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">International</div>
+              <div class="wanted-stat-lbl">Geo</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">High</div>
+              <div class="wanted-stat-lbl">Risk</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">3–5</div>
+              <div class="wanted-stat-lbl">Hops</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 2: James Mitchell -->
+      <div class="wanted-card" style="flex:1;min-width:0;">
+        <div class="wanted-bar low"></div>
+        <div class="wanted-body">
+          <div class="wanted-id">P-002</div>
+          <div class="wanted-name">James Mitchell</div>
+          <div class="wanted-spec">Conservative domestic mule handler</div>
+          <div class="wanted-tags">
+            <span class="wanted-tag">Zelle</span>
+            <span class="wanted-tag">P2P</span>
+            <span class="wanted-tag">Structuring</span>
+            <span class="wanted-tag">Slow timing</span>
+          </div>
+          <div class="wanted-stats">
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">2</div>
+              <div class="wanted-stat-lbl">Cells</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Domestic</div>
+              <div class="wanted-stat-lbl">Geo</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Low</div>
+              <div class="wanted-stat-lbl">Risk</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">2–3</div>
+              <div class="wanted-stat-lbl">Hops</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 3: Maria Chen -->
+      <div class="wanted-card" style="flex:1;min-width:0;">
+        <div class="wanted-bar mid"></div>
+        <div class="wanted-body">
+          <div class="wanted-id">P-003</div>
+          <div class="wanted-name">Maria Chen</div>
+          <div class="wanted-spec">Crypto extraction coordinator</div>
+          <div class="wanted-tags">
+            <span class="wanted-tag">Crypto</span>
+            <span class="wanted-tag">DEX</span>
+            <span class="wanted-tag">Layering</span>
+            <span class="wanted-tag">Mixed rails</span>
+          </div>
+          <div class="wanted-stats">
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">4</div>
+              <div class="wanted-stat-lbl">Cells</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Mixed</div>
+              <div class="wanted-stat-lbl">Geo</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Mid</div>
+              <div class="wanted-stat-lbl">Risk</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">3–4</div>
+              <div class="wanted-stat-lbl">Hops</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Card 4: David Laurent -->
+      <div class="wanted-card" style="flex:1;min-width:0;">
+        <div class="wanted-bar mid"></div>
+        <div class="wanted-body">
+          <div class="wanted-id">P-004</div>
+          <div class="wanted-name">David Laurent</div>
+          <div class="wanted-spec">Shell company network operator</div>
+          <div class="wanted-tags">
+            <span class="wanted-tag">Wire</span>
+            <span class="wanted-tag">ACH</span>
+            <span class="wanted-tag">Shell LLC</span>
+            <span class="wanted-tag">International</span>
+          </div>
+          <div class="wanted-stats">
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">3</div>
+              <div class="wanted-stat-lbl">Cells</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Domestic</div>
+              <div class="wanted-stat-lbl">Geo</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">Mid</div>
+              <div class="wanted-stat-lbl">Risk</div>
+            </div>
+            <div class="wanted-stat">
+              <div class="wanted-stat-val">4–5</div>
+              <div class="wanted-stat-lbl">Hops</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- Row 3: Risk Distribution -->
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px;">
+      <div>
+        <span style="font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#64748b);">Risk Distribution</span>
+        <span style="font-size:10px;color:var(--muted,#64748b);margin-left:10px;">Configured target vs actual output</span>
+      </div>
+    </div>
+    <svg width="440" height="140" viewBox="0 0 440 140" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+
+      <!-- Y-axis ticks -->
+      <line x1="40" y1="10" x2="44" y2="10" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="40" y1="60" x2="44" y2="60" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="40" y1="110" x2="44" y2="110" stroke="#e2e8f0" stroke-width="1"/>
+      <text x="36" y="13" font-size="8" fill="#94a3b8" text-anchor="end">100%</text>
+      <text x="36" y="63" font-size="8" fill="#94a3b8" text-anchor="end">50%</text>
+      <text x="36" y="113" font-size="8" fill="#94a3b8" text-anchor="end">0%</text>
+      <!-- Y-axis gridlines -->
+      <line x1="44" y1="10" x2="420" y2="10" stroke="#f1f5f9" stroke-width="1"/>
+      <line x1="44" y1="60" x2="420" y2="60" stroke="#f1f5f9" stroke-width="1"/>
+      <!-- X-axis line -->
+      <line x1="44" y1="110" x2="420" y2="110" stroke="#e2e8f0" stroke-width="1.5"/>
+
+      <!-- Group: High (x=60) — configured 80px, actual 72px -->
+      <!-- Configured bar (low opacity) -->
+      <rect x="46" y="30" width="28" height="80" fill="#dc2626" fill-opacity="0.25" rx="3"/>
+      <!-- Actual bar (solid) -->
+      <rect x="80" y="38" width="28" height="72" fill="#dc2626" rx="3"/>
+      <!-- Group label -->
+      <text x="79" y="128" font-size="11" fill="#64748b" text-anchor="middle">High</text>
+
+      <!-- Group: Mid (x=200) — configured 80px, actual 88px -->
+      <rect x="186" y="30" width="28" height="80" fill="#d97706" fill-opacity="0.25" rx="3"/>
+      <rect x="220" y="22" width="28" height="88" fill="#d97706" rx="3"/>
+      <text x="219" y="128" font-size="11" fill="#64748b" text-anchor="middle">Mid</text>
+
+      <!-- Group: Low (x=340) — configured 40px, actual 40px -->
+      <rect x="326" y="70" width="28" height="40" fill="#059669" fill-opacity="0.25" rx="3"/>
+      <rect x="360" y="70" width="28" height="40" fill="#059669" rx="3"/>
+      <text x="359" y="128" font-size="11" fill="#64748b" text-anchor="middle">Low</text>
+
+      <!-- Legend -->
+      <rect x="270" y="4" width="10" height="10" fill="#6b7280" fill-opacity="0.3" rx="1"/>
+      <text x="284" y="13" font-size="10" fill="#64748b">Configured</text>
+      <rect x="345" y="4" width="10" height="10" fill="#6b7280" rx="1"/>
+      <text x="359" y="13" font-size="10" fill="#64748b">Actual</text>
+
+    </svg>
+  </div>
+
+</div>
+<!-- ============================================================
+     END SECTION 1: SUMMARY VIEW
+     ============================================================ -->
+
+
+<!-- ============================================================
+        </div>
+
+        <!-- QUALITY GATE VIEW -->
+        <div id="view-quality" class="view">
+          <!-- ============================================================
+     QUALITY GATE VIEW
+     ============================================================ -->
+<div style="display:flex;gap:20px;width:100%;box-sizing:border-box;">
+
+  <!-- LEFT: Quality Battlefield SVG (58%) -->
+  <div style="flex:0 0 58%;min-width:0;" class="card">
+    <div style="margin-bottom:8px;">
+      <div class="card-title" style="font-size:13px;font-weight:700;margin-bottom:2px;">Quality Battlefield</div>
+      <div style="font-size:10px;color:var(--muted,#64748b);">Realism vs. Distinctiveness across all variants — revision trails shown</div>
+    </div>
+    <svg width="100%" height="380" viewBox="0 0 520 380" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <filter id="ttShadow" x="-20%" y="-20%" width="140%" height="140%">
+          <feDropShadow dx="0" dy="1" stdDeviation="2" flood-color="#00000018"/>
+        </filter>
+      </defs>
+
+      <!-- Background -->
+      <rect width="520" height="380" fill="white"/>
+
+      <!-- Chart area: left=50, top=20, right=470, bottom=340 → 420×320 -->
+
+      <!-- Gridlines: horizontal at distinctiveness 2,4,6,8,10 → y = 340 - score×32 -->
+      <!-- score 2 → y=276, 4→212, 6→148, 8→84, 10→20 -->
+      <line x1="50" y1="276" x2="470" y2="276" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="50" y1="212" x2="470" y2="212" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="50" y1="148" x2="470" y2="148" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="50" y1="84"  x2="470" y2="84"  stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="50" y1="20"  x2="470" y2="20"  stroke="#e2e8f0" stroke-width="1"/>
+
+      <!-- Vertical gridlines at realism 2,4,6,8,10 → x = 50 + score×45 -->
+      <!-- 2→140, 4→230, 6→320, 8→410 (approx: 50+2*45=140, 50+4*45=230, 50+6*45=320, 50+8*45=410, 50+10*45=500... let's recalc: 470-50=420, /10=42 per unit) -->
+      <!-- Use x = 50 + score*42 → 2→134, 4→218, 6→302, 8→386, 10→470 -->
+      <!-- For consistency with dot positions specified in prompt (x=50+score*45), keep 45 but clip at 470 -->
+      <line x1="140" y1="20" x2="140" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="230" y1="20" x2="230" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="320" y1="20" x2="320" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="410" y1="20" x2="410" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+      <line x1="470" y1="20" x2="470" y2="340" stroke="#e2e8f0" stroke-width="1"/>
+
+      <!-- Pass Zone: x from 315 (score 7.0) to 470, y from 0 to 224 (score 7.0 from top → y=340-7*32=116) -->
+      <!-- y for distinct=7 → y=340-7*32=340-224=116 -->
+      <rect x="315" y="20" width="155" height="96" fill="#ecfdf5" fill-opacity="0.7" stroke="#059669" stroke-dasharray="4,3" stroke-width="1"/>
+      <text x="466" y="32" text-anchor="end" font-size="9" fill="#059669" font-weight="600">Pass Zone ✓</text>
+
+      <!-- Score floor reference lines -->
+      <!-- x=315 (realism=7): vertical dashed red -->
+      <line x1="315" y1="20" x2="315" y2="340" stroke="#dc2626" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4,3"/>
+      <!-- y=116 (distinct=7): horizontal dashed red -->
+      <line x1="50" y1="116" x2="470" y2="116" stroke="#dc2626" stroke-opacity="0.35" stroke-width="1" stroke-dasharray="4,3"/>
+
+      <!-- REVISION TRAILS -->
+      <!-- x = 50 + score*45, y = 340 - score*32 -->
+
+      <!-- V-007: ghost (4.0→x=230, 7.1→y=113) → final green (8.1→x=415, 7.4→y=103) -->
+      <!-- Recalc: x=50+4*45=230, y=340-7.1*32=340-227.2=112.8≈113 -->
+      <!-- final: x=50+8.1*45=50+364.5=414.5≈415, y=340-7.4*32=340-236.8=103.2≈103 -->
+      <circle cx="230" cy="113" r="5" fill="#94a3b8" fill-opacity="0.4"/>
+      <line x1="230" y1="113" x2="415" y2="103" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <!-- ghost arrow dot -->
+      <circle cx="415" cy="103" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+
+      <!-- V-009: ghost1 (3.5→x=207.5, 5.5→y=164) → ghost2 (5.8→x=311, 6.2→y=141.6) → final (8.0→x=410, 7.2→y=109.6) -->
+      <circle cx="208" cy="164" r="5" fill="#94a3b8" fill-opacity="0.4"/>
+      <circle cx="311" cy="142" r="5" fill="#94a3b8" fill-opacity="0.4"/>
+      <line x1="208" y1="164" x2="311" y2="142" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <line x1="311" y1="142" x2="410" y2="110" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <circle cx="410" cy="110" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+
+      <!-- V-011: ghost (5.0→x=275, 4.5→y=196) → final RED (6.5→x=342.5, 6.8→y=122.4) -->
+      <circle cx="275" cy="196" r="5" fill="#94a3b8" fill-opacity="0.4"/>
+      <line x1="275" y1="196" x2="343" y2="122" stroke="#94a3b8" stroke-width="1.5" stroke-dasharray="4,3"/>
+      <circle cx="343" cy="122" r="7" fill="#dc2626" stroke="white" stroke-width="1.5"/>
+
+      <!-- ALL 12 FINAL DOTS (using prompt-specified coordinates) -->
+      <!-- Green passed dots (9 dots from first set, minus V-007 and V-009 already drawn above) -->
+      <!-- Coordinates from prompt: -->
+      <!-- (7.2,7.5)→(374,100), skip since we have trail dots at 415 and 410 for V-007/V-009 -->
+      <!-- Let's draw all 9 green from prompt spec, they may overlap with trail endpoints which is fine -->
+      <circle cx="374" cy="100" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <!-- (8.1,7.4)→(415,104) - slight variation from trail endpoint, draw both -->
+      <!-- skip, already at 415,103 from trail -->
+      <circle cx="401" cy="78"  r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <circle cx="428" cy="91"  r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <circle cx="455" cy="68"  r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <circle cx="388" cy="52"  r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <circle cx="446" cy="107" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <circle cx="379" cy="59"  r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+      <!-- (8.0,7.2)→(410,110) - near V-009 trail end -->
+      <circle cx="410" cy="110" r="7" fill="#059669" stroke="white" stroke-width="1.5"/>
+
+      <!-- Red failed dots -->
+      <!-- (6.5,6.8)→(343,122) - V-011 already drawn from trail -->
+      <circle cx="343" cy="122" r="7" fill="#dc2626" stroke="white" stroke-width="1.5"/>
+      <!-- (5.2,5.0)→(284,180) -->
+      <circle cx="284" cy="180" r="7" fill="#dc2626" stroke="white" stroke-width="1.5"/>
+
+      <!-- Tooltip mock near (8.4, 7.8) = (428, 91) -->
+      <rect x="430" y="50" width="120" height="62" fill="white" stroke="#e2e8f0" rx="5" filter="url(#ttShadow)"/>
+      <text x="438" y="63"  font-size="9" font-weight="700" fill="#0f172a">V-003 · P03</text>
+      <text x="438" y="76"  font-size="9" fill="#0f172a">Realism: 8.4</text>
+      <text x="438" y="89"  font-size="9" fill="#0f172a">Distinct: 7.8</text>
+      <text x="438" y="102" font-size="9" fill="#059669">✓ Passed att.1</text>
+      <!-- Connector line from tooltip to dot -->
+      <line x1="430" y1="91" x2="435" y2="91" stroke="#94a3b8" stroke-width="1"/>
+
+      <!-- X-axis -->
+      <line x1="50" y1="340" x2="470" y2="340" stroke="#94a3b8" stroke-width="1"/>
+      <!-- X ticks at score 0,2,4,6,8,10 → x = 50+score*45 (capped) -->
+      <line x1="50"  y1="340" x2="50"  y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="140" y1="340" x2="140" y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="230" y1="340" x2="230" y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="320" y1="340" x2="320" y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="410" y1="340" x2="410" y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="470" y1="340" x2="470" y2="345" stroke="#94a3b8" stroke-width="1"/>
+      <text x="50"  y="355" text-anchor="middle" font-size="9" fill="#94a3b8">0</text>
+      <text x="140" y="355" text-anchor="middle" font-size="9" fill="#94a3b8">2</text>
+      <text x="230" y="355" text-anchor="middle" font-size="9" fill="#94a3b8">4</text>
+      <text x="320" y="355" text-anchor="middle" font-size="9" fill="#94a3b8">6</text>
+      <text x="410" y="355" text-anchor="middle" font-size="9" fill="#94a3b8">8</text>
+      <text x="470" y="355" text-anchor="middle" font-size="9" fill="#94a3b8">10</text>
+      <text x="260" y="372" text-anchor="middle" font-size="10" fill="#64748b">Realism Score</text>
+
+      <!-- Y-axis -->
+      <line x1="50" y1="20" x2="50" y2="340" stroke="#94a3b8" stroke-width="1"/>
+      <!-- Y ticks at score 0,2,4,6,8,10 → y = 340 - score*32 -->
+      <line x1="50" y1="340" x2="45" y2="340" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="50" y1="276" x2="45" y2="276" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="50" y1="212" x2="45" y2="212" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="50" y1="148" x2="45" y2="148" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="50" y1="84"  x2="45" y2="84"  stroke="#94a3b8" stroke-width="1"/>
+      <line x1="50" y1="20"  x2="45" y2="20"  stroke="#94a3b8" stroke-width="1"/>
+      <text x="42" y="343" text-anchor="end" font-size="9" fill="#94a3b8">0</text>
+      <text x="42" y="279" text-anchor="end" font-size="9" fill="#94a3b8">2</text>
+      <text x="42" y="215" text-anchor="end" font-size="9" fill="#94a3b8">4</text>
+      <text x="42" y="151" text-anchor="end" font-size="9" fill="#94a3b8">6</text>
+      <text x="42" y="87"  text-anchor="end" font-size="9" fill="#94a3b8">8</text>
+      <text x="42" y="23"  text-anchor="end" font-size="9" fill="#94a3b8">10</text>
+      <!-- Y-axis label rotated -->
+      <text transform="rotate(-90,14,180)" x="14" y="180" text-anchor="middle" font-size="10" fill="#64748b">Distinctiveness</text>
+    </svg>
+  </div>
+
+  <!-- RIGHT: Donut + Issues Table (42%) -->
+  <div style="flex:0 0 42%;min-width:0;display:flex;flex-direction:column;gap:16px;">
+
+    <!-- Pass/Fail Donut -->
+    <div class="card">
+      <div class="card-title" style="font-size:12px;margin-bottom:8px;">Pass / Fail Distribution</div>
+      <div style="display:flex;align-items:center;gap:20px;">
+        <!-- Donut SVG -->
+        <svg width="130" height="130" viewBox="0 0 180 180" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;">
+          <!-- r=55, circumference = 2π×55 ≈ 345.6 -->
+          <!-- Background track -->
+          <circle cx="90" cy="90" r="55" fill="none" stroke="#f1f5f9" stroke-width="20"/>
+          <!-- Green: 8/12 = 230.4 of 345.6. Start at top → rotate -90deg = 270deg -->
+          <circle cx="90" cy="90" r="55" fill="none"
+                  stroke="#059669" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="230.4 345.6"
+                  transform="rotate(-90 90 90)"/>
+          <!-- Yellow: 3/12 = 86.4, starts after green (230.4/345.6 × 360 = 240deg) -->
+          <circle cx="90" cy="90" r="55" fill="none"
+                  stroke="#d97706" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="86.4 345.6"
+                  transform="rotate(150 90 90)"/>
+          <!-- Red: 1/12 = 28.8, starts after yellow (150 + 86.4/345.6×360 = 150+90=240deg) -->
+          <circle cx="90" cy="90" r="55" fill="none"
+                  stroke="#dc2626" stroke-width="20" stroke-linecap="round"
+                  stroke-dasharray="28.8 345.6"
+                  transform="rotate(240 90 90)"/>
+          <!-- Center labels -->
+          <text x="90" y="85" text-anchor="middle" font-size="22" font-weight="700" fill="#0f4c8a">11</text>
+          <text x="90" y="100" text-anchor="middle" font-size="10" fill="#64748b">approved</text>
+        </svg>
+        <!-- Legend -->
+        <div style="display:flex;flex-direction:column;gap:6px;font-size:10px;color:#0f172a;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:#059669;flex-shrink:0;display:inline-block;"></span>
+            <span>Passed first attempt</span>
+            <span style="margin-left:4px;font-weight:700;">8</span>
+            <span style="color:#64748b;">· 66.7%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:#d97706;flex-shrink:0;display:inline-block;"></span>
+            <span>After revision</span>
+            <span style="margin-left:4px;font-weight:700;">3</span>
+            <span style="color:#64748b;">· 25.0%</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span style="width:10px;height:10px;border-radius:2px;background:#dc2626;flex-shrink:0;display:inline-block;"></span>
+            <span>Permanently failed</span>
+            <span style="margin-left:4px;font-weight:700;">1</span>
+            <span style="color:#64748b;">· 8.3%</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quality Issues Table -->
+    <div class="card" style="flex:1;min-width:0;">
+      <div style="font-size:10px;text-transform:uppercase;color:var(--muted,#64748b);letter-spacing:0.05em;font-weight:600;margin-bottom:8px;">Quality Issues</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;font-size:10px;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="padding:5px 6px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Variant</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Gate</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Issue</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Severity</th>
+              <th style="padding:5px 6px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Resolution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <!-- Warning row -->
+            <tr style="background:#fffbeb;">
+              <td style="padding:5px 6px;font-weight:600;color:#0f172a;">V-007</td>
+              <td style="padding:5px 6px;color:#64748b;">Critic</td>
+              <td style="padding:5px 6px;color:#0f172a;">Timing too uniform</td>
+              <td style="padding:5px 6px;"><span style="color:#d97706;font-size:10px;">⚠ Warning</span></td>
+              <td style="padding:5px 6px;"><span style="color:#059669;font-size:10px;">Revised → ✓</span></td>
+            </tr>
+            <!-- Warning row -->
+            <tr style="background:#fffbeb;">
+              <td style="padding:5px 6px;font-weight:600;color:#0f172a;">V-009</td>
+              <td style="padding:5px 6px;color:#64748b;">Critic</td>
+              <td style="padding:5px 6px;color:#0f172a;">Round-number amounts</td>
+              <td style="padding:5px 6px;"><span style="color:#d97706;font-size:10px;">⚠ Warning</span></td>
+              <td style="padding:5px 6px;"><span style="color:#059669;font-size:10px;">Revised → ✓</span></td>
+            </tr>
+            <!-- Error row -->
+            <tr style="background:#fef2f2;">
+              <td style="padding:5px 6px;font-weight:600;color:#0f172a;">V-009</td>
+              <td style="padding:5px 6px;color:#64748b;">Schema</td>
+              <td style="padding:5px 6px;color:#0f172a;">Amount floor violation</td>
+              <td style="padding:5px 6px;"><span style="color:#dc2626;font-size:10px;">✗ Error</span></td>
+              <td style="padding:5px 6px;"><span style="color:#059669;font-size:10px;">Auto-corrected</span></td>
+            </tr>
+            <!-- Warning row -->
+            <tr style="background:#fffbeb;">
+              <td style="padding:5px 6px;font-weight:600;color:#0f172a;">V-011</td>
+              <td style="padding:5px 6px;color:#64748b;">Critic</td>
+              <td style="padding:5px 6px;color:#0f172a;">Realism 5.8 &lt; floor</td>
+              <td style="padding:5px 6px;"><span style="color:#d97706;font-size:10px;">⚠ Warning</span></td>
+              <td style="padding:5px 6px;"><span style="color:#059669;font-size:10px;">Revised → ✓</span></td>
+            </tr>
+            <!-- Error row -->
+            <tr style="background:#fef2f2;">
+              <td style="padding:5px 6px;font-weight:600;color:#0f172a;">V-012</td>
+              <td style="padding:5px 6px;color:#64748b;">Critic</td>
+              <td style="padding:5px 6px;color:#0f172a;">Persona inconsistency</td>
+              <td style="padding:5px 6px;"><span style="color:#dc2626;font-size:10px;">✗ Error</span></td>
+              <td style="padding:5px 6px;"><span style="color:#dc2626;font-size:10px;font-weight:600;">Discarded</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- ============================================================
+     END QUALITY GATE VIEW
+     ============================================================ -->
+
+
+<!-- ============================================================
+        </div>
+
+        <!-- OPERATIONS VIEW -->
+        <div id="view-operations" class="view">
+          ============================================================ -->
+<div style="margin-top:24px;">
+
+  <!-- Phase Legend -->
+  <div style="display:flex;flex-wrap:wrap;gap:16px;margin-bottom:16px;padding:10px 14px;background:var(--surface,#f8fafc);border:1px solid var(--border,#e2e8f0);border-radius:8px;align-items:center;">
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#7c3aed;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Persona Analysis</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#0f4c8a;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Network Planning</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#0891b2;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Participant Profiles</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#ea580c;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Transaction Gen</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#d97706;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Self-Review</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#059669;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Schema Validation</span>
+    </div>
+    <div style="display:flex;align-items:center;gap:5px;">
+      <span style="width:10px;height:10px;border-radius:2px;background:#dc2626;display:inline-block;flex-shrink:0;"></span>
+      <span style="font-size:10px;color:#0f172a;">Critic Scoring</span>
+    </div>
+  </div>
+
+  <!-- Pipeline Waterfall -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-title" style="font-size:12px;margin-bottom:8px;">Pipeline Waterfall</div>
+    <!--
+      SVG: viewBox 820×300
+      Left margin=90 (labels), right=20, top=20, bottom=30
+      Chart area: x from 90 to 800 = 710px wide, y from 20 to 270 = 250px tall
+      Time scale: 710/140 = 5.071px per second
+      Row height=26px, gap=4px → row pitch=30px
+      Row top positions: row0=20, row1=50, row2=80, row3=110, row4=140, row5=170, row6=200 (V-007-r1 + r2), row7=230
+      px(t) = 90 + t * 5.071
+      py(row) = 20 + row * 30
+    -->
+    <svg width="100%" height="300" viewBox="0 0 820 300" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+
+      <!-- Alternating row backgrounds -->
+      <rect x="90" y="20"  width="710" height="26" fill="#f8fafc"/>
+      <rect x="90" y="50"  width="710" height="26" fill="white"/>
+      <rect x="90" y="80"  width="710" height="26" fill="#f8fafc"/>
+      <rect x="90" y="110" width="710" height="26" fill="white"/>
+      <rect x="90" y="140" width="710" height="26" fill="#f8fafc"/>
+      <rect x="90" y="170" width="710" height="26" fill="white"/>
+      <rect x="90" y="200" width="710" height="26" fill="#f8fafc"/>
+      <rect x="90" y="230" width="710" height="26" fill="white"/>
+
+      <!--
+        Helper: px(t) = 90 + t*5.071
+        Segments: x=px(start), width=dur*5.071
+
+        V-001 row=0, y=20:
+        [0,8,pur],[8,6,acc],[14,12,cyn],[26,14,ora],[40,5,yel],[45,2,grn],[47,4,red]
+      -->
+      <!-- V-001 row y=20 -->
+      <text x="86" y="37" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-001</text>
+      <rect x="90"   y="23" width="40.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="130.6" y="23" width="30.4"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="161.0" y="23" width="60.9"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="221.8" y="23" width="71.0"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="292.8" y="23" width="25.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="318.2" y="23" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="328.3" y="23" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="354"  y="37" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- V-002 row y=50 -->
+      <text x="86" y="67" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-002</text>
+      <rect x="100.1" y="53" width="45.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="145.7" y="53" width="35.5"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="181.3" y="53" width="65.9"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="247.2" y="53" width="76.1"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="323.2" y="53" width="30.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="353.7" y="53" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="363.8" y="53" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="389"  y="67" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- V-003 row y=80 -->
+      <text x="86" y="97" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-003</text>
+      <rect x="95.1"  y="83" width="50.7"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="145.8" y="83" width="40.6"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="186.4" y="83" width="71.0"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="257.3" y="83" width="81.1"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="338.5" y="83" width="35.5"  height="20" rx="2" fill="#d97706"/>
+      <rect x="374.0" y="83" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="384.1" y="83" width="25.4"  height="20" rx="2" fill="#dc2626"/>
+      <text x="414"  y="97" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- V-004 row y=110 -->
+      <text x="86" y="127" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-004</text>
+      <rect x="105.2" y="113" width="40.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="145.8" y="113" width="30.4"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="176.2" y="113" width="55.8"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="232.0" y="113" width="65.9"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="297.9" y="113" width="25.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="323.2" y="113" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="333.4" y="113" width="15.2"  height="20" rx="2" fill="#dc2626"/>
+      <text x="353"  y="127" font-size="11" fill="#dc2626" font-weight="700">✗</text>
+
+      <!-- V-005 row y=140 -->
+      <text x="86" y="157" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-005</text>
+      <rect x="115.4" y="143" width="45.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="161.0" y="143" width="35.5"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="196.5" y="143" width="60.9"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="257.3" y="143" width="71.0"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="328.3" y="143" width="25.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="353.7" y="143" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="363.8" y="143" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="389"  y="157" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- V-006 row y=170 -->
+      <text x="86" y="187" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-006</text>
+      <rect x="130.6" y="173" width="40.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="171.1" y="173" width="30.4"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="201.6" y="173" width="65.9"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="267.4" y="173" width="76.1"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="343.5" y="173" width="30.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="374.0" y="173" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="384.1" y="173" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="409"  y="187" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- V-007 row y=200 (r1 faded + r2 full) -->
+      <text x="86" y="217" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-007</text>
+      <!-- r1 faded segments [10,10,pur],[20,8,acc],[28,14,cyn],[42,15,ora],[57,6,yel],[63,2,grn],[65,4,red] -->
+      <rect x="140.7" y="203" width="50.7"  height="20" rx="2" fill="#7c3aed" opacity="0.45"/>
+      <rect x="191.4" y="203" width="40.6"  height="20" rx="2" fill="#0f4c8a" opacity="0.45"/>
+      <rect x="232.0" y="203" width="71.0"  height="20" rx="2" fill="#0891b2" opacity="0.45"/>
+      <rect x="303.0" y="203" width="76.1"  height="20" rx="2" fill="#ea580c" opacity="0.45"/>
+      <rect x="379.0" y="203" width="30.4"  height="20" rx="2" fill="#d97706" opacity="0.45"/>
+      <rect x="409.5" y="203" width="10.1"  height="20" rx="2" fill="#059669" opacity="0.45"/>
+      <rect x="419.6" y="203" width="20.3"  height="20" rx="2" fill="#dc2626" opacity="0.45"/>
+      <!-- Gap [69-77] → x from 90+69*5.071=440 to 90+77*5.071=481 → dashed gap rect -->
+      <rect x="440" y="203" width="40" height="20" rx="2" fill="none" stroke="#94a3b8" stroke-dasharray="4,3" stroke-width="1"/>
+      <!-- r2 segments [77,5,pur],[82,4,acc],[86,8,cyn],[94,10,ora],[104,4,yel],[108,2,grn],[110,4,red] -->
+      <rect x="480.5" y="203" width="25.4"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="505.8" y="203" width="20.3"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="526.1" y="203" width="40.6"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="566.7" y="203" width="50.7"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="617.4" y="203" width="20.3"  height="20" rx="2" fill="#d97706"/>
+      <rect x="637.7" y="203" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="647.8" y="203" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="672"  y="217" font-size="11" fill="#059669" font-weight="700">✓</text>
+      <!-- REVISED badge -->
+      <rect x="676" y="204" width="44" height="15" rx="3" fill="#d97706"/>
+      <text x="698" y="215" text-anchor="middle" font-size="8" fill="white" font-weight="700">REVISED</text>
+
+      <!-- V-008 row y=230 -->
+      <text x="86" y="247" text-anchor="end" font-size="10" font-family="monospace" fill="#64748b">V-008</text>
+      <rect x="150.9" y="233" width="45.6"  height="20" rx="2" fill="#7c3aed"/>
+      <rect x="196.5" y="233" width="35.5"  height="20" rx="2" fill="#0f4c8a"/>
+      <rect x="232.0" y="233" width="65.9"  height="20" rx="2" fill="#0891b2"/>
+      <rect x="297.9" y="233" width="71.0"  height="20" rx="2" fill="#ea580c"/>
+      <rect x="368.8" y="233" width="25.4"  height="20" rx="2" fill="#d97706"/>
+      <rect x="394.3" y="233" width="10.1"  height="20" rx="2" fill="#059669"/>
+      <rect x="404.3" y="233" width="20.3"  height="20" rx="2" fill="#dc2626"/>
+      <text x="429"  y="247" font-size="11" fill="#059669" font-weight="700">✓</text>
+
+      <!-- Time axis bottom: y=270 -->
+      <line x1="90" y1="270" x2="800" y2="270" stroke="#94a3b8" stroke-width="1"/>
+      <!-- Ticks at 0,20,40,60,80,100,120,140 → px = 90 + t*5.071 -->
+      <!-- 0→90, 20→191.4, 40→292.8, 60→394.3, 80→495.7, 100→597.1, 120→698.6, 140→800 -->
+      <line x1="90"    y1="270" x2="90"    y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="191.4" y1="270" x2="191.4" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="292.8" y1="270" x2="292.8" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="394.3" y1="270" x2="394.3" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="495.7" y1="270" x2="495.7" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="597.1" y1="270" x2="597.1" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="698.6" y1="270" x2="698.6" y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <line x1="800"   y1="270" x2="800"   y2="275" stroke="#94a3b8" stroke-width="1"/>
+      <text x="90"    y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">0</text>
+      <text x="191.4" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">20</text>
+      <text x="292.8" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">40</text>
+      <text x="394.3" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">60</text>
+      <text x="495.7" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">80</text>
+      <text x="597.1" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">100</text>
+      <text x="698.6" y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">120</text>
+      <text x="800"   y="285" text-anchor="middle" font-size="9" font-family="monospace" fill="#94a3b8">140</text>
+      <text x="445"   y="298" text-anchor="middle" font-size="9" fill="#64748b">Time (seconds)</text>
+
+    </svg>
+  </div>
+
+  <!-- Two-col below waterfall -->
+  <div style="display:flex;gap:16px;margin-top:0;">
+
+    <!-- LEFT: Cost Sparkline -->
+    <div class="card" style="flex:1;min-width:0;">
+      <div style="font-size:10px;text-transform:uppercase;color:var(--muted,#64748b);letter-spacing:0.05em;font-weight:600;margin-bottom:8px;">Cost Accumulation</div>
+      <svg width="100%" height="80" viewBox="0 0 400 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" style="display:block;">
+        <!-- Fill area -->
+        <polygon
+          points="0,70 49,68 98,60 147,48 196,35 245,24 294,16 343,11 371,9 400,8 400,80 0,80"
+          fill="#e8f0fa" fill-opacity="0.5"/>
+        <!-- Cost line (S-curve rising) -->
+        <polyline
+          points="0,70 49,68 98,60 147,48 196,35 245,24 294,16 343,11 371,9"
+          fill="none" stroke="#0f4c8a" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+        <!-- $5.00 cap dashed red line at y=3 -->
+        <line x1="0" y1="3" x2="400" y2="3" stroke="#dc2626" stroke-dasharray="5,4" stroke-width="1"/>
+        <text x="395" y="11" text-anchor="end" font-size="8" fill="#dc2626">$5.00 cap</text>
+        <!-- Labels -->
+        <text x="4" y="78" font-size="8" fill="#64748b">$0</text>
+        <text x="340" y="24" font-size="8" fill="#059669" font-weight="600">$1.84</text>
+        <!-- Current value dot -->
+        <circle cx="371" cy="9" r="3" fill="#0f4c8a"/>
+      </svg>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:#64748b;margin-top:4px;">
+        <span>V-001 start</span>
+        <span style="color:#059669;font-weight:600;">Current: $1.84</span>
+        <span>Cap: $5.00</span>
+      </div>
+    </div>
+
+    <!-- RIGHT: Error Log -->
+    <div class="card" style="flex:1;min-width:0;">
+      <div style="font-size:10px;text-transform:uppercase;color:var(--muted,#64748b);letter-spacing:0.05em;font-weight:600;margin-bottom:8px;">Error Log</div>
+      <div style="overflow-x:auto;">
+        <table class="data-table" style="width:100%;font-size:10px;border-collapse:collapse;">
+          <thead>
+            <tr>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Time</th>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Stage</th>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Variant</th>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Sev</th>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Message</th>
+              <th style="padding:4px 5px;text-align:left;font-weight:600;color:#64748b;border-bottom:1px solid #e2e8f0;white-space:nowrap;">Resolution</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr style="background:#fffbeb;">
+              <td style="padding:4px 5px;font-family:monospace;font-size:9px;color:#64748b;white-space:nowrap;">14:33:45</td>
+              <td style="padding:4px 5px;color:#0f172a;">Critic</td>
+              <td style="padding:4px 5px;font-weight:600;color:#0f172a;">V-007</td>
+              <td style="padding:4px 5px;"><span style="color:#d97706;">⚠</span></td>
+              <td style="padding:4px 5px;color:#0f172a;white-space:nowrap;">Realism 5.8 &lt; 7.0</td>
+              <td style="padding:4px 5px;color:#64748b;white-space:nowrap;">Revision queued</td>
+            </tr>
+            <tr style="background:#fffbeb;">
+              <td style="padding:4px 5px;font-family:monospace;font-size:9px;color:#64748b;white-space:nowrap;">14:34:02</td>
+              <td style="padding:4px 5px;color:#0f172a;">Schema</td>
+              <td style="padding:4px 5px;font-weight:600;color:#0f172a;">V-009</td>
+              <td style="padding:4px 5px;"><span style="color:#d97706;">⚠</span></td>
+              <td style="padding:4px 5px;color:#0f172a;white-space:nowrap;">Amount $0 floor</td>
+              <td style="padding:4px 5px;color:#059669;white-space:nowrap;">Auto-corrected</td>
+            </tr>
+            <tr style="background:#fffbeb;">
+              <td style="padding:4px 5px;font-family:monospace;font-size:9px;color:#64748b;white-space:nowrap;">14:34:58</td>
+              <td style="padding:4px 5px;color:#0f172a;">Critic</td>
+              <td style="padding:4px 5px;font-weight:600;color:#0f172a;">V-009</td>
+              <td style="padding:4px 5px;"><span style="color:#d97706;">⚠</span></td>
+              <td style="padding:4px 5px;color:#0f172a;white-space:nowrap;">Round numbers</td>
+              <td style="padding:4px 5px;color:#64748b;white-space:nowrap;">Revision queued</td>
+            </tr>
+            <tr style="background:#fef2f2;">
+              <td style="padding:4px 5px;font-family:monospace;font-size:9px;color:#64748b;white-space:nowrap;">14:35:10</td>
+              <td style="padding:4px 5px;color:#0f172a;">Critic</td>
+              <td style="padding:4px 5px;font-weight:600;color:#0f172a;">V-012</td>
+              <td style="padding:4px 5px;"><span style="color:#dc2626;">✗</span></td>
+              <td style="padding:4px 5px;color:#0f172a;white-space:nowrap;">Persona mismatch</td>
+              <td style="padding:4px 5px;color:#dc2626;font-weight:600;white-space:nowrap;">Discarded</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+</div>
+<!-- ============================================================
+     END OPERATIONS VIEW
+     ============================================================ -->
+        </div>
+
+        <!-- VARIANTS VIEW -->
+        <div id="view-variants" class="view">
+          ============================================================ -->
+
+<style>
+  /* Variants-specific styles */
+  .variants-view {
+    display: flex;
+    flex-direction: row;
+    gap: 16px;
+    height: calc(100vh - 104px);
+  }
+  .variants-left {
+    width: 35%;
+    flex-shrink: 0;
+    background: var(--surface, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 10px;
+    padding: 16px;
+    overflow-y: auto;
+    box-sizing: border-box;
+  }
+  .variants-right {
+    flex: 1;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  /* Coverage grid cells */
+  .cov-grid {
+    display: grid;
+    grid-template-columns: auto repeat(3, 1fr);
+    gap: 8px;
+    margin-top: 10px;
+  }
+  .cov-col-header {
+    font-size: 9px;
+    font-family: monospace;
+    color: var(--muted, #64748b);
+    text-align: center;
+    padding: 4px 2px;
+    font-weight: 600;
+  }
+  .cov-row-header {
+    font-size: 9px;
+    font-family: monospace;
+    color: var(--muted, #64748b);
+    text-align: right;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    padding-right: 6px;
+    font-weight: 600;
+  }
+  .cell {
+    border-radius: 6px;
+    padding: 7px 8px;
+    font-size: 9px;
+    font-family: monospace;
+    line-height: 1.5;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: border-color .15s;
+  }
+  .cell-done {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+    color: #065f46;
+  }
+  .cell-done:hover {
+    border-color: #059669;
+  }
+  .cell-failed {
+    background: #fef2f2;
+    border-color: #fecaca;
+    color: #991b1b;
+  }
+  .cell-empty {
+    background: var(--surface2, #f1f5f9);
+    border-color: var(--border, #e2e8f0);
+    color: var(--muted, #64748b);
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 48px;
+  }
+  .cell-selected {
+    border: 2px solid var(--accent, #0f4c8a) !important;
+    background: #eff6ff !important;
+    color: #1e3a5f !important;
+  }
+  .selected-chip {
+    display: inline-block;
+    font-size: 7px;
+    color: var(--accent, #0f4c8a);
+    background: #dbeafe;
+    border-radius: 3px;
+    padding: 1px 4px;
+    margin-top: 3px;
+    font-weight: 700;
+    letter-spacing: .04em;
+  }
+
+  /* Storyboard */
+  .storyboard {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 8px;
+  }
+  .story-card {
+    display: flex;
+    gap: 12px;
+    background: var(--surface, #f8fafc);
+    border: 1px solid var(--border, #e2e8f0);
+    border-radius: 8px;
+    padding: 12px;
+    align-items: flex-start;
+  }
+  .story-icon {
+    font-size: 20px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .story-content {
+    flex: 1;
+    min-width: 0;
+  }
+  .story-step {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: var(--muted, #64748b);
+    margin-bottom: 2px;
+  }
+  .story-title {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text, #0f172a);
+    margin-bottom: 4px;
+  }
+  .story-text {
+    font-size: 11px;
+    color: var(--muted, #64748b);
+    line-height: 1.5;
+    margin-bottom: 6px;
+  }
+  .story-stats {
+    display: flex;
+    gap: 10px;
+  }
+  .story-stat {
+    font-size: 9px;
+    color: var(--muted, #64748b);
+    background: var(--surface2, #f1f5f9);
+    border-radius: 4px;
+    padding: 2px 7px;
+  }
+
+  /* Flow edge animation */
+  @keyframes dash {
+    to { stroke-dashoffset: -20; }
+  }
+  .flow-edge {
+    stroke-dasharray: 6,3;
+    animation: dash 1.5s linear infinite;
+  }
+
+  /* Attempt history table */
+  .attempt-row-fail {
+    background: #fef2f2;
+  }
+  .attempt-row-pass {
+    background: #ecfdf5;
+  }
+
+  /* Section label style */
+  .section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+    color: var(--muted, #64748b);
+    margin-bottom: 8px;
+    margin-top: 16px;
+  }
+  .section-label:first-child {
+    margin-top: 0;
+  }
+</style>
+
+<div class="variants-view">
+
+  <!-- LEFT PANEL: Coverage Grid -->
+  <div class="variants-left">
+    <div style="margin-bottom:2px;">
+      <span style="font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted,#64748b);">Coverage Grid</span>
+    </div>
+    <div style="font-size:10px;color:var(--muted,#64748b);font-style:italic;margin-bottom:10px;">Click a cell to inspect variant</div>
+
+    <div class="cov-grid">
+      <!-- Corner empty + col headers -->
+      <div></div>
+      <div class="cov-col-header">burst</div>
+      <div class="cov-col-header">staggered</div>
+      <div class="cov-col-header">delayed</div>
+
+      <!-- Row: hop=2 -->
+      <div class="cov-row-header">hop=2</div>
+      <div class="cell cell-done">cell_001<br>P02 · 8.1 ✓</div>
+      <div class="cell cell-done">cell_002<br>P01 · 7.8 ✓</div>
+      <div class="cell cell-done">cell_003<br>P03 · 8.4 ✓</div>
+
+      <!-- Row: hop=3 -->
+      <div class="cov-row-header">hop=3</div>
+      <div class="cell cell-done">cell_004<br>P04 · 7.2 ✓</div>
+      <!-- SELECTED CELL -->
+      <div class="cell cell-done cell-selected">
+        cell_005<br>P01 · 8.1 ✓<br>
+        <span class="selected-chip">● Selected</span>
+      </div>
+      <div class="cell cell-done">cell_006<br>P03 · 8.6 ✓</div>
+
+      <!-- Row: hop=5 -->
+      <div class="cov-row-header">hop=5</div>
+      <div class="cell cell-failed">cell_007<br>P02 · 5.8 ✗</div>
+      <div class="cell cell-done">
+        cell_008<br>P04 · 7.5 ✓
+        <span class="badge badge-yellow" style="font-size:8px;padding:1px 5px;margin-left:3px;vertical-align:middle;">rev.2</span>
+      </div>
+      <div class="cell cell-empty">—</div>
+    </div>
+
+    <!-- Coverage stat -->
+    <div style="margin-top:14px;display:flex;align-items:center;gap:8px;">
+      <span style="font-size:11px;color:var(--muted,#64748b);">8/9 cells</span>
+      <span class="badge badge-green">88.9%</span>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL: Variant Detail -->
+  <div class="variants-right">
+
+    <!-- Variant selector row -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;flex-shrink:0;">
+      <span style="font-size:11px;color:var(--muted,#64748b);">Viewing:</span>
+      <select style="font-size:12px;border:1.5px solid var(--accent,#0f4c8a);border-radius:6px;padding:5px 10px;color:var(--text,#0f172a);background:#fff;cursor:pointer;">
+        <option>V-005 · cell_005 · hop=3, staggered · P01 (James M.)</option>
+      </select>
+    </div>
+
+    <!-- Section A: Heist Storyboard -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="section-label">Constructor Reasoning Chain</div>
+      <div class="storyboard">
+
+        <div class="story-card">
+          <div class="story-icon">🎯</div>
+          <div class="story-content">
+            <div class="story-step">01 · Motive</div>
+            <div class="story-title">Criminal Profile</div>
+            <div class="story-text">James needs to move $19,400 domestically before daily ACH limits reset. Prioritizes stealth over speed — conservative timing prevents velocity alerts.</div>
+            <div class="story-stats">
+              <span class="story-stat">1,240 tok</span>
+              <span class="story-stat">3.2s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="story-card">
+          <div class="story-icon">🔗</div>
+          <div class="story-content">
+            <div class="story-step">02 · Blueprint</div>
+            <div class="story-title">Network Plan</div>
+            <div class="story-text">3-hop chain with staggered 4–8hr intervals. Zelle for domestic hops, final ACH extraction below CTR threshold.</div>
+            <div class="story-stats">
+              <span class="story-stat">890 tok</span>
+              <span class="story-stat">2.1s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="story-card">
+          <div class="story-icon">👥</div>
+          <div class="story-content">
+            <div class="story-step">03 · Crew</div>
+            <div class="story-title">Participants</div>
+            <div class="story-text">4 accounts: personal checking origin, 2 mules recruited via job-posting (believe it's freelance payroll), savings destination.</div>
+            <div class="story-stats">
+              <span class="story-stat">2,100 tok</span>
+              <span class="story-stat">5.4s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="story-card">
+          <div class="story-icon">⏱️</div>
+          <div class="story-content">
+            <div class="story-step">04 · Execution</div>
+            <div class="story-title">Transactions</div>
+            <div class="story-text">$4,900 Zelle → mule1 at 09:34. $4,750 Zelle → mule2 at 14:02. $9,200 ACH at 18:45. $125 grocery cover.</div>
+            <div class="story-stats">
+              <span class="story-stat">3,400 tok</span>
+              <span class="story-stat">8.7s</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="story-card">
+          <div class="story-icon">🛡️</div>
+          <div class="story-content">
+            <div class="story-step">05 · Self-Review</div>
+            <div class="story-title">Quality Check</div>
+            <div class="story-text">Round-number amounts detected, adjusted to $4,873 and $4,692. Added grocery cover transaction for realistic account activity.</div>
+            <div class="story-stats">
+              <span class="story-stat">620 tok</span>
+              <span class="story-stat">1.8s</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- Section B: Money Trail Graph -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="section-label">Money Trail</div>
+      <svg width="100%" height="200" viewBox="0 0 680 200" xmlns="http://www.w3.org/2000/svg" style="display:block;overflow:visible;">
+        <defs>
+          <marker id="arr-orange" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#ea580c"/>
+          </marker>
+          <marker id="arr-dark" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#c2410c"/>
+          </marker>
+          <marker id="arr-darkest" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#7f1d1d"/>
+          </marker>
+          <marker id="arr-gray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+            <path d="M0,0 L0,6 L8,3 z" fill="#94a3b8"/>
+          </marker>
+        </defs>
+
+        <!-- Edge: ACC-001 → ACC-002 -->
+        <path d="M104,100 L200,90" stroke="#ea580c" stroke-width="2.5" fill="none"
+              class="flow-edge" marker-end="url(#arr-orange)"/>
+        <text x="152" y="88" font-size="9" fill="#ea580c" text-anchor="middle">$4,873 · 09:34</text>
+
+        <!-- Edge: ACC-002 → ACC-003 -->
+        <path d="M260,90 L350,90" stroke="#c2410c" stroke-width="2" fill="none"
+              class="flow-edge" marker-end="url(#arr-dark)"/>
+        <text x="305" y="83" font-size="9" fill="#c2410c" text-anchor="middle">$4,692 · 14:02</text>
+
+        <!-- Edge: ACC-003 → ACC-004 -->
+        <path d="M410,90 L510,100" stroke="#7f1d1d" stroke-width="3.5" fill="none"
+              class="flow-edge" marker-end="url(#arr-darkest)"/>
+        <text x="460" y="88" font-size="9" fill="#7f1d1d" text-anchor="middle">$9,200 · 18:45</text>
+
+        <!-- Edge: ACC-001 → ACC-005 (cover) -->
+        <path d="M96,114 L200,160" stroke="#94a3b8" stroke-width="1" fill="none"
+              class="flow-edge" marker-end="url(#arr-gray)"/>
+        <text x="140" y="148" font-size="9" fill="#94a3b8" text-anchor="middle">$125 · 10:15</text>
+
+        <!-- Node: ACC-001 SOURCE circle -->
+        <circle cx="80" cy="100" r="24" fill="#dc2626"/>
+        <text x="80" y="96" font-size="10" fill="white" text-anchor="middle" font-weight="700">SRC</text>
+        <text x="80" y="137" font-size="9" fill="#64748b" text-anchor="middle">ACC-001</text>
+        <text x="80" y="148" font-size="8" fill="#94a3b8" text-anchor="middle">Shell LLC</text>
+
+        <!-- Node: ACC-002 MULE 1 diamond -->
+        <polygon points="230,60 260,90 230,120 200,90" fill="#ea580c"/>
+        <text x="230" y="95" font-size="10" fill="white" text-anchor="middle" font-weight="700">M1</text>
+        <text x="230" y="137" font-size="9" fill="#64748b" text-anchor="middle">ACC-002</text>
+        <text x="230" y="148" font-size="8" fill="#94a3b8" text-anchor="middle">Mule 1</text>
+
+        <!-- Node: ACC-003 MULE 2 diamond -->
+        <polygon points="380,60 410,90 380,120 350,90" fill="#c2410c"/>
+        <text x="380" y="95" font-size="10" fill="white" text-anchor="middle" font-weight="700">M2</text>
+        <text x="380" y="137" font-size="9" fill="#64748b" text-anchor="middle">ACC-003</text>
+        <text x="380" y="148" font-size="8" fill="#94a3b8" text-anchor="middle">Mule 2</text>
+
+        <!-- Node: ACC-004 DESTINATION rect -->
+        <rect x="510" y="82" width="50" height="36" fill="#7f1d1d" rx="5"/>
+        <text x="535" y="104" font-size="10" fill="white" text-anchor="middle" font-weight="700">DST</text>
+        <text x="535" y="132" font-size="9" fill="#64748b" text-anchor="middle">ACC-004</text>
+        <text x="535" y="143" font-size="8" fill="#94a3b8" text-anchor="middle">Savings</text>
+
+        <!-- Node: ACC-005 COVER triangle -->
+        <polygon points="200,160 225,140 250,160" fill="#94a3b8"/>
+        <text x="225" y="165" font-size="9" fill="#64748b" text-anchor="middle">CVR</text>
+        <text x="225" y="177" font-size="9" fill="#64748b" text-anchor="middle">ACC-005</text>
+        <text x="225" y="188" font-size="8" fill="#94a3b8" text-anchor="middle">Grocery</text>
+
+      </svg>
+    </div>
+
+    <!-- Section C: Attempt History -->
+    <div class="card">
+      <div class="section-label">Attempt History</div>
+      <table class="data-table" style="font-size:11px;width:100%;">
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Realism</th>
+            <th>Distinctiveness</th>
+            <th>Passed</th>
+            <th>Critic Feedback</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr class="attempt-row-fail">
+            <td>1</td>
+            <td>4.2</td>
+            <td>7.1</td>
+            <td style="color:#dc2626;font-weight:700;">✗</td>
+            <td style="color:#991b1b;">Timing too uniform, amounts suspiciously round</td>
+          </tr>
+          <tr class="attempt-row-fail">
+            <td>2</td>
+            <td>6.8</td>
+            <td>7.1</td>
+            <td style="color:#dc2626;font-weight:700;">✗</td>
+            <td style="color:#991b1b;">Better timing but round numbers persist</td>
+          </tr>
+          <tr class="attempt-row-pass">
+            <td>3</td>
+            <td>8.1</td>
+            <td>7.4</td>
+            <td style="color:#059669;font-weight:700;">✓</td>
+            <td style="color:#64748b;">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div>
+</div>
+<!-- ============================================================
+     END SECTION 2: VARIANTS VIEW
+     ============================================================ -->
+        </div>
+
+        <!-- DATASET VIEW -->
+        <div id="view-dataset" class="view">
+          <!-- ============================================================ -->
+<!-- SECTION 1: DATASET VIEW                                      -->
+<!-- ============================================================ -->
+
+<div class="dataset-view-section">
+
+  <!-- Filter Bar -->
+  <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:16px;">
+    <!-- Role filter chips -->
+    <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; background:var(--accent,#0f4c8a); color:#fff;">All &middot; 1,140</span>
+    <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; background:#f5f3ff; color:#7c3aed; border:1px solid #7c3aed;">placement</span>
+    <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; background:#e8f0fa; color:#0f4c8a; border:1px solid #0f4c8a;">hop</span>
+    <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; background:#fef2f2; color:#dc2626; border:1px solid #dc2626;">extraction</span>
+    <span style="padding:4px 12px; border-radius:20px; font-size:11px; font-weight:600; cursor:pointer; background:#f1f5f9; color:#64748b; border:1px solid #e2e8f0;">cover_activity</span>
+
+    <!-- Right-side controls -->
+    <div style="margin-left:auto; display:flex; gap:8px; align-items:center;">
+      <select style="width:110px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; padding:5px 8px; background:#fff; color:#0f172a; outline:none;">
+        <option>Variant: All</option>
+        <option>V-001</option>
+        <option>V-002</option>
+        <option>V-003</option>
+      </select>
+      <select style="width:110px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; padding:5px 8px; background:#fff; color:#0f172a; outline:none;">
+        <option>Persona: All</option>
+        <option>Viktor S.</option>
+        <option>James M.</option>
+        <option>Maria C.</option>
+      </select>
+      <input type="text" placeholder="🔍 Search..." style="width:160px; font-size:11px; border:1px solid #e2e8f0; border-radius:6px; padding:5px 8px; color:#0f172a; outline:none;" />
+    </div>
+  </div>
+
+  <!-- Showing count -->
+  <div style="font-size:11px; color:#64748b; margin-bottom:8px;">Showing 1–15 of 1,140 transactions</div>
+
+  <!-- Transaction Table -->
+  <table class="data-table" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">txn_id</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">timestamp</th>
+        <th style="text-align:right; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">amount</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">channel</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">is_fraud</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">fraud_role</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">variant_id</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0; white-space:nowrap;">persona</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- Row 1 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001001</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">09:34:12</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$9,800.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Zelle</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f5f3ff; color:#7c3aed; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">placement</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 2 -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001002</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">14:02:45</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$9,600.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Zelle</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">hop_1_of_3</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 3 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001003</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">18:47:33</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$9,400.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">ACH</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">hop_2_of_3</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 4 — extraction (red amount) -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001004</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">09:22:10</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:700; color:#dc2626; white-space:nowrap;">$28,700.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Wire</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#fef2f2; color:#dc2626; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">extraction</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 5 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001005</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">10:15:00</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$340.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Debit</td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10007; legit</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">cover_activity</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 6 -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-001006</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">16:45:22</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$87.50</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Debit</td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10007; legit</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">cover_activity</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-001</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Viktor S.</td>
+      </tr>
+
+      <!-- Row 7 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-002001</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">08:15:00</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$4,873.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Zelle</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f5f3ff; color:#7c3aed; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">placement</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-002</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">James M.</td>
+      </tr>
+
+      <!-- Row 8 -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-002002</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">12:30:45</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$4,692.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Zelle</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">hop_1_of_2</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-002</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">James M.</td>
+      </tr>
+
+      <!-- Row 9 — extraction -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-002003</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">17:22:18</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:700; color:#dc2626; white-space:nowrap;">$9,200.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">ACH</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#fef2f2; color:#dc2626; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">extraction</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-002</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">James M.</td>
+      </tr>
+
+      <!-- Row 10 -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-002004</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">09:05:11</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$125.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Debit</td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10007; legit</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">cover_activity</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-002</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">James M.</td>
+      </tr>
+
+      <!-- Row 11 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-003001</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">10:44:55</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$7,432.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Zelle</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f5f3ff; color:#7c3aed; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">placement</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-003</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Maria C.</td>
+      </tr>
+
+      <!-- Row 12 -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-003002</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">13:12:30</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$7,187.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Crypto</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">hop_1_of_3</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-003</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Maria C.</td>
+      </tr>
+
+      <!-- Row 13 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-003003</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">16:55:40</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$6,914.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Crypto</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">hop_2_of_3</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-003</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Maria C.</td>
+      </tr>
+
+      <!-- Row 14 — extraction -->
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-003004</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">20:30:00</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:700; color:#dc2626; white-space:nowrap;">$20,843.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Wire</td>
+        <td style="padding:8px 10px;"><span style="background:#ecfdf5; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10003; fraud</span></td>
+        <td style="padding:8px 10px;"><span style="background:#fef2f2; color:#dc2626; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">extraction</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-003</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Maria C.</td>
+      </tr>
+
+      <!-- Row 15 -->
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">TXN-003005</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:10px; color:#64748b; white-space:nowrap;">11:00:00</td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; text-align:right; font-weight:600; white-space:nowrap;">$55.00</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Debit</td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">&#10007; legit</span></td>
+        <td style="padding:8px 10px;"><span style="background:#f1f5f9; color:#64748b; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">cover_activity</span></td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">V-003</td>
+        <td style="padding:8px 10px; font-size:11px; color:#0f172a;">Maria C.</td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- Pagination -->
+  <div style="display:flex; justify-content:space-between; align-items:center; margin-top:12px;">
+    <span style="font-size:11px; color:#64748b;">Showing 1–15 of 1,140 transactions</span>
+    <div style="display:flex; gap:4px; align-items:center;">
+      <button disabled style="width:56px; height:28px; border:1px solid #e2e8f0; border-radius:5px; font-size:11px; background:#f8fafc; color:#cbd5e1; cursor:not-allowed;">&#8592; Prev</button>
+      <button style="width:28px; height:28px; border:1px solid #0f4c8a; border-radius:5px; font-size:11px; background:#0f4c8a; color:#fff; cursor:pointer; font-weight:600;">1</button>
+      <button style="width:28px; height:28px; border:1px solid #e2e8f0; border-radius:5px; font-size:11px; background:#fff; color:#0f172a; cursor:pointer;">2</button>
+      <button style="width:28px; height:28px; border:1px solid #e2e8f0; border-radius:5px; font-size:11px; background:#fff; color:#0f172a; cursor:pointer;">3</button>
+      <span style="font-size:11px; color:#64748b; padding:0 4px;">...</span>
+      <button style="width:28px; height:28px; border:1px solid #e2e8f0; border-radius:5px; font-size:11px; background:#fff; color:#0f172a; cursor:pointer;">76</button>
+      <button style="width:56px; height:28px; border:1px solid #e2e8f0; border-radius:5px; font-size:11px; background:#fff; color:#0f172a; cursor:pointer;">Next &#8594;</button>
+    </div>
+  </div>
+
+</div>
+<!-- END SECTION 1: DATASET VIEW -->
+
+
+<!-- ============================================================ -->
+        </div>
+
+        <!-- EXPORT VIEW -->
+        <div id="view-export" class="view">
+          <!-- ============================================================ -->
+
+<div class="export-view-section" style="margin-top:32px;">
+
+  <!-- 3 Download Cards -->
+  <div style="display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-bottom:24px;">
+
+    <!-- Card 1: CSV Dataset -->
+    <div class="card" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px; text-align:center;">
+      <div style="font-size:32px; line-height:1;">&#128202;</div>
+      <div style="margin-top:10px;">
+        <span style="background:#0f4c8a; color:#fff; font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">CSV</span>
+      </div>
+      <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:10px;">Transaction Dataset</div>
+      <div style="font-size:11px; color:#64748b; line-height:1.5; margin:8px 0;">Flat tabular format. One row per transaction. ML-ready with all labels.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:8px;">1,140 transactions &middot; 813 KB</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#94a3b8; margin:8px 0; text-align:left; background:#f1f5f9; border-radius:6px; padding:8px 10px; line-height:1.8;">
+        txn_id<br>timestamp<br>amount<br>channel<br>is_fraud<br>fraud_role<br>variant_id<br>persona_name
+      </div>
+      <button class="btn btn-primary" style="width:100%; margin-top:16px; padding:8px 0; font-size:12px; font-weight:600; background:#0f4c8a; color:#fff; border:none; border-radius:7px; cursor:pointer;">&#8595;&nbsp; Download CSV</button>
+    </div>
+
+    <!-- Card 2: JSON Dataset -->
+    <div class="card" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px; text-align:center;">
+      <div style="font-size:32px; line-height:1;">&#128196;</div>
+      <div style="margin-top:10px;">
+        <span style="background:#7c3aed; color:#fff; font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">JSON</span>
+      </div>
+      <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:10px;">Nested Dataset</div>
+      <div style="font-size:11px; color:#64748b; line-height:1.5; margin:8px 0;">Full nested structure with variant metadata and transaction arrays. Includes all critic scores.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:8px;">1,140 transactions &middot; 1.24 MB</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#94a3b8; margin:8px 0; text-align:left; background:#f1f5f9; border-radius:6px; padding:8px 10px; line-height:1.8;">
+        run_id<br>variants[]<br>&nbsp;&nbsp;variant_id<br>&nbsp;&nbsp;transactions[]<br>&nbsp;&nbsp;critic_scores<br>&nbsp;&nbsp;persona<br>&nbsp;&nbsp;metadata
+      </div>
+      <button class="btn" style="width:100%; margin-top:16px; padding:8px 0; font-size:12px; font-weight:600; background:#7c3aed; color:#fff; border:none; border-radius:7px; cursor:pointer;">&#8595;&nbsp; Download JSON</button>
+    </div>
+
+    <!-- Card 3: Graph Adjacency -->
+    <div class="card" style="background:#f8fafc; border:1px solid #e2e8f0; border-radius:12px; padding:24px; text-align:center;">
+      <div style="font-size:32px; line-height:1;">&#128376;&#65039;</div>
+      <div style="margin-top:10px;">
+        <span style="background:#059669; color:#fff; font-size:9px; font-weight:700; padding:2px 8px; border-radius:4px; letter-spacing:0.05em;">GRAPH</span>
+      </div>
+      <div style="font-size:15px; font-weight:700; color:#0f172a; margin-top:10px;">Graph Adjacency List</div>
+      <div style="font-size:11px; color:#64748b; line-height:1.5; margin:8px 0;">Node/edge format for GNN training. Includes node types, edge weights, fraud labels.</div>
+      <div style="font-size:10px; color:#94a3b8; margin-bottom:8px;">234 nodes &middot; 892 edges &middot; 341 KB</div>
+      <div style="font-family:'JetBrains Mono',monospace; font-size:9px; color:#94a3b8; margin:8px 0; text-align:left; background:#f1f5f9; border-radius:6px; padding:8px 10px; line-height:1.8;">
+        nodes[]<br>&nbsp;&nbsp;node_id, type<br>&nbsp;&nbsp;is_fraud<br>edges[]<br>&nbsp;&nbsp;source, target<br>&nbsp;&nbsp;weight, channel<br>&nbsp;&nbsp;timestamp
+      </div>
+      <button class="btn" style="width:100%; margin-top:16px; padding:8px 0; font-size:12px; font-weight:600; background:#059669; color:#fff; border:none; border-radius:7px; cursor:pointer;">&#8595;&nbsp; Download Graph</button>
+    </div>
+
+  </div>
+
+  <!-- Export Manifest Table -->
+  <div style="font-size:11px; font-weight:700; color:#64748b; text-transform:uppercase; letter-spacing:0.07em; margin-bottom:10px;">Run Artifacts</div>
+
+  <table class="data-table" style="width:100%; border-collapse:collapse;">
+    <thead>
+      <tr>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0;">File</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Format</th>
+        <th style="text-align:right; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Size</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Records</th>
+        <th style="text-align:left; font-size:11px; font-weight:600; color:#64748b; padding:8px 10px; border-bottom:1px solid #e2e8f0;">Description</th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">config.json</td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">JSON</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">2.1 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#94a3b8;">—</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Run configuration snapshot</td>
+      </tr>
+
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">personas.json</td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">JSON</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">14.8 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">4 personas</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Full criminal persona profiles</td>
+      </tr>
+
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">variants.json</td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">JSON</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">487 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">11 variants</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Complete variant data with metadata</td>
+      </tr>
+
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">dataset.csv</td>
+        <td style="padding:8px 10px;"><span style="background:#f0fdf4; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">CSV</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">813 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">1,140 txns</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Flat ML training dataset</td>
+      </tr>
+
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">dataset.json</td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">JSON</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">1.24 MB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">1,140 txns</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Nested dataset with variant metadata</td>
+      </tr>
+
+      <tr style="background:#f8fafc;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">run_summary.json</td>
+        <td style="padding:8px 10px;"><span style="background:#e8f0fa; color:#0f4c8a; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">JSON</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">4.9 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#94a3b8;">—</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">Aggregate stats and quality metrics</td>
+      </tr>
+
+      <tr style="background:#fff;">
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#0f4c8a; white-space:nowrap;">graph_adjacency.json</td>
+        <td style="padding:8px 10px;"><span style="background:#f0fdf4; color:#059669; padding:2px 7px; border-radius:20px; font-size:10px; font-weight:700;">GRAPH</span></td>
+        <td style="padding:8px 10px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b; text-align:right; white-space:nowrap;">341 KB</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">234 nodes</td>
+        <td style="padding:8px 10px; font-size:11px; color:#64748b;">GNN-ready adjacency list</td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- run_summary.json Preview -->
+  <div style="margin-top:24px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+      <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#64748b;">run_summary.json</span>
+      <button class="btn btn-ghost" style="font-size:10px; padding:3px 10px; border:1px solid #e2e8f0; border-radius:5px; background:#fff; color:#64748b; cursor:pointer;">Copy</button>
+    </div>
+    <div style="background:#0f172a; border-radius:8px; padding:16px; overflow-x:auto;">
+      <pre style="margin:0; color:#94a3b8; font-family:'JetBrains Mono',monospace; font-size:11px; line-height:1.75;">{
+  <span style="color:#60a5fa">"run_id"</span>: <span style="color:#4ade80">"run_20260315_143022"</span>,
+  <span style="color:#60a5fa">"status"</span>: <span style="color:#4ade80">"completed"</span>,
+  <span style="color:#60a5fa">"fraud_type"</span>: <span style="color:#4ade80">"Layered Mule Network"</span>,
+  <span style="color:#60a5fa">"variants_requested"</span>: <span style="color:#fbbf24">12</span>,
+  <span style="color:#60a5fa">"variants_approved"</span>: <span style="color:#fbbf24">11</span>,
+  <span style="color:#60a5fa">"variants_failed"</span>: <span style="color:#fbbf24">1</span>,
+  <span style="color:#60a5fa">"coverage_saturation"</span>: <span style="color:#fbbf24">0.917</span>,
+  <span style="color:#60a5fa">"mean_realism_score"</span>: <span style="color:#fbbf24">8.1</span>,
+  <span style="color:#60a5fa">"mean_distinctiveness_score"</span>: <span style="color:#fbbf24">7.9</span>,
+  <span style="color:#60a5fa">"total_transactions"</span>: <span style="color:#fbbf24">1140</span>,
+  <span style="color:#60a5fa">"total_cost_usd"</span>: <span style="color:#fbbf24">1.84</span>,
+  <span style="color:#60a5fa">"total_tokens"</span>: <span style="color:#fbbf24">128450</span>,
+  <span style="color:#60a5fa">"duration_seconds"</span>: <span style="color:#fbbf24">258</span>,
+  <span style="color:#60a5fa">"personas_generated"</span>: <span style="color:#fbbf24">4</span>,
+  <span style="color:#60a5fa">"revision_loops"</span>: <span style="color:#fbbf24">3</span>
+}</pre>
+    </div>
+  </div>
+
+</div>
+<!-- END SECTION 2: EXPORT VIEW -->
+        </div>
+
+      </div><!-- /view-container -->
+
+    </div><!-- /console-main -->
+
+  </div><!-- /console-layout -->
+
+  <script>
+    // ─── Navigation System ───────────────────────────────────────────────────
+    function initNav() {
+      // Primary nav items
+      document.querySelectorAll('[data-nav]').forEach(item => {
+        item.addEventListener('click', () => {
+          const target = item.dataset.nav;
+
+          // Remove active from all nav items and sub-items
+          document.querySelectorAll('[data-nav]').forEach(i => i.classList.remove('active'));
+
+          // Add active to clicked
+          item.classList.add('active');
+
+          // Hide all views
+          document.querySelectorAll('.view').forEach(v => v.classList.remove('active'));
+
+          // Show target view
+          const view = document.getElementById('view-' + target);
+          if (view) view.classList.add('active');
+
+          // Update header visibility
+          updateHeader(target);
+        });
+      });
+
+      // Results group toggle
+      const groupHeader = document.getElementById('results-group-header');
+      const subList     = document.getElementById('results-sub-list');
+      if (groupHeader && subList) {
+        groupHeader.addEventListener('click', () => {
+          const isOpen = subList.classList.toggle('open');
+          groupHeader.classList.toggle('open', isOpen);
+        });
+      }
+    }
+
+    function updateHeader(view) {
+      // Show header on all views except 'input'
+      const header = document.getElementById('global-header');
+      if (header) {
+        header.style.display = (view === 'input') ? 'none' : 'flex';
+      }
+    }
+
+    // ─── Header Actions ───────────────────────────────────────────────────────
+    function initHeaderActions() {
+      const pauseBtn = document.getElementById('btn-pause');
+      const stopBtn  = document.getElementById('btn-stop');
+
+      if (pauseBtn) {
+        let paused = false;
+        pauseBtn.addEventListener('click', () => {
+          paused = !paused;
+          pauseBtn.textContent = paused ? '▶ Resume' : '‖ Pause';
+        });
+      }
+
+      if (stopBtn) {
+        stopBtn.addEventListener('click', () => {
+          if (confirm('Stop this run? Progress so far will be preserved.')) {
+            stopBtn.textContent = '◼ Stopped';
+            stopBtn.disabled = true;
+            stopBtn.style.opacity = '0.5';
+          }
+        });
+      }
+    }
+
+    // ─── Init on DOM ready ────────────────────────────────────────────────────
+    document.addEventListener('DOMContentLoaded', () => {
+      initNav();
+      initHeaderActions();
+
+      // Set initial active state: input view, no header
+      const inputView = document.getElementById('view-input');
+      if (inputView) inputView.classList.add('active');
+      updateHeader('input');
+    });
+  </script>
+
+</body>
+</html>

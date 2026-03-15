@@ -1,0 +1,741 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>FraudGen — Screen 08: Results — Export</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #f8fafc;
+    --border: #e2e8f0;
+    --accent: #0f4c8a;
+    --accent-light: #e8f0fa;
+    --red: #dc2626;
+    --red-light: #fef2f2;
+    --green: #059669;
+    --green-light: #ecfdf5;
+    --yellow: #d97706;
+    --yellow-light: #fffbeb;
+    --text: #0f172a;
+    --muted: #64748b;
+    --mono: 'JetBrains Mono', 'Fira Code', monospace;
+    --sans: 'Inter', system-ui, sans-serif;
+    --purple: #7c3aed;
+    --surface2: #f1f5f9;
+    --faint: #94a3b8;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #dde4ed;
+    font-family: var(--sans);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 48px 64px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 20px;
+  }
+
+  /* Screen label */
+  .screen-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-start;
+  }
+  .screen-pill {
+    background: var(--accent);
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    padding: 4px 10px;
+    border-radius: 100px;
+    text-transform: uppercase;
+  }
+  .screen-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .screen-desc {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .screen-sep {
+    color: var(--faint);
+    font-size: 12px;
+  }
+
+  /* Browser shell */
+  .browser {
+    width: 100%;
+    max-width: 1200px;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.14), 0 1px 4px rgba(0,0,0,0.08);
+    background: var(--bg);
+  }
+
+  .browser-bar {
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    height: 40px;
+  }
+
+  .browser-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+  }
+  .dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+  }
+  .dot-red    { background: #ff5f57; }
+  .dot-yellow { background: #febc2e; }
+  .dot-green  { background: #28c840; }
+
+  .browser-url {
+    flex: 1;
+    background: var(--bg);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 4px 12px;
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .url-lock {
+    color: var(--green);
+    font-size: 10px;
+  }
+
+  /* App shell */
+  .app-shell {
+    display: flex;
+    height: 760px;
+  }
+
+  /* Sidebar */
+  .sidebar {
+    width: 200px;
+    flex-shrink: 0;
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    padding: 16px 0;
+    overflow: hidden;
+  }
+
+  .sidebar-logo {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--accent);
+    letter-spacing: -0.02em;
+    padding: 0 16px 16px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar-logo span {
+    opacity: 0.4;
+    font-weight: 400;
+    font-size: 11px;
+    display: block;
+    letter-spacing: 0;
+    margin-top: 1px;
+    color: var(--muted);
+  }
+
+  .nav-list {
+    list-style: none;
+    padding: 0 8px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px;
+    height: 32px;
+    border-radius: 6px;
+    font-size: 12.5px;
+    color: var(--muted);
+    cursor: pointer;
+    user-select: none;
+  }
+  .nav-item.active {
+    background: var(--accent-light);
+    border-left: 2px solid var(--accent);
+    color: var(--accent);
+    font-weight: 700;
+    padding-left: 6px;
+  }
+  .nav-item .nav-icon {
+    font-size: 13px;
+    flex-shrink: 0;
+  }
+
+  .nav-sub-list {
+    list-style: none;
+    padding: 0 8px 0 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin-top: 1px;
+  }
+  .nav-sub-item {
+    font-size: 11px;
+    color: var(--faint);
+    height: 24px;
+    display: flex;
+    align-items: center;
+    padding: 0 6px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .nav-sub-item.active {
+    color: var(--accent);
+    font-weight: 600;
+    background: var(--accent-light);
+  }
+  .nav-sub-item:hover:not(.active) { color: var(--muted); }
+
+  .sidebar-divider {
+    border: none;
+    border-top: 1px solid var(--border);
+    margin: 10px 0;
+  }
+
+  /* Global Header (top bar inside app) */
+  .app-header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 20px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--bg);
+    flex-shrink: 0;
+  }
+  .header-run-id {
+    font-size: 11.5px;
+    font-family: var(--mono);
+    color: var(--muted);
+    font-weight: 500;
+    margin-right: 16px;
+    padding-right: 16px;
+    border-right: 1px solid var(--border);
+  }
+  .header-badges {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1;
+  }
+  .hbadge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    font-weight: 500;
+  }
+  .hbadge-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+  }
+  .hbadge-dot.green { background: var(--green); }
+  .hbadge-sep {
+    color: var(--border);
+    font-size: 14px;
+    padding: 0 2px;
+  }
+  .hbadge-pill {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 100px;
+    letter-spacing: 0.02em;
+  }
+  .hbadge-pill.accent { background: var(--accent-light); color: var(--accent); }
+  .hbadge-pill.green  { background: var(--green-light);  color: var(--green);  }
+
+  /* Main area */
+  .main-wrap {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: var(--bg);
+  }
+
+  .main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 28px;
+  }
+
+  /* Section heading */
+  .section-heading {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: var(--muted);
+    margin-bottom: 12px;
+  }
+
+  /* Download cards grid */
+  .download-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  .dl-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0;
+  }
+
+  .dl-icon {
+    font-size: 36px;
+    line-height: 1;
+    margin-bottom: 10px;
+  }
+
+  .format-badge {
+    display: inline-block;
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    padding: 2px 8px;
+    border-radius: 4px;
+    color: #fff;
+    margin-bottom: 10px;
+  }
+  .format-badge.csv    { background: var(--accent); }
+  .format-badge.json   { background: var(--purple); }
+  .format-badge.graph  { background: var(--green);  }
+
+  .dl-title {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: var(--text);
+    margin-bottom: 6px;
+  }
+
+  .dl-desc {
+    font-size: 11px;
+    color: var(--muted);
+    line-height: 1.5;
+    margin-bottom: 10px;
+  }
+
+  .dl-stats {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 8px;
+  }
+
+  .dl-columns {
+    font-size: 9px;
+    font-family: var(--mono);
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 14px;
+    word-break: break-all;
+  }
+
+  .dl-btn {
+    display: block;
+    width: 100%;
+    height: 36px;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: var(--sans);
+    color: #fff;
+    cursor: pointer;
+    letter-spacing: 0.01em;
+    margin-top: auto;
+  }
+  .dl-btn.csv   { background: var(--accent); }
+  .dl-btn.json  { background: var(--purple); }
+  .dl-btn.graph { background: var(--green);  }
+  .dl-btn:hover { opacity: 0.88; }
+
+  /* Manifest table */
+  .manifest-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 11px;
+  }
+  .manifest-table thead th {
+    text-align: left;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--faint);
+    padding: 0 10px 8px;
+    border-bottom: 1px solid var(--border);
+  }
+  .manifest-table thead th.right { text-align: right; }
+  .manifest-table tbody tr {
+    border-bottom: 1px solid var(--border);
+  }
+  .manifest-table tbody tr:last-child { border-bottom: none; }
+  .manifest-table tbody tr:hover { background: var(--surface); }
+  .manifest-table tbody td {
+    padding: 9px 10px;
+    color: var(--text);
+    vertical-align: middle;
+  }
+  .manifest-table tbody td.mono {
+    font-family: var(--mono);
+    font-size: 10.5px;
+    color: var(--accent);
+  }
+  .manifest-table tbody td.right {
+    text-align: right;
+    color: var(--muted);
+  }
+  .manifest-table tbody td.desc {
+    color: var(--muted);
+    font-size: 10.5px;
+  }
+  .tbl-badge {
+    display: inline-block;
+    font-size: 9px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 1px 6px;
+    border-radius: 3px;
+    color: #fff;
+  }
+  .tbl-badge.csv   { background: var(--accent); }
+  .tbl-badge.json  { background: var(--purple); }
+  .tbl-badge.graph { background: var(--green);  }
+
+  /* Code block */
+  .code-block-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+  }
+  .code-block-title {
+    font-size: 12px;
+    font-family: var(--mono);
+    color: var(--muted);
+  }
+  .copy-btn {
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--muted);
+    background: none;
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    padding: 3px 10px;
+    cursor: pointer;
+    font-family: var(--sans);
+    letter-spacing: 0.01em;
+  }
+  .copy-btn:hover { background: var(--surface); color: var(--text); }
+
+  .code-block {
+    background: #0f172a;
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 11px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+  }
+
+  /* JSON syntax colors */
+  .jk { color: #60a5fa; }   /* key */
+  .js { color: #4ade80; }   /* string value */
+  .jn { color: #fbbf24; }   /* number value */
+  .jp { color: #94a3b8; }   /* punctuation / braces */
+</style>
+</head>
+<body>
+
+<!-- Screen label -->
+<div class="screen-label">
+  <span class="screen-pill">08</span>
+  <span class="screen-name">Results — Export</span>
+  <span class="screen-sep">/</span>
+  <span class="screen-desc">Download dataset &amp; run artifacts</span>
+</div>
+
+<!-- Browser chrome -->
+<div class="browser">
+  <div class="browser-bar">
+    <div class="browser-dots">
+      <div class="dot dot-red"></div>
+      <div class="dot dot-yellow"></div>
+      <div class="dot dot-green"></div>
+    </div>
+    <div class="browser-url">
+      <span class="url-lock">🔒</span>
+      fraudgen.app/run/results/export
+    </div>
+  </div>
+
+  <!-- App shell -->
+  <div class="app-shell">
+
+    <!-- Sidebar -->
+    <nav class="sidebar">
+      <div class="sidebar-logo">
+        FraudGen
+        <span>Fraud Variant Engine</span>
+      </div>
+
+      <ul class="nav-list">
+        <li class="nav-item">
+          <span class="nav-icon">⚙️</span> Configure
+        </li>
+        <li class="nav-item">
+          <span class="nav-icon">🧬</span> Personas
+        </li>
+        <li class="nav-item">
+          <span class="nav-icon">📡</span> Monitor
+        </li>
+        <li class="nav-item">
+          <span class="nav-icon">📋</span> Variants
+        </li>
+
+        <hr class="sidebar-divider" />
+
+        <li class="nav-item" style="color: var(--text); font-weight: 600;">
+          <span class="nav-icon">📁</span> Results ▾
+        </li>
+      </ul>
+
+      <ul class="nav-sub-list">
+        <li class="nav-sub-item">Overview</li>
+        <li class="nav-sub-item">Dataset</li>
+        <li class="nav-sub-item">Quality</li>
+        <li class="nav-sub-item active">Export</li>
+      </ul>
+
+      <hr class="sidebar-divider" />
+
+      <ul class="nav-list">
+        <li class="nav-item">
+          <span class="nav-icon">📜</span> History
+        </li>
+        <li class="nav-item">
+          <span class="nav-icon">🔧</span> Settings
+        </li>
+      </ul>
+    </nav>
+
+    <!-- Main -->
+    <div class="main-wrap">
+
+      <!-- Global Header -->
+      <div class="app-header">
+        <div class="header-run-id">run_20260315_143022</div>
+        <div class="header-badges">
+          <div class="hbadge">
+            <div class="hbadge-dot green"></div>
+            <span style="color: var(--green); font-weight: 600;">Healthy</span>
+          </div>
+          <span class="hbadge-sep">|</span>
+          <div class="hbadge">
+            <span class="hbadge-pill green">100%</span>
+          </div>
+          <span class="hbadge-sep">|</span>
+          <div class="hbadge" style="color: var(--muted);">
+            Variants <span style="font-weight:700; color: var(--text); margin-left:3px;">11/12</span>
+          </div>
+          <span class="hbadge-sep">|</span>
+          <div class="hbadge" style="color: var(--muted);">
+            Cost <span style="font-weight:700; color: var(--text); margin-left:3px;">$1.84</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main content area -->
+      <div class="main-content">
+
+        <!-- Row 1: Download cards -->
+        <div>
+          <div class="download-grid">
+
+            <!-- Card 1: CSV -->
+            <div class="dl-card">
+              <div class="dl-icon">📊</div>
+              <span class="format-badge csv">CSV</span>
+              <div class="dl-title">Transaction Dataset</div>
+              <div class="dl-desc">Flat tabular format, ML-ready. One row per transaction.</div>
+              <div class="dl-stats">1,140 transactions · 800 KB</div>
+              <div class="dl-columns">txn_id · timestamp · amount · channel · is_fraud · fraud_role · variant_id</div>
+              <button class="dl-btn csv">⬇ Download CSV</button>
+            </div>
+
+            <!-- Card 2: JSON -->
+            <div class="dl-card">
+              <div class="dl-icon">📄</div>
+              <span class="format-badge json">JSON</span>
+              <div class="dl-title">Nested Dataset</div>
+              <div class="dl-desc">Full nested structure with variant metadata and transaction arrays.</div>
+              <div class="dl-stats">1,140 transactions · 1.2 MB</div>
+              <div class="dl-columns" style="visibility: hidden;">—</div>
+              <button class="dl-btn json">⬇ Download JSON</button>
+            </div>
+
+            <!-- Card 3: Graph -->
+            <div class="dl-card">
+              <div class="dl-icon">🕸️</div>
+              <span class="format-badge graph">GRAPH</span>
+              <div class="dl-title">Graph Adjacency List</div>
+              <div class="dl-desc">Node/edge format for GNN training pipelines. Includes node types and edge weights.</div>
+              <div class="dl-stats">892 edges · 234 nodes · 340 KB</div>
+              <div class="dl-columns" style="visibility: hidden;">—</div>
+              <button class="dl-btn graph">⬇ Download Graph</button>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- Row 2: Run Artifacts manifest -->
+        <div>
+          <div class="section-heading">Run Artifacts</div>
+          <table class="manifest-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Format</th>
+                <th class="right">Size</th>
+                <th>Records</th>
+                <th class="desc">Description</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td class="mono">config.json</td>
+                <td><span class="tbl-badge json">JSON</span></td>
+                <td class="right">2.1 KB</td>
+                <td style="color: var(--faint);">—</td>
+                <td class="desc">Run configuration snapshot</td>
+              </tr>
+              <tr>
+                <td class="mono">personas.json</td>
+                <td><span class="tbl-badge json">JSON</span></td>
+                <td class="right">14.8 KB</td>
+                <td>4 personas</td>
+                <td class="desc">Full criminal persona profiles</td>
+              </tr>
+              <tr>
+                <td class="mono">variants.json</td>
+                <td><span class="tbl-badge json">JSON</span></td>
+                <td class="right">487 KB</td>
+                <td>11 variants</td>
+                <td class="desc">Complete variant data with metadata</td>
+              </tr>
+              <tr>
+                <td class="mono">dataset.csv</td>
+                <td><span class="tbl-badge csv">CSV</span></td>
+                <td class="right">813 KB</td>
+                <td>1,140 txns</td>
+                <td class="desc">Flat tabular ML training dataset</td>
+              </tr>
+              <tr>
+                <td class="mono">dataset.json</td>
+                <td><span class="tbl-badge json">JSON</span></td>
+                <td class="right">1.24 MB</td>
+                <td>1,140 txns</td>
+                <td class="desc">Nested dataset with variant metadata</td>
+              </tr>
+              <tr>
+                <td class="mono">run_summary.json</td>
+                <td><span class="tbl-badge json">JSON</span></td>
+                <td class="right">4.9 KB</td>
+                <td style="color: var(--faint);">—</td>
+                <td class="desc">Aggregate stats and quality metrics</td>
+              </tr>
+              <tr>
+                <td class="mono">graph_adjacency.json</td>
+                <td><span class="tbl-badge graph">GRAPH</span></td>
+                <td class="right">341 KB</td>
+                <td>234 nodes</td>
+                <td class="desc">GNN-ready adjacency list</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Row 3: run_summary.json preview -->
+        <div>
+          <div class="code-block-header">
+            <span class="code-block-title">run_summary.json</span>
+            <button class="copy-btn">Copy</button>
+          </div>
+          <div class="code-block"><span class="jp">{</span>
+  <span class="jk">"run_id"</span><span class="jp">:</span> <span class="js">"run_20260315_143022"</span><span class="jp">,</span>
+  <span class="jk">"status"</span><span class="jp">:</span> <span class="js">"completed"</span><span class="jp">,</span>
+  <span class="jk">"fraud_type"</span><span class="jp">:</span> <span class="js">"Layered Mule Network"</span><span class="jp">,</span>
+  <span class="jk">"variants_requested"</span><span class="jp">:</span> <span class="jn">12</span><span class="jp">,</span>
+  <span class="jk">"variants_approved"</span><span class="jp">:</span> <span class="jn">11</span><span class="jp">,</span>
+  <span class="jk">"variants_failed"</span><span class="jp">:</span> <span class="jn">1</span><span class="jp">,</span>
+  <span class="jk">"coverage_saturation"</span><span class="jp">:</span> <span class="jn">0.917</span><span class="jp">,</span>
+  <span class="jk">"mean_realism_score"</span><span class="jp">:</span> <span class="jn">8.1</span><span class="jp">,</span>
+  <span class="jk">"mean_distinctiveness_score"</span><span class="jp">:</span> <span class="jn">7.9</span><span class="jp">,</span>
+  <span class="jk">"total_transactions"</span><span class="jp">:</span> <span class="jn">1140</span><span class="jp">,</span>
+  <span class="jk">"total_cost_usd"</span><span class="jp">:</span> <span class="jn">1.84</span><span class="jp">,</span>
+  <span class="jk">"total_tokens"</span><span class="jp">:</span> <span class="jn">128450</span><span class="jp">,</span>
+  <span class="jk">"duration_seconds"</span><span class="jp">:</span> <span class="jn">258</span><span class="jp">,</span>
+  <span class="jk">"personas_generated"</span><span class="jp">:</span> <span class="jn">4</span><span class="jp">,</span>
+  <span class="jk">"revision_loops"</span><span class="jp">:</span> <span class="jn">3</span><span class="jp">,</span>
+  <span class="jk">"schema_errors_corrected"</span><span class="jp">:</span> <span class="jn">1</span>
+<span class="jp">}</span></div>
+        </div>
+
+      </div><!-- /main-content -->
+    </div><!-- /main-wrap -->
+  </div><!-- /app-shell -->
+</div><!-- /browser -->
+
+</body>
+</html>
