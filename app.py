@@ -6,8 +6,12 @@ No business logic, no LLM calls — only coordination.
 """
 from __future__ import annotations
 
+import atexit
 import asyncio
 import sys
+from pathlib import Path
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).parent / ".env")
 import os
 import threading
 import time
@@ -98,10 +102,19 @@ def _start_run(config: RunConfig) -> None:
                 approved_variants_out=approved_variants,
             ),
         ),
-        daemon=True,
+        daemon=False,
     )
     thread.start()
     st.session_state.run_thread = thread
+
+    # On process exit, signal the pipeline to stop and wait up to 10s for a
+    # clean shutdown so in-flight file writes can complete.
+    def _shutdown() -> None:
+        run_state.set_control("stop")
+        thread.join(timeout=10)
+
+    atexit.register(_shutdown)
+
     st.rerun()
 
 

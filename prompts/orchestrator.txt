@@ -36,7 +36,7 @@ You MUST return a JSON object with exactly this structure:
     {
       "cell_id": "string — unique ID, e.g. 'cell_001'",
       "dimension_values": {
-        "dimension_name": "specific value assigned to this cell for this dimension"
+        "dimension_name": "short_snake_case_identifier (max 30 chars, NO prose — e.g. '5_hop_fan_out', 'crypto_btc_otc', 'staggered_3day', 'fully_witting_paid')"
       },
       "persona_slot": "string — which type of persona should be assigned here (e.g. 'high_risk_international' or 'low_risk_domestic_patient')"
     }
@@ -49,4 +49,5 @@ Important constraints:
 - Generate at least as many coverage cells as the requested variant count. Cells should not all cluster in the same dimension values.
 - Cells must cover extreme values (not just midpoints) on the most important dimensions.
 - persona_slot values across cells should reference diverse persona types — do not assign the same type to every cell.
+- dimension_values in coverage_cells MUST be short snake_case identifiers, maximum 30 characters each. Do NOT write prose descriptions as cell values. The prose context belongs in variation_dimensions[].description — not in cell values. Good: "5_hop_fan_out". Bad: "5 hops — maximum domestic layering with four intermediate buffer accounts before extraction".
 - Return ONLY the JSON object. No preamble, no explanation outside the JSON.
