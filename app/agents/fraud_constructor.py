@@ -268,9 +268,15 @@ def _repair_constraint_violations(
         except (ValueError, AttributeError):
             return None
 
-    def _respace_fraud_txns(txns: list[dict], min_delta: timedelta) -> None:
-        """Sort fraud transactions by timestamp and push any that are too close forward.
-        Loops until stable so cascading fixes and post-ACH shifts are all caught."""
+    def _respace_fraud_txns(
+        txns: list[dict], min_delta: timedelta, max_delta: timedelta | None
+    ) -> None:
+        """Sort fraud transactions by timestamp and enforce min/max gap constraints.
+
+        Pushes transactions that are too close forward (min fix) and pulls
+        transactions that are too far apart backward to prev + max (max fix).
+        Loops until stable so cascading fixes are all caught.
+        """
         for _pass in range(10):
             txns.sort(key=lambda t: (_parse(t.get("timestamp", "")) or datetime.max.replace(tzinfo=timezone.utc)))
             fixed_any = False
@@ -279,9 +285,15 @@ def _repair_constraint_violations(
                 curr_ts = _parse(txns[i].get("timestamp", ""))
                 if prev_ts is None or curr_ts is None:
                     continue
-                if (curr_ts - prev_ts) < min_delta:
+                gap = curr_ts - prev_ts
+                if gap < min_delta:
                     jitter = timedelta(hours=_random.uniform(0, min_delta.total_seconds() / 3600 * 0.1))
                     txns[i]["timestamp"] = (prev_ts + min_delta + jitter).isoformat()
+                    fixed_any = True
+                elif max_delta is not None and gap > max_delta:
+                    # Pull the transaction back so gap = max_delta (midpoint jitter within allowed range)
+                    jitter = timedelta(hours=_random.uniform(0, (max_delta - min_delta).total_seconds() / 3600 * 0.1))
+                    txns[i]["timestamp"] = (prev_ts + max_delta - jitter).isoformat()
                     fixed_any = True
             if not fixed_any:
                 break
@@ -310,8 +322,11 @@ def _repair_constraint_violations(
             curr["timestamp"] = (prev_ts + ach_floor).isoformat()
 
     # 3. Re-space fraud transaction timestamps — runs after ACH floor so it catches any gaps it created
-    if min_interval:
-        _respace_fraud_txns(fraud_txns, timedelta(hours=float(min_interval)))
+    max_interval = audit.get("max_timing_interval_hrs")
+    if min_interval or max_interval:
+        min_delta = timedelta(hours=float(min_interval)) if min_interval else timedelta(0)
+        max_delta = timedelta(hours=float(max_interval)) if max_interval else None
+        _respace_fraud_txns(fraud_txns, min_delta, max_delta)
 
     # 4. Zelle amount cap
     zelle_max = float(rail_constraints.get("Zelle", {}).get("max_per_transaction", 2500))
