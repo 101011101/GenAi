@@ -7,6 +7,9 @@
 
 FraudGen deploys a Red Team of AI agents that proactively explores fraud variant space ahead of real attackers, producing labeled synthetic training data for a financial institution's existing ML fraud detection pipeline.
 
+> **How this fits the "catch what humans miss, detect in real time" category:**
+> FraudGen doesn't detect fraud in real time — it makes real-time detectors significantly better. The detection speed and accuracy of a production ML model is bounded by its training data. A model that has never seen a 5-hop fan-out mule network will miss it every time, no matter how fast it runs. FraudGen attacks that bound directly: by generating thousands of structurally diverse fraud variants before they occur in the wild, the institution's real-time detector has already seen them. The "real time" win happens at inference — because the model was trained on a richer, adversarially-generated dataset that humans could never have assembled manually.
+
 ---
 
 ## Table of Contents
