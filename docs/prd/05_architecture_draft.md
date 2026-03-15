@@ -20,15 +20,16 @@ The system has three major components. The backend pipeline is where all the rea
 └──────────────────────┬──────────────────────────────┘
                        ↓ RunConfig
 ┌──────────────────────────────────────────────────────┐
-│                BACKEND PIPELINE  [TENTATIVE]         │
+│                    BACKEND PIPELINE                  │
 │                                                      │
 │  runner.py                                           │
+│    ├── orchestrator       →  variation_dimensions    │
+│    ├── cell_generator     →  coverage cells          │
 │    ├── persona_generator  →  List[Persona]           │
-│    ├── coverage_matrix    →  variant assignments     │
 │    ├── fraud_constructor  →  RawVariant (per agent)  │
 │    ├── schema_validator   →  ValidatedVariant        │
 │    ├── critic             →  ScoredVariant           │
-│    └── output_handler     →  files on disk           │
+│    └── output_handler     →  6 files on disk         │
 │                                                      │
 │  run_state.py  ← pipeline writes, console reads      │
 └──────────────────────┬───────────────────────────────┘
@@ -62,7 +63,7 @@ project/
 │       ├── dataset_browser.py
 │       └── export_panel.py
 │
-├── agents/                             ← [TENTATIVE] agent logic
+├── agents/                             ← agent logic
 │   ├── orchestrator.py
 │   ├── persona_generator.py
 │   ├── fraud_constructor.py
@@ -79,13 +80,15 @@ project/
 │   ├── variant.py                      ← one fraud variant + transactions
 │   └── output_record.py                ← final labeled dataset row
 │
-├── pipeline/                           ← [TENTATIVE]
+├── pipeline/
 │   ├── runner.py                       ← async engine
 │   ├── coverage_matrix.py              ← variant space tracker
+│   ├── cell_generator.py               ← deterministic coverage cell generator (Cartesian product of dimension example_values)
+│   ├── variant_validator.py            ← pure Python 8-rule constraint checker; violations → retry
 │   ├── run_state.py                    ← shared state: pipeline writes, console reads
 │   └── output_handler.py              ← formatters + file writer
 │
-├── prompts/                            ← [TENTATIVE] system prompts
+├── prompts/                            ← system prompts
 │   ├── orchestrator.txt
 │   ├── persona_generator.txt
 │   ├── fraud_constructor.txt
@@ -145,30 +148,31 @@ Polls `run_state` every ~1 second while pipeline is running:
 
 ---
 
-## System 2 — Backend Pipeline [TENTATIVE]
+## System 2 — Backend Pipeline
 
 The pipeline is pure Python. No Streamlit imports anywhere in this system. It runs in a background thread so the console UI stays responsive.
 
-### runner.py [TENTATIVE]
+### runner.py
 The coordinator. Sequence of operations:
 1. Receive `RunConfig` from console
-2. Call `persona_generator` → get `List[Persona]`
-3. Call `coverage_matrix.build()` → get variant assignment grid
-4. Spawn agent tasks using `asyncio.gather()` up to `max_parallel`
-5. Each task: `fraud_constructor` → `schema_validator` → `critic`
-6. On critic fail: re-queue with feedback (up to max revision iterations)
-7. Write progress to `run_state` after each variant completes
-8. After batch: check coverage saturation → trigger second pass if needed
-9. On completion: call `output_handler` to write all files
+2. Call `OrchestratorAgent` → get `variation_dimensions` + `suggested_persona_count`
+3. Call `cell_generator.generate_cells()` → coverage cells (deterministic Cartesian product of dimension `example_values`)
+4. Initialize `CoverageMatrix` with dimensions + cells
+5. Call `PersonaGeneratorAgent` → get `List[Persona]`
+6. Spawn variant tasks using `asyncio` up to `max_parallel`
+7. Each task: `fraud_constructor` → `variant_validator` → `critic`
+8. On critic fail: re-queue with feedback (up to `max_revisions` iterations)
+9. Optional second pass if `coverage_saturation < 60%` and `auto_second_pass=True`
+10. On completion: call `output_handler` to write all 6 files
 
-### coverage_matrix.py [TENTATIVE]
+### coverage_matrix.py
 `CoverageMatrix` class:
 - Initialized with variation dimensions extracted by orchestrator
 - Tracks which cells are assigned, in progress, completed
 - Detects clustering (agents gravitating to same cells)
 - Returns underrepresented cells for second pass targeting
 
-### run_state.py [TENTATIVE]
+### run_state.py
 `RunState` class — the bridge between pipeline and console:
 ```
 variants_completed    int
@@ -178,46 +182,54 @@ variant_log           List[VariantSummary]   ← one entry per completed variant
 control_signal        str                    ← "run" | "pause" | "stop"
 errors                List[str]
 is_complete           bool
+current_phase         str                    ← "idle" | "Orchestrating" | "Generating personas" | "Generating variants" | "Compiling dataset" | "complete"
+total_cost_usd        float                  ← accumulated API cost across all agent calls
+revisions_count       int                    ← variants that passed on a retry attempt
+rejections_count      int                    ← variants that failed all attempts and were discarded
+event_log             List[str]              ← real-time timestamped agent activity (capped at 200 entries)
 ```
 Pipeline writes to it. Console reads from it every second.
 Pause/stop: console sets `control_signal`, runner checks it between agent batches.
 
-### output_handler.py [TENTATIVE]
-Takes approved `List[OutputRecord]` and writes:
+### output_handler.py
+Takes approved `List[ScoredVariant]` and writes 6 files per run:
+- `config.json` — the `RunConfig` settings for this run
+- `personas.json` — personas used in this run
+- `variants.json` — all approved variants (metadata only, no transaction list)
 - `dataset.csv` — one row per transaction, flat tabular
-- `dataset.json` — full nested structure with variant + persona metadata
-- `run_summary.json` — stats (variant count, mean critic score, coverage %, timing)
+- `dataset.json` — full nested structure with variant + persona metadata + transactions
+- `run_summary.json` — stats (variant count, mean critic score, coverage %, timing, cost, revision/rejection counts)
 
-### agents/ [TENTATIVE]
+### agents/
 
 Each agent is a Python class with a `run()` method. It takes a context object, builds a prompt, calls the Claude API, parses the response, and returns a typed Pydantic object. No agent imports or calls another agent directly — the runner always mediates.
 
-**Orchestrator** [TENTATIVE]
-Hybrid agent — one LLM call to decompose the fraud description into variation dimensions, then pure Python logic to coordinate everything downstream. The LLM call returns a structured list of dimensions (hop count, timing, topology, etc.) which gets handed to the CoverageMatrix.
+**Orchestrator**
+One LLM call with extended thinking. Decomposes the fraud description into `variation_dimensions` (list of dimension objects with `example_values`) and returns `suggested_persona_count`. Does NOT coordinate anything downstream — the runner handles all of that.
 
-**Persona Generator** [TENTATIVE]
+**Persona Generator**
 Single LLM call (or N parallel calls for large counts). Receives the fraud description and persona settings (count, risk distribution, geographic scope). Returns `List[Persona]`. Enforces the configured risk distribution — if the analyst set 30% high / 40% mid / 30% low, the prompt enforces that spread explicitly.
 
-**Fraud Network Constructor (Level 3)** [TENTATIVE]
-The core generation agent. Runs as a five-step LLM reasoning chain followed by a deterministic Python labeling step:
-1. **Persona analysis** — what does this criminal actually need? What are their constraints and fears?
-2. **Network planning** — decide hop count, topology (chain vs fan-out), timing, amount logic, cover activity
-3. **Participant profiles** — for each account in the network, who are they, how were they recruited, what do they think they're doing
-4. **Transaction generation** — full transaction sequence grounded in real-world constraints. Transactions do NOT include `is_fraud` or `fraud_role` fields at this stage. The LLM instead emits a `fraud_account_ids` list — the internal mule/layering account IDs only (excludes victim source accounts, extraction destination accounts, and cover activity accounts).
-5. **Self-review** — agent checks its own output for internal consistency, verifies `fraud_account_ids` contains only internal mule accounts, and corrects any constraint violations before returning.
-6. **Deterministic labeling** (pure Python, not an LLM call) — `label_transactions()` in `utils/label_transactions.py` receives the transaction list and `fraud_account_ids` set. It performs a BFS traversal of the transfer graph and stamps `fraud_role` and `is_fraud` on every transaction using edge-classification rules: placement (external→fraud), hop_N_of_M (fraud→fraud, BFS depth N of M), extraction (fraud→external), cover_activity (external→external). This step runs after self-review and before `RawVariant` is returned.
+**Fraud Network Constructor (Level 3)**
+The core generation agent. Runs as a four-step LLM reasoning chain followed by two deterministic Python steps:
+1. **Persona analysis** [LLM] — what does this criminal actually need? What are their constraints and fears?
+2. **Network planning** [LLM] — decide hop count, topology (chain vs fan-out), timing, amount logic, cover activity
+3. **Participant profiles** [LLM] — for each account in the network, who are they, how were they recruited, what do they think they're doing
+4. **Transaction generation** [LLM] — full transaction sequence grounded in real-world constraints. Transactions do NOT include `is_fraud` or `fraud_role` fields. The LLM emits a `fraud_account_ids` list — the internal mule/layering account IDs only.
+5. **Constraint repair + validation** [Python] — `_repair_constraint_violations()` auto-fixes common LLM errors (channel substitution, timestamp re-spacing, ACH floor enforcement, Zelle cap enforcement). Then `check_variant_constraints()` in `pipeline/variant_validator.py` checks 8 hard rules deterministically; any violations → raises exception → triggers retry. No LLM call.
+6. **Deterministic labeling** [Python/BFS] — `label_transactions()` in `utils/label_transactions.py` receives the transaction list and `fraud_account_ids` set. Performs a BFS traversal of the transfer graph and stamps `fraud_role` and `is_fraud` on every transaction: placement (external→fraud), hop_N_of_M (fraud→fraud, BFS depth N of M), extraction (fraud→external), cover_activity (external→external).
 
 Returns `RawVariant` JSON with all transactions fully labeled.
 
-**Critic** [TENTATIVE]
-Independent LLM agent. Receives `ValidatedVariant` + original `Persona`. Has no knowledge of the coverage matrix or other variants. Scores on four dimensions:
+**Critic**
+Independent LLM agent. Receives `ValidatedVariant` + original `Persona` + `persona_consistency` boolean (from the deterministic check in step 5 above). Has no knowledge of the coverage matrix or other variants. Scores two dimensions via LLM:
 
 | Dimension | Type | Question |
 |---|---|---|
 | Realism | Score 1–10 | Would a fraud analyst believe this happened? |
-| Persona consistency | Pass/Fail | Does behavior match this criminal's profile? |
-| Label correctness | Pass/Fail | Does this actually represent the fraud type? |
 | Variant distinctiveness | Score 1–10 | Is this structurally different from the batch average? |
+
+Persona consistency is checked deterministically by `FraudConstructorAgent._check_persona_consistency()` and passed in as a boolean. A variant fails immediately if `persona_consistency=False`, regardless of LLM scores.
 
 On fail: returns specific feedback string → passed back to constructor for revision.
 
@@ -231,7 +243,7 @@ On fail: returns specific feedback string → passed back to constructor for rev
 
 *Bank System Agent* — evaluates each transaction against a rule set (velocity limits, reporting thresholds, new-payee flags). Returns approve / flag / reject. When it flags, the criminal mastermind receives the signal and adapts — producing organic evasion behavior.
 
-### How Agents Communicate [TENTATIVE]
+### How Agents Communicate
 
 Agents do not call each other. The runner is always the intermediary. "Agent communication" is the runner passing one agent's output as input to the next.
 
@@ -255,7 +267,7 @@ if mule_response.has_question:
 
 The mule agent doesn't know it's talking to a cover story agent — it just sees the next message in its conversation history. The runner orchestrates the entire exchange invisibly.
 
-### prompts/ [TENTATIVE]
+### prompts/
 One `.txt` file per agent containing the system prompt. Stored as plain text files so they can be edited without touching Python code. Loaded at runtime by `llm_client.py`. During the hackathon, prompts will be iterated constantly — keeping them in text files means no Python changes needed to adjust agent behavior.
 
 ---
@@ -296,17 +308,18 @@ Filterable `st.dataframe` of the full dataset. Filter by:
 
 ---
 
-## Pipeline Flow [TENTATIVE]
+## Pipeline Flow
 
 ### Level 3 Pipeline
 
 ```
 RunConfig (from console)
     ↓
-Orchestrator LLM call → variation dimensions
+OrchestratorAgent LLM call (extended thinking) → variation_dimensions + suggested_persona_count
     ↓
-CoverageMatrix.build()  →  assignment grid
-PersonaGenerator        →  List[Persona]
+cell_generator.generate_cells() [Python] → coverage cells (Cartesian product)
+CoverageMatrix initialized with dimensions + cells
+PersonaGeneratorAgent LLM call → List[Persona]
     ↓
 [PARALLEL — up to max_parallel]
   For each (Persona, cell_assignment):
@@ -315,7 +328,7 @@ PersonaGenerator        →  List[Persona]
       Step 2: network planning            [LLM]
       Step 3: participant profiles        [LLM]
       Step 4: transaction generation      [LLM] → transactions (unlabeled) + fraud_account_ids list
-      Step 5: self-review                 [LLM] → corrected transactions + verified fraud_account_ids
+      Step 5: constraint repair + validation [Python] → _repair_constraint_violations() auto-fixes channel/timestamp/ACH/Zelle issues; check_variant_constraints() checks 8 hard rules → violations trigger retry
       Step 6: label_transactions()        [Python/BFS] → stamps fraud_role + is_fraud on all txns
       → RawVariant JSON (fully labeled)
     ↓
@@ -323,8 +336,9 @@ PersonaGenerator        →  List[Persona]
       → fail: discard, reassign cell
       → pass: ValidatedVariant
     ↓
-    Critic (LLM)
-      → fail: feedback → FraudConstructor again (max 3x)
+    Critic (LLM) — scores Realism (1–10) + Distinctiveness (1–10)
+      persona_consistency bool passed in from constructor (deterministic)
+      → fail (score below floor OR persona_consistency=False): feedback → FraudConstructor again (max max_revisions+1 attempts)
       → pass: ScoredVariant → approved_variants[]
     ↓
     run_state.update()  ← console reads for live display
@@ -362,7 +376,7 @@ Same outer structure, FraudConstructor replaced by multi-agent simulation:
   → SchemaValidator → Critic → revision loop (same as L3)
 ```
 
-### Revision Loop Detail [TENTATIVE]
+### Revision Loop Detail
 
 Schema failures (malformed JSON) are hard failures — discarded immediately, cell reassigned. Not worth retrying, as the output structure is broken.
 
@@ -407,7 +421,7 @@ For 100 variants, output_handler writes all files at the end. For 1,000+ variant
 
 ---
 
-## Data Flow — Interface Contracts [TENTATIVE]
+## Data Flow — Interface Contracts
 
 ```
 console → RunConfig → runner.py
@@ -434,7 +448,7 @@ approved_variants[] → output_handler → files on disk
 
 ---
 
-## Concurrency Model [TENTATIVE]
+## Concurrency Model
 
 ```
 Main thread:     Streamlit UI (polls run_state, re-renders)
@@ -451,19 +465,21 @@ Revision loops run within the same async task — the failed variant re-calls th
 ## Build Order
 
 ```
-1. models/                      ← foundation, everything depends on these
-2. utils/llm_client.py          ← Claude API wrapper
-3. utils/schema_validator.py    ← validation logic
-4. utils/label_transactions.py  ← BFS labeler; depends only on stdlib
-5. prompts/                     ← plain text, no code dependencies
-6. pipeline/run_state.py        ← needed by both pipeline and console
-7. agents/                      ← depends on models + utils + prompts
-8. pipeline/coverage_matrix.py
-9. pipeline/runner.py           ← depends on agents + coverage_matrix + run_state
-10. pipeline/output_handler.py
-11. console/data_display/       ← depends on models (knows the output schema)
-12. console/monitoring_panel.py ← depends on run_state
-13. console/orchestrator_controls.py
-14. console/input_panel.py
-15. app.py                      ← wires everything, built last
+1.  models/                      ← foundation, everything depends on these
+2.  utils/llm_client.py          ← Claude API wrapper
+3.  utils/schema_validator.py    ← validation logic
+4.  utils/label_transactions.py  ← BFS labeler; depends only on stdlib
+5.  pipeline/cell_generator.py   ← deterministic Cartesian product cell builder; depends only on models
+6.  prompts/                     ← plain text, no code dependencies
+7.  pipeline/run_state.py        ← needed by both pipeline and console
+8.  agents/                      ← depends on models + utils + prompts
+9.  pipeline/variant_validator.py ← pure Python 8-rule constraint checker; depends on models
+10. pipeline/coverage_matrix.py
+11. pipeline/runner.py           ← depends on agents + coverage_matrix + cell_generator + run_state
+12. pipeline/output_handler.py
+13. console/data_display/        ← depends on models (knows the output schema)
+14. console/monitoring_panel.py  ← depends on run_state
+15. console/orchestrator_controls.py
+16. console/input_panel.py
+17. app.py                       ← wires everything, built last
 ```

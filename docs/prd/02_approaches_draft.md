@@ -157,11 +157,11 @@ The input does not need to be exhaustive. The orchestrator's job is to expand it
 
 ## Layer 2 — Orchestrator Agent
 
-The orchestrator receives the input and executes four steps:
+The orchestrator receives the input and executes one LLM call (with extended thinking), then hands off to the runner for all downstream coordination.
 
 ### Step 1 — Dimension Decomposition
 
-Identifies the key axes along which this fraud type can vary. For mule networks:
+The orchestrator's sole LLM call. Identifies the key axes along which this fraud type can vary. For mule networks:
 
 | Dimension | Example Range |
 |---|---|
@@ -174,9 +174,15 @@ Identifies the key axes along which this fraud type can vary. For mule networks:
 | Network topology | Chain / fan-out / hybrid |
 | Geographic spread | Domestic / multi-jurisdictional |
 
-### Step 2 — Persona Seed Generation
+Returns `variation_dimensions` (list of dimension objects with `example_values`) and `suggested_persona_count`. The orchestrator does NOT generate personas, build the coverage matrix, or spawn any sub-agents — all of that is done by the runner.
 
-Before building the coverage matrix or spawning any sub-agents, the orchestrator generates a **criminal persona** for each planned variant. This is the key mechanism for producing genuine behavioral diversity rather than surface-level variation.
+### Step 2 — Coverage Cell Generation (Runner + cell_generator.py)
+
+After the orchestrator returns, the runner calls `cell_generator.generate_cells()` — a pure Python function that takes a Cartesian product of the dimensions' `example_values` to build concrete coverage cells. Each cell specifies one combination of dimension values (e.g., `hop_count=3, timing_interval=same-day, topology=chain`). No LLM call.
+
+### Step 3 — Persona Seed Generation (Runner + PersonaGeneratorAgent)
+
+The runner calls `PersonaGeneratorAgent` separately — this is a distinct agent, not the orchestrator. It receives the fraud description and persona settings and returns a `List[Persona]`.
 
 A persona defines the decision-maker behind the fraud: their risk tolerance, resources, operational constraints, timeline pressure, and specific evasion targets. This persona is passed to the sub-agent as its primary context and seeds every decision the sub-agent makes — hop count, timing, amounts, cover behavior — as consequences of a coherent criminal logic rather than arbitrary parameter choices.
 
@@ -190,13 +196,9 @@ Viktor and James both run mule networks. But Viktor's network is aggressive, dis
 
 Personas are generated to cover diverse combinations of risk profile, resource level, operational scale, and geographic context — not just diverse transaction parameters.
 
-### Step 3 — Coverage Matrix Construction
+### Step 4 — Sub-Agent Assignment (Runner)
 
-Builds a grid across variation dimensions and persona profiles to define the full variant space. This matrix is the plan the sub-agent fleet executes against and the baseline for diversity enforcement after collection.
-
-### Step 4 — Sub-Agent Assignment
-
-Spawns sub-agents, each assigned a specific persona and a specific cell or region of the coverage matrix. Assignments are explicit — the sub-agent is told exactly what variant it is responsible for, not given free choice.
+The runner spawns sub-agents using `asyncio`, each assigned a specific persona (round-robin from the persona list) and a specific coverage cell. Assignments are explicit — the sub-agent is told exactly what variant it is responsible for, not given free choice. The orchestrator is not involved in this step.
 
 **Orchestrator Quality Indicators:**
 - Dimension coverage — did it identify all meaningful variation axes?
@@ -245,21 +247,22 @@ Agents output structured data, not free text:
     "topology": "fan_out",
     "extraction_method": "crypto"
   },
+  "fraud_account_ids": ["acct_b2", "acct_c3", "acct_d4", "acct_e5", "acct_f6", "acct_g7"],
   "transactions": [
     {
       "timestamp": "...",
       "amount": 0.00,
       "sender_account_id": "...",
       "receiver_account_id": "...",
-      "merchant_category": "...",
-      "is_fraud": true,
-      "fraud_role": "hop_2_of_6"
+      "merchant_category": "..."
     }
   ],
   "evasion_techniques": ["..."],
   "fraud_indicators_present": ["..."]
 }
 ```
+
+> **Note:** `fraud_role` and `is_fraud` are NOT in the LLM output — they are stamped by `label_transactions()` (Python BFS graph traversal in `utils/label_transactions.py`) after the LLM generates transactions. The LLM only declares `fraud_account_ids` — the internal mule/layering account IDs. The BFS labeler uses this set to classify every transaction as `placement`, `hop_N_of_M`, `extraction`, or `cover_activity` and stamps `is_fraud` accordingly.
 
 ### Real-World Grounding
 
@@ -283,15 +286,16 @@ A separate agent reviews every sub-agent output before it enters the dataset. Th
 
 ### Critic Scoring
 
+The critic LLM scores two dimensions:
+
 | Dimension | Type | Threshold |
 |---|---|---|
-| Realism | Score 1–10 | ≥ 7 |
-| Persona consistency | Pass / Fail | Pass required |
-| Label correctness | Pass / Fail | Pass required |
-| Internal consistency | Pass / Fail | Pass required |
-| Variant distinctiveness | Score 1–10 | ≥ 6 (vs. batch average) |
+| Realism | Score 1–10 | ≥ 7 (configurable) |
+| Variant distinctiveness | Score 1–10 | ≥ 6 (configurable) |
 
-Persona consistency is the additional check enabled by seeding: does the generated behavior actually follow from the persona's stated risk tolerance, resources, and constraints? A high-risk, time-pressured persona that generates slow, cautious, conservative transfers has failed this check regardless of how realistic the individual transactions are.
+> **Persona consistency** is NOT an LLM-scored dimension. It is checked deterministically by `FraudConstructorAgent._check_persona_consistency()` before the critic runs, and the result is passed to the critic as a boolean. A variant fails immediately if `persona_consistency=False`, regardless of LLM scores. This catches cases where the generated behavior contradicts the persona's stated risk tolerance, resources, or operational constraints (e.g., a low-resource persona generating a 9-hop international crypto network).
+>
+> **Label correctness** is not a critic dimension — labeling is performed deterministically by `label_transactions()` (Python BFS) before the critic sees the variant, so correctness is guaranteed structurally, not scored.
 
 ### Revision Loop
 

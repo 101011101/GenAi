@@ -32,8 +32,9 @@ st.set_page_config(
 # Project root on sys.path so all imports resolve regardless of cwd
 # ---------------------------------------------------------------------------
 _ROOT = os.path.dirname(os.path.abspath(__file__))
-if _ROOT not in sys.path:
-    sys.path.insert(0, _ROOT)
+_APP_DIR = os.path.join(_ROOT, "app")
+if _APP_DIR not in sys.path:
+    sys.path.insert(0, _APP_DIR)
 
 # ---------------------------------------------------------------------------
 # Console components

@@ -27,10 +27,11 @@ from dotenv import load_dotenv
 
 load_dotenv(Path(__file__).parent / ".env")
 
-# Ensure project root is on sys.path
+# Ensure app/ is on sys.path so module imports resolve
 _ROOT = Path(__file__).parent
-if str(_ROOT) not in sys.path:
-    sys.path.insert(0, str(_ROOT))
+_APP_DIR = str(_ROOT / "app")
+if _APP_DIR not in sys.path:
+    sys.path.insert(0, _APP_DIR)
 
 from agents.critic import CriticAgent
 from agents.fraud_constructor import FraudConstructorAgent

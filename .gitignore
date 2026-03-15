@@ -7,3 +7,5 @@ __pycache__/
 venv/
 .debug_cache/
 .edp_intent/
+.DS_Store
+**/.DS_Store
